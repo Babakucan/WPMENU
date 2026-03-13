@@ -1,0 +1,14 @@
+{
+  "name": "MeraPaket",
+  "address": "Örnek Mah. Restoran Sok. No:1",
+  "estimatedMinutes": 25,
+  "phone": "+90 555 000 00 00",
+  "hours": "10:00 - 23:00",
+  "hoursOpen": "10:00",
+  "hoursClose": "23:00",
+  "minOrderAmount": 30,
+  "coupons": [
+    { "code": "HOSGELDIN", "discount": 10, "type": "percent", "description": "İlk siparişte %10 indirim" },
+    { "code": "20TL", "discount": 20, "type": "fixed", "description": "20₺ indirim" }
+  ]
+}

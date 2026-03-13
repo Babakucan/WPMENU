@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Menü - MeraPaket</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="telegram-web-app.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: linear-gradient(180deg, #0c0c0c 0%, #18181b 100%);
+      color: #e4e4e7;
+      min-height: 100vh;
+      padding-bottom: 220px;
+    }
+    .header {
+      text-align: center;
+      padding: 24px 20px;
+      background: linear-gradient(135deg, rgba(34,197,94,0.1) 0%, transparent 100%);
+      border-bottom: 1px solid #27272a;
+    }
+    .header h1 { font-size: 1.5rem; font-weight: 700; }
+    .header p { color: #71717a; font-size: 0.9rem; margin-top: 4px; }
+    .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .search-box { padding: 10px 14px; border-radius: 10px; border: 1px solid #27272a; background: #18181b; color: #e4e4e7; width: 100%; max-width: 280px; font-size: 0.95rem; }
+    .theme-btn { padding: 8px 14px; border-radius: 10px; border: 1px solid #27272a; background: #18181b; color: #a1a1aa; cursor: pointer; font-size: 0.9rem; }
+    body.light { background: #f4f4f5; color: #18181b; }
+    body.light .product, body.light .cart { background: #fff; border-color: #e4e4e7; }
+    body.light .product-name, body.light .cart-total { color: #18181b; }
+    .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #27272a; border-top-color: #22c55e; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .categories { padding: 20px; max-width: 480px; margin: 0 auto; }
+    .category { margin-bottom: 32px; }
+    .category h2 {
+      font-size: 1rem;
+      color: #a1a1aa;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .product {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      background: #18181b;
+      border-radius: 14px;
+      margin-bottom: 10px;
+      border: 1px solid transparent;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .product:hover { border-color: #27272a; background: #1f1f23; }
+    .product-img {
+      width: 56px;
+      height: 56px;
+      background: #27272a;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+    .product-img img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
+    .product-info { flex: 1; min-width: 0; }
+    .product-name { font-weight: 600; margin-bottom: 2px; }
+    .product-price { color: #22c55e; font-size: 0.95rem; }
+    .product-actions { display: flex; align-items: center; gap: 8px; }
+    .qty-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: 1px solid #3f3f46;
+      background: #27272a;
+      color: #e4e4e7;
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .qty-btn:hover { background: #3f3f46; }
+    .qty-val { min-width: 24px; text-align: center; font-weight: 600; }
+
+    .cart {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #18181b;
+      border-top: 1px solid #27272a;
+      padding: 20px;
+      max-width: 520px;
+      margin: 0 auto;
+      box-shadow: 0 -4px 24px rgba(0,0,0,0.4);
+    }
+    .cart-items {
+      max-height: 100px;
+      overflow-y: auto;
+      font-size: 0.9rem;
+      color: #a1a1aa;
+      margin-bottom: 12px;
+    }
+    .cart-line { display: flex; justify-content: space-between; margin-bottom: 4px; }
+    .cart-total { font-size: 1.3rem; font-weight: 700; color: #22c55e; margin-bottom: 12px; }
+    .order-btn {
+      width: 100%;
+      padding: 14px;
+      background: #22c55e;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .order-btn:hover { background: #16a34a; }
+    .order-btn:disabled { background: #3f3f46; cursor: not-allowed; }
+
+    .form-section { display: none; padding: 20px; max-width: 480px; margin: 0 auto; }
+    .form-section.show { display: block; }
+    .form-section h2 { font-size: 1.25rem; margin-bottom: 16px; }
+    .order-type-toggle {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .order-type-btn {
+      flex: 1;
+      padding: 14px;
+      border-radius: 12px;
+      border: 2px solid #3f3f46;
+      background: transparent;
+      color: #a1a1aa;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .order-type-btn.active { border-color: #22c55e; background: rgba(34,197,94,0.1); color: #22c55e; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 0.9rem; color: #a1a1aa; margin-bottom: 6px; }
+    input, textarea {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      border: 1px solid #3f3f46;
+      background: #27272a;
+      color: #e4e4e7;
+      font-size: 1rem;
+    }
+    input:focus, textarea:focus { outline: none; border-color: #22c55e; }
+    .error { color: #ef4444; font-size: 0.9rem; margin-top: 8px; }
+    .success { display: none; text-align: center; padding: 60px 20px; }
+    .success.show { display: block; }
+    .success h2 { font-size: 1.5rem; margin-bottom: 12px; }
+    .success p { color: #71717a; }
+    .loading { text-align: center; padding: 40px; color: #71717a; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="header">
+      <div class="header-top">
+        <input type="text" id="search" class="search-box" placeholder="🔍 Ürün ara...">
+        <button type="button" id="theme-btn" class="theme-btn">☀️</button>
+      </div>
+      <h1>🍽️ MeraPaket</h1>
+      <p>Menüden seçim yapın</p>
+      <div id="closed-banner" style="display:none;margin-top:12px;padding:12px;background:rgba(239,68,68,0.2);border-radius:10px;color:#f87171">🕐 Restoran şu an kapalı. Çalışma saatleri: <span id="hours-text"></span></div>
+    </div>
+
+    <div id="menu-section" class="categories">
+      <div class="loading">Menü yükleniyor...</div>
+    </div>
+
+    <div class="cart" id="cart">
+      <div class="cart-items" id="cart-items">Sepetiniz boş</div>
+      <div class="cart-total" id="cart-total">0₺</div>
+      <button class="order-btn" id="order-btn" disabled>Sipariş Ver</button>
+      <div id="add-error" class="error" style="margin-top:8px"></div>
+    </div>
+
+    <div id="form-section" class="form-section">
+      <h2>📋 Sipariş Detayları</h2>
+      <div class="order-type-toggle">
+        <button type="button" class="order-type-btn active" data-type="paket">📦 Paket Servis</button>
+        <button type="button" class="order-type-btn" data-type="restoran">🏠 Restoran İçi</button>
+      </div>
+      <div class="form-group" id="address-group">
+        <label>Adres</label>
+        <select id="saved-addresses" style="width:100%;padding:12px;border-radius:10px;margin-bottom:8px;background:#27272a;border:1px solid #3f3f46;color:#e4e4e7;display:none"><option value="">Kayıtlı adresler...</option></select>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input type="text" id="address" placeholder="Teslimat adresi" style="flex:1">
+          <button type="button" id="location-btn" class="order-type-btn" style="white-space:nowrap">📍 Konum</button>
+        </div>
+        <span style="font-size:0.85rem;color:#71717a">İsterseniz konum gönderebilirsiniz.</span>
+      </div>
+      <div class="form-group" id="table-group" style="display:none">
+        <label>Masa No</label>
+        <input type="text" id="table" placeholder="Örn: 5">
+      </div>
+      <div class="form-group" id="coupon-group">
+        <label>Kupon Kodu (isteğe bağlı)</label>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="coupon" placeholder="Örn: HOSGELDIN" style="flex:1">
+          <button type="button" id="apply-coupon" class="order-type-btn">Uygula</button>
+        </div>
+        <span id="coupon-result" style="font-size:0.85rem;margin-top:4px;display:block"></span>
+      </div>
+      <div class="form-group">
+        <label>Ödeme Yöntemi</label>
+        <div class="order-type-toggle">
+          <button type="button" class="order-type-btn active" data-payment="kapida_nakit">💵 Kapıda Nakit</button>
+          <button type="button" class="order-type-btn" data-payment="kapida_pos">💳 Kapıda POS</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Notlar (isteğe bağlı)</label>
+        <textarea id="notes" rows="2" placeholder="Örn: Acılı olsun"></textarea>
+      </div>
+      <button class="order-btn" id="submit-btn">Siparişi Tamamla</button>
+      <div id="form-error" class="error"></div>
+    </div>
+
+    <div id="success" class="success">
+      <h2>✅ Siparişiniz alındı!</h2>
+      <p>Telegram'dan onay mesajını kontrol edin.</p>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    let telegramId = params.get('tg');
+    if (!telegramId && window.Telegram?.WebApp?.initData) {
+      try {
+        const userStr = new URLSearchParams(window.Telegram.WebApp.initData).get('user');
+        if (userStr) { const u = JSON.parse(decodeURIComponent(userStr)); telegramId = u?.id ? String(u.id) : null; }
+      } catch (_) {}
+    }
+    const lat = params.get('lat');
+    const lng = params.get('lng');
+    const reorderId = params.get('reorder');
+    const favId = params.get('fav');
+    const addOrderId = params.get('add');
+    if (!telegramId) {
+      document.body.innerHTML = '<div class="header"><h1 style="color:#ef4444">Link Telegram üzerinden açılmalı.</h1></div>';
+    } else {
+      let cart = [];
+      let orderType = 'paket';
+      let restaurantInfo = { isOpen: true, minOrderAmount: 0 };
+      let appliedCoupon = null;
+      let allProducts = [];
+
+      const icons = { 'ana-yemekler': '🍽️', 'icecekler': '🥤', 'tatlilar': '🍰' };
+      if (localStorage.getItem('theme') === 'light') { document.body.classList.add('light'); document.getElementById('theme-btn').textContent = '🌙'; }
+      document.getElementById('theme-btn').addEventListener('click', () => {
+        document.body.classList.toggle('light');
+        const isLight = document.body.classList.contains('light');
+        localStorage.setItem('theme', isLight ? 'light' : '');
+        document.getElementById('theme-btn').textContent = isLight ? '🌙' : '☀️';
+      });
+
+      async function loadRestaurant() {
+        try {
+          const r = await fetch('/api/restaurant');
+          restaurantInfo = await r.json();
+          if (!restaurantInfo.isOpen) {
+            document.getElementById('closed-banner').style.display = 'block';
+            document.getElementById('hours-text').textContent = restaurantInfo.hours || '10:00 - 23:00';
+            document.getElementById('order-btn').disabled = true;
+          }
+        } catch (_) {}
+      }
+
+      async function loadMenu() {
+        const el = document.getElementById('menu-section');
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 10000);
+          const res = await fetch('/api/menu', { signal: controller.signal });
+          clearTimeout(timeout);
+          if (!res.ok) throw new Error('API hata');
+          const menu = await res.json();
+        allProducts = (menu.categories || []).flatMap(c => (c.products || []).map(p => ({ ...p, cat: c })));
+        el.innerHTML = menu.categories.map(cat => `
+          <div class="category">
+            <h2>${cat.icon || icons[cat.id] || '🍽️'} ${cat.name}</h2>
+            ${cat.products.map(p => `
+              <div class="product" data-id="${p.id}" data-name="${p.name}" data-price="${p.price}">
+                <div class="product-img">${p.image ? `<img src="${p.image}" alt="">` : '🍽️'}</div>
+                <div class="product-info">
+                  <div class="product-name">${p.name}</div>
+                  <div class="product-price">${p.price}₺</div>
+                </div>
+                <div class="product-actions">
+                  <button class="qty-btn minus">−</button>
+                  <span class="qty-val">0</span>
+                  <button class="qty-btn plus">+</button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `).join('');
+
+        await loadRestaurant();
+        await loadSavedAddresses();
+        await loadReorderOrFav();
+        if (cart.length) updateCart();
+        el.querySelectorAll('.product').forEach(row => {
+          const name = row.dataset.name;
+          const price = parseInt(row.dataset.price);
+          const plus = row.querySelector('.plus');
+          const minus = row.querySelector('.minus');
+          const qtyEl = row.querySelector('.qty-val');
+          qtyEl.textContent = cart.filter(i => i.name === name && i.price === price).length;
+
+          plus.addEventListener('click', () => {
+            cart.push({ name, price });
+            updateCart();
+            qtyEl.textContent = cart.filter(i => i.name === name && i.price === price).length;
+          });
+          minus.addEventListener('click', () => {
+            const idx = cart.findIndex(i => i.name === name && i.price === price);
+            if (idx >= 0) {
+              cart.splice(idx, 1);
+              updateCart();
+              qtyEl.textContent = cart.filter(i => i.name === name && i.price === price).length;
+            }
+          });
+        });
+        } catch (e) {
+          el.innerHTML = '<div class="loading" style="color:#f87171">Menü yüklenemedi. Lütfen sayfayı yenileyin veya kısa süre sonra tekrar deneyin.<br><small>' + (e.name === 'AbortError' ? 'Zaman aşımı.' : 'Bağlantı hatası.') + '</small></div>';
+        }
+      }
+      document.getElementById('search').addEventListener('input', (e) => {
+        const q = (e.target.value || '').toLowerCase();
+        document.querySelectorAll('.category').forEach(cat => {
+          let hasVisible = false;
+          cat.querySelectorAll('.product').forEach(p => {
+            const ok = !q || (p.dataset.name || '').toLowerCase().includes(q);
+            p.style.display = ok ? '' : 'none';
+            if (ok) hasVisible = true;
+          });
+          cat.style.display = hasVisible ? '' : 'none';
+        });
+      });
+      async function loadSavedAddresses() {
+        try {
+          const r = await fetch('/api/user/prefs?telegramId=' + telegramId);
+          const p = await r.json();
+          const addrs = p.addresses || [];
+          const sel = document.getElementById('saved-addresses');
+          sel.innerHTML = '<option value="">Yeni adres</option>' + addrs.map(a => '<option value="' + a.replace(/"/g, '&quot;') + '">' + (a.length > 45 ? a.slice(0, 42) + '...' : a) + '</option>').join('');
+          sel.style.display = addrs.length ? 'block' : 'none';
+          sel.addEventListener('change', () => { if (sel.value) document.getElementById('address').value = sel.value; });
+        } catch (_) {}
+      }
+
+      function getOrderBtnText() {
+        return addOrderId ? 'Siparişe Ekle' : 'Sipariş Ver';
+      }
+      function updateCart() {
+        const itemsEl = document.getElementById('cart-items');
+        const totalEl = document.getElementById('cart-total');
+        const orderBtn = document.getElementById('order-btn');
+
+        const subtotal = cart.reduce((s, i) => s + i.price, 0);
+        if (cart.length === 0) {
+          itemsEl.innerHTML = 'Sepetiniz boş';
+          totalEl.textContent = '0₺';
+          orderBtn.disabled = true;
+          orderBtn.textContent = getOrderBtnText();
+        } else {
+          const minOk = subtotal >= (restaurantInfo.minOrderAmount || 0);
+          orderBtn.disabled = addOrderId ? (cart.length === 0) : !minOk;
+          orderBtn.textContent = getOrderBtnText();
+          const groups = {};
+          cart.forEach(i => { const k = i.name + '_' + i.price; groups[k] = (groups[k] || 0) + 1; });
+          itemsEl.innerHTML = Object.entries(groups).map(([k, q]) => {
+            const [n, p] = k.split('_');
+            return `<div class="cart-line"><span>${q}x ${n}</span><span>${parseInt(p) * q}₺</span></div>`;
+          }).join('');
+          const discount = appliedCoupon ? appliedCoupon.discount : 0;
+          const total = Math.max(0, subtotal - discount);
+          let totalText = total + '₺';
+          if (discount) totalText = `<s>${subtotal}₺</s> ${total}₺ (-${discount}₺)`;
+          totalEl.innerHTML = totalText;
+          if (!addOrderId && restaurantInfo.minOrderAmount && subtotal < restaurantInfo.minOrderAmount) {
+            itemsEl.innerHTML += `<div class="cart-line" style="color:#f87171;margin-top:6px">Min. sipariş: ${restaurantInfo.minOrderAmount}₺</div>`;
+          }
+        }
+      }
+
+      document.querySelectorAll('.order-type-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.order-type-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          orderType = btn.dataset.type;
+          document.getElementById('address-group').style.display = orderType === 'paket' ? 'block' : 'none';
+          document.getElementById('table-group').style.display = orderType === 'restoran' ? 'block' : 'none';
+        });
+      });
+
+      document.getElementById('order-btn').addEventListener('click', () => {
+        if (addOrderId) {
+          const groups = {};
+          cart.forEach(i => { const k = i.name + '_' + i.price; groups[k] = (groups[k] || 0) + 1; });
+          const itemsStr = Object.entries(groups).map(([k, q]) => {
+            const [n, p] = k.split('_');
+            return `${q}x ${n} (${parseInt(p) * q}₺)`;
+          }).join(', ');
+          const total = cart.reduce((s, i) => s + i.price, 0);
+          if (total < 1) return;
+          fetch(`/api/orders/${addOrderId}/add`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ telegramId, items: itemsStr, total })
+          }).then(r => r.json()).then(d => {
+            const errEl = document.getElementById('add-error');
+            if (d.ok) {
+              errEl.textContent = '';
+              document.getElementById('menu-section').style.display = 'none';
+              document.getElementById('cart').style.display = 'none';
+              document.getElementById('success').innerHTML = '<h2>✅ Eklemeler siparişe eklendi!</h2><p>Telegram\'dan onay mesajını kontrol edin.</p>';
+              document.getElementById('success').classList.add('show');
+              if (typeof window.closeTelegramWebApp === 'function') window.closeTelegramWebApp();
+            } else {
+              errEl.textContent = d.error || 'Hata';
+            }
+          }).catch(() => { document.getElementById('add-error').textContent = 'Bağlantı hatası.'; });
+        } else {
+          document.getElementById('menu-section').style.display = 'none';
+          document.getElementById('cart').style.display = 'none';
+          document.getElementById('form-section').classList.add('show');
+        }
+      });
+
+      let paymentMethod = 'kapida_nakit';
+      let orderLocation = null;
+
+      document.querySelectorAll('[data-payment]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('[data-payment]').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          paymentMethod = btn.dataset.payment;
+        });
+      });
+
+      document.getElementById('location-btn').addEventListener('click', () => {
+        if (!navigator.geolocation) {
+          document.getElementById('form-error').textContent = 'Konum desteklenmiyor.';
+          return;
+        }
+        document.getElementById('form-error').textContent = '';
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            orderLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            document.getElementById('address').value = `Konum: ${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
+          },
+          () => { document.getElementById('form-error').textContent = 'Konum alınamadı. Tarayıcı konum iznini verdiğinizden emin olun.'; }
+        );
+      });
+
+      document.getElementById('apply-coupon').addEventListener('click', async () => {
+        const code = document.getElementById('coupon').value.trim();
+        const subtotal = cart.reduce((s, i) => s + i.price, 0);
+        if (!code) { document.getElementById('coupon-result').textContent = ''; appliedCoupon = null; updateCart(); return; }
+        try {
+          const r = await fetch('/api/coupon/validate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code, subtotal })
+          });
+          const d = await r.json();
+          if (d.ok) {
+            appliedCoupon = { code, discount: d.discount };
+            document.getElementById('coupon-result').textContent = '✓ ' + d.discount + '₺ indirim uygulandı';
+            document.getElementById('coupon-result').style.color = '#22c55e';
+          } else {
+            appliedCoupon = null;
+            document.getElementById('coupon-result').textContent = d.error || 'Geçersiz kupon';
+            document.getElementById('coupon-result').style.color = '#f87171';
+          }
+        } catch {
+          document.getElementById('coupon-result').textContent = 'Kupon kontrol edilemedi';
+          document.getElementById('coupon-result').style.color = '#f87171';
+        }
+        updateCart();
+      });
+
+      document.getElementById('submit-btn').addEventListener('click', async () => {
+        const subtotal = cart.reduce((s, i) => s + i.price, 0);
+        const minOrder = restaurantInfo.minOrderAmount || 0;
+        if (subtotal < minOrder) {
+          document.getElementById('form-error').textContent = `Minimum sipariş tutarı ${minOrder}₺. Sepetiniz: ${subtotal}₺`;
+          return;
+        }
+        if (!restaurantInfo.isOpen) {
+          document.getElementById('form-error').textContent = 'Restoran şu an kapalı.';
+          return;
+        }
+        const address = orderType === 'paket'
+          ? (document.getElementById('address').value.trim() || 'Belirtilmedi')
+          : ('Masa ' + (document.getElementById('table').value.trim() || '-'));
+        const notes = document.getElementById('notes').value.trim();
+
+        const groups = {};
+        cart.forEach(i => { const k = i.name + '_' + i.price; groups[k] = (groups[k] || 0) + 1; });
+        const itemsStr = Object.entries(groups).map(([k, q]) => {
+          const [n, p] = k.split('_');
+          return `${q}x ${n} (${parseInt(p) * q}₺)`;
+        }).join(', ');
+        const subtotalCart = cart.reduce((s, i) => s + i.price, 0);
+
+        document.getElementById('form-error').textContent = '';
+        const submitBtn = document.getElementById('submit-btn');
+        const origText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner"></span> Gönderiliyor...';
+        try {
+          if (Notification.permission === 'default') Notification.requestPermission();
+          const res = await fetch('/api/order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              telegramId, items: itemsStr, total: subtotalCart, address, notes, orderType, paymentMethod, location: orderLocation,
+              couponCode: appliedCoupon ? appliedCoupon.code : null
+            })
+          });
+          const data = await res.json();
+          if (data.ok) {
+            document.getElementById('form-section').classList.remove('show');
+            document.getElementById('success').classList.add('show');
+            if (Notification.permission === 'granted') new Notification('Siparişiniz alındı!', { body: 'Telegram\'dan onay mesajını kontrol edin.' });
+            if (typeof window.closeTelegramWebApp === 'function') window.closeTelegramWebApp();
+          } else {
+            document.getElementById('form-error').textContent = data.error || 'Hata oluştu';
+          }
+        } catch (e) {
+          document.getElementById('form-error').textContent = 'Bağlantı kurulamadı. İnternet bağlantınızı kontrol edin veya kısa süre sonra tekrar deneyin.';
+        }
+        submitBtn.disabled = false;
+        submitBtn.textContent = origText;
+      });
+
+      if (lat && lng) {
+        orderLocation = { lat: parseFloat(lat), lng: parseFloat(lng) };
+        const addr = document.getElementById('address');
+        if (addr) addr.value = `Konum: ${lat}, ${lng}`;
+      }
+      function parseItemsStr(itemsStr) {
+        const parts = itemsStr.split(', ');
+        const out = [];
+        for (const p of parts) {
+          const m = p.match(/(\d+)x\s+(.+?)\s+\((\d+)₺\)/);
+          if (m) {
+            const qty = parseInt(m[1]);
+            const name = m[2].trim();
+            const total = parseInt(m[3]);
+            const price = Math.round(total / qty);
+            for (let i = 0; i < qty; i++) out.push({ name, price });
+          }
+        }
+        return out;
+      }
+      async function loadReorderOrFav() {
+        if (addOrderId) {
+          document.querySelector('.header p').textContent = 'Siparişe eklemek için ürün seçin';
+        } else if (reorderId) {
+          try {
+            const res = await fetch(`/api/orders/${reorderId}?telegramId=${telegramId}`);
+            if (res.ok) {
+              const o = await res.json();
+              if (o.telegramId === telegramId) cart.push(...parseItemsStr(o.items));
+            }
+          } catch (_) {}
+        } else if (favId) {
+          try {
+            const res = await fetch(`/api/favorites/${favId}?telegramId=${telegramId}`);
+            if (res.ok) {
+              const f = await res.json();
+              if (f.telegramId === telegramId) cart.push(...parseItemsStr(f.items));
+            }
+          } catch (_) {}
+        }
+      }
+      loadMenu();
+    }
+  </script>
+</body>
+</html>

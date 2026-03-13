@@ -1,0 +1,118 @@
+[
+  {
+    "id": 2,
+    "telegramId": "960820778",
+    "items": "1x Künefe (85₺)",
+    "total": 85,
+    "address": "Belirtilmedi",
+    "notes": "",
+    "orderType": "paket",
+    "status": "Teslim Edildi",
+    "createdAt": "2026-03-13T15:30:48.680Z"
+  },
+  {
+    "id": 3,
+    "telegramId": "960820778",
+    "items": "1x Lahmacun (45₺), 1x Pizza (Orta) (95₺), 1x Döner Dürüm (75₺), 1x Adana Kebap (120₺), 1x Kıymalı Pide (85₺), 1x Ayran (15₺), 1x Kola (25₺), 1x Fanta (25₺), 1x Su (10₺), 1x Çay (12₺), 1x Künefe (85₺), 1x Baklava (3 dilim) (75₺)",
+    "total": 667,
+    "address": "Belirtilmedi",
+    "notes": "",
+    "orderType": "paket",
+    "status": "Teslim Edildi",
+    "createdAt": "2026-03-13T15:41:28.642Z"
+  },
+  {
+    "id": 4,
+    "telegramId": "1786268836",
+    "items": "2x Lahmacun (90₺), 2x Ayran (30₺), 1x Baklava (3 dilim) (75₺)",
+    "total": 195,
+    "address": "Masa 8",
+    "notes": "Büyük dalga",
+    "orderType": "restoran",
+    "status": "Teslim Edildi",
+    "createdAt": "2026-03-13T15:45:33.415Z"
+  },
+  {
+    "id": 5,
+    "telegramId": "1786268836",
+    "items": "2x Lahmacun (90₺), 2x Ayran (30₺), 1x Baklava (3 dilim) (75₺), 4x Pizza (Orta) (380₺), 4x Döner Dürüm (300₺)",
+    "total": 875,
+    "address": "Masa -",
+    "notes": "Xxxx",
+    "orderType": "paket",
+    "paymentMethod": "kapida_pos",
+    "location": null,
+    "status": "Teslim Edildi",
+    "createdAt": "2026-03-13T16:05:47.060Z"
+  },
+  {
+    "id": 6,
+    "telegramId": "960820778",
+    "items": "2x Lahmacun (90₺), 1x Künefe (85₺)",
+    "total": 175,
+    "subtotal": 175,
+    "discountAmount": 0,
+    "address": "Belirtilmedi",
+    "notes": "",
+    "orderType": "paket",
+    "paymentMethod": "kapida_nakit",
+    "location": null,
+    "couponCode": null,
+    "status": "Teslim Edildi",
+    "createdAt": "2026-03-13T16:13:29.227Z"
+  },
+  {
+    "id": 7,
+    "telegramId": "960820778",
+    "items": "1x Lahmacun (45₺), 1x Pizza (Orta) (95₺), 1x Döner Dürüm (75₺), 1x Ayran (15₺), 1x Kola (25₺)",
+    "total": 255,
+    "subtotal": 255,
+    "discountAmount": 0,
+    "address": "Masa -",
+    "notes": "",
+    "orderType": "paket",
+    "paymentMethod": "kapida_nakit",
+    "location": {
+      "lat": 40.1768448,
+      "lng": 29.0947072
+    },
+    "couponCode": null,
+    "status": "Teslim Edildi",
+    "createdAt": "2026-03-13T16:42:15.138Z"
+  },
+  {
+    "id": 8,
+    "telegramId": "960820778",
+    "items": "1x Lahmacun (45₺), 1x Pizza (Orta) (95₺), 1x Döner Dürüm (75₺), 2x Ayran (30₺), 2x Kola (50₺)",
+    "total": 295,
+    "subtotal": 295,
+    "discountAmount": 0,
+    "address": "Belirtilmedi",
+    "notes": "",
+    "orderType": "paket",
+    "paymentMethod": "kapida_nakit",
+    "location": {
+      "lat": 40.173602,
+      "lng": 29.10389
+    },
+    "couponCode": null,
+    "status": "Teslim Edildi",
+    "createdAt": "2026-03-13T16:42:40.172Z"
+  },
+  {
+    "id": 9,
+    "telegramId": "1786268836",
+    "items": "2x Pizza (Orta) (190₺)",
+    "total": 190,
+    "subtotal": 190,
+    "discountAmount": 0,
+    "address": "Xx",
+    "notes": "",
+    "orderType": "paket",
+    "paymentMethod": "kapida_nakit",
+    "location": null,
+    "couponCode": null,
+    "status": "Alındı",
+    "createdAt": "2026-03-13T16:47:41.532Z"
+  }
+]

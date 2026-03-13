@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yardım - MeraPaket</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #0c0c0c;
+      color: #e4e4e7;
+      padding: 24px;
+      max-width: 480px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 20px; }
+    .info { background: #18181b; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+    .info h3 { color: #22c55e; margin-bottom: 8px; font-size: 0.9rem; }
+    .info p { color: #a1a1aa; }
+  </style>
+</head>
+<body>
+  <h1>ℹ️ Yardım</h1>
+  <div class="info">
+    <h3>📍 Adres</h3>
+    <p id="address">-</p>
+  </div>
+  <div class="info">
+    <h3>📞 Telefon</h3>
+    <p id="phone">-</p>
+  </div>
+  <div class="info">
+    <h3>🕐 Çalışma Saatleri</h3>
+    <p id="hours">-</p>
+  </div>
+  <script>
+    fetch('/api/restaurant').then(r => r.json()).then(d => {
+      document.getElementById('address').textContent = d.address || '-';
+      document.getElementById('phone').textContent = d.phone || '-';
+      document.getElementById('hours').textContent = d.hours || '-';
+    }).catch(() => {});
+  </script>
+</body>
+</html>
