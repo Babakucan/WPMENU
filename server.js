@@ -1,6 +1,7 @@
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
 const ngrok = require('@ngrok/ngrok');
@@ -76,6 +77,31 @@ const apiLimiter = rateLimit({
 });
 app.use('/api/', apiLimiter);
 
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
+const adminTokens = new Set();
+
+function requireAdmin(req, res, next) {
+  if (!ADMIN_PASSWORD) return next();
+  const token = req.headers['x-admin-token'] || (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  if (token && adminTokens.has(token)) return next();
+  res.status(401).json({ ok: false, error: 'Yetkisiz. Giriş yapın.' });
+}
+
+app.post('/api/auth/login', (req, res) => {
+  const { password } = req.body || {};
+  if (!ADMIN_PASSWORD) return res.json({ ok: true, token: 'no-auth' });
+  if (password !== ADMIN_PASSWORD) return res.status(401).json({ ok: false, error: 'Geçersiz şifre' });
+  const token = crypto.randomBytes(32).toString('hex');
+  adminTokens.add(token);
+  res.json({ ok: true, token });
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  const token = req.headers['x-admin-token'] || (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  adminTokens.delete(token);
+  res.json({ ok: true });
+});
+
 function isLocalhost() {
   return baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1');
 }
@@ -92,7 +118,7 @@ app.get('/api/favorites', (req, res) => {
   const favs = loadFavorites().filter(f => f.telegramId === req.query.telegramId);
   res.json({ favorites: favs });
 });
-app.get('/api/admin/stats', (req, res) => {
+app.get('/api/admin/stats', requireAdmin, (req, res) => {
   const favs = loadFavorites();
   const today = orders.filter(o => new Date(o.createdAt).toDateString() === new Date().toDateString());
   res.json({
@@ -103,7 +129,7 @@ app.get('/api/admin/stats', (req, res) => {
     todayRevenue: today.reduce((s, o) => s + (o.total || 0), 0)
   });
 });
-app.get('/api/analytics', (req, res) => {
+app.get('/api/analytics', requireAdmin, (req, res) => {
   const byStatus = {};
   orders.forEach(o => { byStatus[o.status] = (byStatus[o.status] || 0) + 1; });
   res.json({ byStatus, total: orders.length });
@@ -161,7 +187,7 @@ app.post('/api/coupon/validate', (req, res) => {
   if (!result) return res.json({ ok: false, error: 'Geçersiz kupon' });
   res.json({ ok: true, discount: result.discount, finalTotal: Math.max(0, (Number(subtotal) || 0) - result.discount) });
 });
-app.put('/api/restaurant', (req, res) => {
+app.put('/api/restaurant', requireAdmin, (req, res) => {
   try {
     fs.writeFileSync(RESTAURANT_PATH, JSON.stringify(req.body, null, 2));
     res.json({ ok: true });
@@ -170,7 +196,7 @@ app.put('/api/restaurant', (req, res) => {
     res.status(500).json({ ok: false, error: 'Kaydedilemedi' });
   }
 });
-app.put('/api/menu', (req, res) => {
+app.put('/api/menu', requireAdmin, (req, res) => {
   try {
     fs.writeFileSync(MENU_PATH, JSON.stringify(req.body, null, 2));
     res.json({ ok: true });
@@ -229,7 +255,7 @@ app.post('/api/order', (req, res) => {
     }
     bot.sendMessage(telegramId, formatOrderConfirm(order), { parse_mode: 'HTML' }).catch(e => logError('Bot mesaj', e));
     pendingLocationForOrder.set(String(telegramId), id);
-    bot.sendMessage(telegramId, '📍 Teslimat adresi için konumunuzu paylaşır mısınız?\n\n<b>Atamaya tıklayın → Konum</b>', { parse_mode: 'HTML' }).catch(() => {});
+    bot.sendMessage(telegramId, '📍 Sana kolay gelsin diye konumunu paylaşır mısın? Böylece adresini daha doğru bulabiliriz.\n\n<b>Konum</b> gönderebilir veya adresini yazabilirsin.', { parse_mode: 'HTML' }).catch(() => {});
     console.log('📥 Sipariş ' + id);
     res.json({ ok: true, orderId: id });
   } catch (e) {
@@ -238,10 +264,10 @@ app.post('/api/order', (req, res) => {
   }
 });
 
-app.get('/api/orders', (req, res) => {
+app.get('/api/orders', requireAdmin, (req, res) => {
   res.json({ orders: [...orders].reverse() });
 });
-app.get('/api/orders/:id', (req, res) => {
+app.get('/api/orders/:id', requireAdmin, (req, res) => {
   const order = orders.find(o => o.id === parseInt(req.params.id) && o.telegramId === req.query.telegramId);
   if (!order) return res.status(404).json({ error: 'Sipariş bulunamadı' });
   res.json(order);
@@ -260,11 +286,11 @@ app.post('/api/orders/:id/add', (req, res) => {
   order.total = (order.total || 0) + Number(total);
   if (order.subtotal != null) order.subtotal += Number(total);
   saveOrders(orders);
-  bot.sendMessage(telegramId, `➕ Eklemeler sipariş #${id} eklendi.\n\nYeni toplam: ${order.total}₺`, { parse_mode: 'HTML' }).catch(() => {});
+  bot.sendMessage(telegramId, `➕ Eklediklerin siparişe dahil edildi.\n\nYeni tutar: ${order.total}₺`, { parse_mode: 'HTML' }).catch(() => {});
   res.json({ ok: true, order });
 });
 
-app.patch('/api/orders/:id', (req, res) => {
+app.patch('/api/orders/:id', requireAdmin, (req, res) => {
   const id = parseInt(req.params.id);
   const { status } = req.body;
   const order = orders.find(o => o.id === id);
@@ -274,11 +300,11 @@ app.patch('/api/orders/:id', (req, res) => {
   order.status = status;
   saveOrders(orders);
   const msgs = {
-    'Hazırlanıyor': '👨‍🍳 Hazırlanıyor',
-    'Hazır': '✅ Hazır, yola çıkıyor',
-    'Yola Çıktı': '🚗 Yolda!',
+    'Hazırlanıyor': '👨‍🍳 Siparişin hazırlanıyor.',
+    'Hazır': '✅ Hazır, birazdan yola çıkacak.',
+    'Yola Çıktı': '🚗 Siparişin yolda!',
     'Teslim Edildi': '🎉 Teslim edildi. Afiyet olsun!',
-    'İptal': '❌ İptal edildi'
+    'İptal': '❌ Siparişin iptal edildi.'
   };
   if (msgs[status]) {
     const prefs = loadPrefs();
@@ -288,12 +314,12 @@ app.patch('/api/orders/:id', (req, res) => {
       if (status === 'Teslim Edildi') {
         const favs = loadFavorites();
         const isFav = favs.some(f => f.telegramId === order.telegramId && f.orderId === id);
-        if (!isFav) opts.reply_markup = { inline_keyboard: [[{ text: '⭐ Favorilere Ekle', callback_data: `fav_add_${id}` }]] };
+        if (!isFav) opts.reply_markup = { inline_keyboard: [[{ text: '⭐ Teşekkürler! Favorilere ekle', callback_data: `fav_add_${id}` }]] };
       }
-      bot.sendMessage(order.telegramId, `📦 <b>Sipariş #${id}</b>\n\n${msgs[status]}`, { parse_mode: 'HTML', ...opts }).catch(() => {});
+      bot.sendMessage(order.telegramId, `📦 <b>Siparişin</b>\n\n${msgs[status]}`, { parse_mode: 'HTML', ...opts }).catch(() => {});
       if (status === 'Teslim Edildi') {
         setTimeout(() => {
-          bot.sendMessage(order.telegramId, 'Siparişiniz nasıldı? Yorumlarınız bizim için önemli 💚').catch(() => {});
+          bot.sendMessage(order.telegramId, 'Sipariş nasıldı? Yorumunu merak ediyoruz 💚').catch(() => {});
         }, 60 * 1000);
       }
     }
@@ -351,28 +377,42 @@ function formatOrderConfirm(order) {
   const est = r.estimatedMinutes || 25;
   const payLabel = order.paymentMethod === 'kapida_pos' ? 'POS' : 'Nakit';
   const disc = order.discountAmount ? `\n🏷 İndirim: -${order.discountAmount}₺` : '';
-  return `✅ <b>Siparişiniz alındı!</b>
+  return `✅ <b>Siparişin alındı!</b>
 
-📦 #${order.id}
-${order.items}
+📦 ${order.items}
 
 📍 ${order.address}
 ${order.notes ? `📝 ${order.notes}\n` : ''}💳 ${payLabel}${disc}
 💰 <b>${order.total}₺</b>
 
-⏱ Tahmini süre: ~${est} dk
+⏱ Tahminen ${est} dakika içinde hazır olacak.
 
-Teşekkürler!`;
+Afiyet olsun!`;
+}
+
+function getActiveCampaign() {
+  const r = getRestaurant();
+  const campaigns = r.campaigns || {};
+  for (const [key, c] of Object.entries(campaigns)) {
+    if (c && c.enabled) return { key, ...c };
+  }
+  return null;
 }
 
 function buildMainKeyboard(chatId) {
   const useUrl = !isLocalhost();
-  const siparisBtn = useUrl ? menuButton(chatId, '🛒 Sipariş Ver') : { text: '🛒 Sipariş Ver', callback_data: 'open_menu' };
+  const siparisBtn = useUrl ? menuButton(chatId, '🍽️ Menüyü açın') : { text: '🍽️ Menüyü açın', callback_data: 'open_menu' };
+  const activeCampaign = getActiveCampaign();
+  const row2 = [
+    { text: '📋 Siparişlerim', callback_data: 'my_orders' },
+    { text: '⭐ Favorilerim', callback_data: 'open_favorites' }
+  ];
+  if (activeCampaign) row2.push({ text: '🎯 Kampanyalarım', callback_data: 'campaigns' });
   return {
     inline_keyboard: [
       [siparisBtn],
-      [{ text: '📋 Siparişlerim', callback_data: 'my_orders' }, { text: '🍽️ Menü', callback_data: 'menu_preview' }],
-      [{ text: 'ℹ️ İletişim', callback_data: 'help' }, { text: '⚙️ Ayarlar', callback_data: 'settings' }]
+      row2,
+      [{ text: '📍 Adres & iletişim', callback_data: 'help' }, { text: '⚙️ Ayarlar', callback_data: 'settings' }]
     ]
   };
 }
@@ -382,7 +422,7 @@ function sendMainMenu(chatId, firstName) {
   const name = firstName || 'Müşteri';
   const openNow = isOpen(r);
   const status = openNow ? '🟢 Açık' : '🔴 Kapalı';
-  const text = `👋 Merhaba ${name}!\n\n<b>${r.name || 'MeraPaket'}</b> — ${status}\n${r.hours || ''}\n\nAşağıdaki butonlardan devam edebilirsiniz.`;
+  const text = `👋 Merhaba ${name}!\n\n<b>${r.name || 'MeraPaket'}</b> — ${status}\n${r.hours || ''}\n\nNe yapmak istersin? Aşağıdaki butonlardan seçebilirsin.`;
   return bot.sendMessage(chatId, text, { parse_mode: 'HTML', reply_markup: buildMainKeyboard(chatId) }).catch(e => logError('Bot mesaj', e));
 }
 
@@ -412,7 +452,7 @@ bot.on('message', (msg) => {
         order.location = { lat: msg.location.latitude, lng: msg.location.longitude };
         saveOrders(orders);
       }
-      bot.sendMessage(chatId, '✅ Konumunuz siparişe eklendi. Teşekkürler!', { reply_markup: buildMainKeyboard(chatId) }).catch(() => {});
+      bot.sendMessage(chatId, '✅ Konumun alındı, teşekkürler!', { reply_markup: buildMainKeyboard(chatId) }).catch(() => {});
     } else {
       sendMainMenu(chatId, msg.from?.first_name);
     }
@@ -428,10 +468,24 @@ bot.on('callback_query', async (query) => {
   if (data === 'open_menu') {
     bot.answerCallbackQuery(query.id);
     if (isLocalhost()) {
-      await bot.sendMessage(chatId, `Sipariş vermek için menüyü açın:\n\n${menuUrl(chatId)}`);
+      await bot.sendMessage(chatId, `Menüyü açıp sipariş verebilirsin:\n\n${menuUrl(chatId)}`);
     } else {
-      await bot.sendMessage(chatId, 'Aşağıdaki butona tıklayarak menüyü Telegram içinde açın.', {
-        reply_markup: { inline_keyboard: [[menuButton(chatId, '📱 Menüyü Aç')], [{ text: '« Geri', callback_data: 'main_menu' }]] }
+      await bot.sendMessage(chatId, 'Menüyü açıp yemek seçebilirsin. Aşağıdaki butona tıkla:', {
+        reply_markup: { inline_keyboard: [[menuButton(chatId, '🍽️ Menüyü açın')], [{ text: '⬅️ Geri', callback_data: 'main_menu' }]] }
+      });
+    }
+    return;
+  }
+
+  if (data === 'open_favorites') {
+    bot.answerCallbackQuery(query.id);
+    const favUrl = menuUrl(chatId, 'section=favorites');
+    if (isLocalhost()) {
+      await bot.sendMessage(chatId, `Favorilerin:\n\n${favUrl}`);
+    } else {
+      const favBtn = { text: '⭐ Favorilerim', web_app: { url: favUrl } };
+      await bot.sendMessage(chatId, 'Favori siparişlerine buradan ulaşabilirsin:', {
+        reply_markup: { inline_keyboard: [[favBtn], [{ text: '⬅️ Geri', callback_data: 'main_menu' }]] }
       });
     }
     return;
@@ -439,16 +493,13 @@ bot.on('callback_query', async (query) => {
 
   if (data === 'menu_preview') {
     bot.answerCallbackQuery(query.id);
-    const items = loadMenuForPreview();
-    const useUrl = !isLocalhost();
-    const r = getRestaurant();
-    let text = `<b>${r.name || 'Menü'}</b>\n\n`;
-    if (items.length) text += items.map(p => `• ${p.name} — ${p.price}₺`).join('\n') + '\n\n';
-    const kb = useUrl
-      ? { inline_keyboard: [[menuButton(chatId, '🛒 Sipariş Ver')], [{ text: '« Geri', callback_data: 'main_menu' }]] }
-      : buildMainKeyboard(chatId);
-    await bot.sendMessage(chatId, text + 'Sipariş vermek için aşağıdaki butona tıklayın.', { parse_mode: 'HTML', reply_markup: kb });
-    if (!useUrl) await bot.sendMessage(chatId, menuUrl(chatId)).catch(() => {});
+    if (isLocalhost()) {
+      await bot.sendMessage(chatId, `Menüyü açıp sipariş verebilirsin:\n\n${menuUrl(chatId)}`);
+    } else {
+      await bot.sendMessage(chatId, 'Menüyü açıp yemek seçebilirsin. Butona tıkla:', {
+        reply_markup: { inline_keyboard: [[menuButton(chatId, '🍽️ Menüyü açın')], [{ text: '⬅️ Geri', callback_data: 'main_menu' }]] }
+      });
+    }
     return;
   }
 
@@ -466,7 +517,7 @@ bot.on('callback_query', async (query) => {
     const statusEmo = { Alındı: '📥', Hazırlanıyor: '👨‍🍳', Hazır: '✓', 'Yola Çıktı': '🚗' };
     let text = '<b>📋 Siparişlerim</b>\n\n';
     if (activeOrders.length > 0) {
-      text += '<b>Aktif siparişler</b>\n';
+      text += '<b>Devam eden siparişler</b>\n';
       activeOrders.forEach(o => {
         text += `${statusEmo[o.status] || '•'} ${o.status} — ${shortItems(o.items) || 'Sipariş'}\n`;
       });
@@ -478,7 +529,7 @@ bot.on('callback_query', async (query) => {
         text += `• ${shortItems(o.items) || 'Sipariş'} — ${o.total}₺\n`;
       });
     }
-    if (activeOrders.length === 0 && pastOrders.length === 0) text += 'Henüz siparişiniz yok.';
+    if (activeOrders.length === 0 && pastOrders.length === 0) text += 'Henüz sipariş yok. Yeni sipariş vermek için butona tıkla.';
 
     const CANCEL_MINUTES = 10;
     const canCancel = (o) => o.status === 'Alındı' && (Date.now() - new Date(o.createdAt).getTime()) < CANCEL_MINUTES * 60 * 1000;
@@ -486,18 +537,20 @@ bot.on('callback_query', async (query) => {
     const kb = { inline_keyboard: [] };
     if (activeOrders.length > 0) {
       activeOrders.forEach(o => {
-        const row = [{ text: `${o.status} · #${o.id}`, callback_data: `order_status_${o.id}` }];
-        if (canAdd(o)) row.push({ text: '➕ Ekleme', callback_data: `order_add_${o.id}` });
-        if (canCancel(o)) row.push({ text: 'İptal', callback_data: `order_cancel_${o.id}` });
+        const hint = (shortItems(o.items) || String(o.total) + '₺').slice(0, 15);
+        const row = [{ text: `${statusEmo[o.status] || ''} ${o.status} — ${hint}`, callback_data: `order_status_${o.id}` }];
+        if (canAdd(o)) row.push({ text: '➕ Ürün ekleyebilirsiniz', callback_data: `order_add_${o.id}` });
+        if (canCancel(o)) row.push({ text: '❌ İptal', callback_data: `order_cancel_${o.id}` });
         kb.inline_keyboard.push(row);
       });
     }
     pastOrders.forEach(o => {
-      kb.inline_keyboard.push([{ text: `Detay #${o.id}`, callback_data: `order_detail_${o.id}` }]);
+      const lbl = (shortItems(o.items) || '').slice(0, 20) + ((shortItems(o.items) || '').length > 20 ? '…' : '') || o.total + '₺';
+      kb.inline_keyboard.push([{ text: `📋 Detay gör — ${lbl}`, callback_data: `order_detail_${o.id}` }]);
     });
     kb.inline_keyboard.push(
-      [isLocalhost() ? { text: '🛒 Yeni Sipariş', callback_data: 'open_menu' } : menuButton(chatId, '🛒 Yeni Sipariş')],
-      [{ text: '« Ana Menü', callback_data: 'main_menu' }]
+      [isLocalhost() ? { text: '🍽️ Teşekkürler! Yeni sipariş ver', callback_data: 'open_menu' } : menuButton(chatId, '🍽️ Teşekkürler! Yeni sipariş ver')],
+      [{ text: '🏠 Ana sayfa', callback_data: 'main_menu' }]
     );
 
     await bot.editMessageText(text, { chat_id: chatId, message_id: query.message.message_id, parse_mode: 'HTML', reply_markup: kb }).catch(() =>
@@ -511,21 +564,21 @@ bot.on('callback_query', async (query) => {
     const order = orders.find(o => o.id === orderId && o.telegramId === String(chatId));
     bot.answerCallbackQuery(query.id);
     if (!order) {
-      await bot.sendMessage(chatId, 'Sipariş bulunamadı.', { reply_markup: buildMainKeyboard(chatId) });
+      await bot.sendMessage(chatId, 'Böyle bir sipariş bulunamadı.', { reply_markup: buildMainKeyboard(chatId) });
       return;
     }
     if (order.status !== 'Alındı') {
-      await bot.sendMessage(chatId, 'Bu sipariş artık iptal edilemez.', { reply_markup: buildMainKeyboard(chatId) });
+      await bot.sendMessage(chatId, 'Bu sipariş artık iptal edilemez, çok ilerlemiş.', { reply_markup: buildMainKeyboard(chatId) });
       return;
     }
     const created = new Date(order.createdAt).getTime();
     if (Date.now() - created > 10 * 60 * 1000) {
-      await bot.sendMessage(chatId, 'İptal süresi doldu (10 dk). İletişime geçin.', { reply_markup: buildMainKeyboard(chatId) });
+      await bot.sendMessage(chatId, 'İptal için 10 dakika geçmiş. İptal etmek istersen bizimle iletişime geç.', { reply_markup: buildMainKeyboard(chatId) });
       return;
     }
     order.status = 'İptal';
     saveOrders(orders);
-    await bot.sendMessage(chatId, `❌ Sipariş ${orderId} iptal edildi.`, { reply_markup: buildMainKeyboard(chatId) });
+    await bot.sendMessage(chatId, 'Siparişin iptal edildi.', { reply_markup: buildMainKeyboard(chatId) });
     return;
   }
 
@@ -534,16 +587,16 @@ bot.on('callback_query', async (query) => {
     const order = orders.find(o => o.id === orderId && o.telegramId === String(chatId));
     bot.answerCallbackQuery(query.id);
     if (!order) {
-      await bot.sendMessage(chatId, 'Sipariş bulunamadı.', { reply_markup: buildMainKeyboard(chatId) });
+      await bot.sendMessage(chatId, 'Böyle bir sipariş bulunamadı.', { reply_markup: buildMainKeyboard(chatId) });
       return;
     }
     if (!['Alındı', 'Hazırlanıyor', 'Hazır'].includes(order.status)) {
-      await bot.sendMessage(chatId, 'Sipariş yola çıktı, ekleme yapılamaz.', { reply_markup: buildMainKeyboard(chatId) });
+      await bot.sendMessage(chatId, 'Siparişin yolda, artık ekleme yapamıyoruz.', { reply_markup: buildMainKeyboard(chatId) });
       return;
     }
     const useUrl = !isLocalhost();
-    await bot.sendMessage(chatId, 'Siparişe eklemek istediğiniz ürünleri seçin:', {
-      reply_markup: useUrl ? { inline_keyboard: [[menuButton(chatId, '➕ Menüyü Aç', `add=${orderId}`)], [{ text: '« Geri', callback_data: 'my_orders' }]] } : undefined
+    await bot.sendMessage(chatId, 'Menüden eklemek istediklerini seç. Sepete eklenecek:', {
+      reply_markup: useUrl ? { inline_keyboard: [[menuButton(chatId, '➕ Menüden ekleyin', `add=${orderId}`)], [{ text: '⬅️ Geri', callback_data: 'my_orders' }]] } : undefined
     });
     if (!useUrl) await bot.sendMessage(chatId, menuUrl(chatId, `add=${orderId}`)).catch(() => {});
     return;
@@ -554,11 +607,11 @@ bot.on('callback_query', async (query) => {
     const order = orders.find(o => o.id === orderId && o.telegramId === String(chatId));
     bot.answerCallbackQuery(query.id);
     if (!order) {
-      await bot.sendMessage(chatId, 'Sipariş bulunamadı.', { reply_markup: buildMainKeyboard(chatId) });
+      await bot.sendMessage(chatId, 'Böyle bir sipariş bulunamadı.', { reply_markup: buildMainKeyboard(chatId) });
       return;
     }
-    const text = `<b>Sipariş #${order.id}</b>\n\n${order.items}\n\n📍 ${order.address}\n💰 ${order.total}₺`;
-    const kb = { inline_keyboard: [[{ text: '« Siparişlerim', callback_data: 'my_orders' }]] };
+    const text = `<b>Sipariş Detayı</b>\n\n${order.items}\n\n📍 ${order.address}\n💰 ${order.total}₺`;
+    const kb = { inline_keyboard: [[{ text: '📋 Siparişlerime dön', callback_data: 'my_orders' }]] };
     await bot.editMessageText(text, { chat_id: chatId, message_id: query.message.message_id, parse_mode: 'HTML', reply_markup: kb }).catch(() =>
       bot.sendMessage(chatId, text, { parse_mode: 'HTML', reply_markup: kb })
     );
@@ -570,16 +623,16 @@ bot.on('callback_query', async (query) => {
     const order = orders.find(o => o.id === orderId && o.telegramId === String(chatId));
     bot.answerCallbackQuery(query.id);
     if (!order) {
-      await bot.sendMessage(chatId, 'Sipariş bulunamadı.', { reply_markup: buildMainKeyboard(chatId) });
+      await bot.sendMessage(chatId, 'Böyle bir sipariş bulunamadı.', { reply_markup: buildMainKeyboard(chatId) });
       return;
     }
     const statusEmo = { Alındı: '📥', Hazırlanıyor: '👨‍🍳', Hazır: '✅', 'Yola Çıktı': '🚗', 'Teslim Edildi': '🎉' };
-    const text = `<b>Sipariş #${order.id}</b>\n\n${statusEmo[order.status] || '•'} ${order.status}\n💰 ${order.total}₺`;
+    const text = `<b>Siparişiniz</b>\n\n${statusEmo[order.status] || '•'} ${order.status}\n💰 ${order.total}₺`;
     const canAdd = ['Alındı', 'Hazırlanıyor', 'Hazır'].includes(order.status);
     const kb = {
       inline_keyboard: [
-        ...(canAdd ? [[{ text: '➕ Ekleme', callback_data: `order_add_${order.id}` }]] : []),
-        [{ text: '« Siparişlerim', callback_data: 'my_orders' }]
+        ...(canAdd ? [[{ text: '➕ Ürün ekleyebilirsiniz', callback_data: `order_add_${order.id}` }]] : []),
+        [{ text: '📋 Siparişlerime dön', callback_data: 'my_orders' }]
       ]
     };
     await bot.editMessageText(text, { chat_id: chatId, message_id: query.message.message_id, parse_mode: 'HTML', reply_markup: kb }).catch(() =>
@@ -593,12 +646,12 @@ bot.on('callback_query', async (query) => {
     const order = orders.find(o => o.id === orderId);
     bot.answerCallbackQuery(query.id);
     if (!order || order.telegramId !== String(chatId)) {
-      await bot.sendMessage(chatId, 'Sipariş bulunamadı.');
+      await bot.sendMessage(chatId, 'Böyle bir sipariş bulunamadı.');
       return;
     }
     const favs = loadFavorites();
     if (favs.some(f => f.telegramId === String(chatId) && f.orderId === orderId)) {
-      await bot.sendMessage(chatId, 'Bu sipariş zaten favorilerde.', { reply_markup: buildMainKeyboard(chatId) });
+      await bot.sendMessage(chatId, 'Bu sipariş zaten favorilerinde.', { reply_markup: buildMainKeyboard(chatId) });
       return;
     }
     favs.push({
@@ -618,12 +671,12 @@ bot.on('callback_query', async (query) => {
     const favs = loadFavorites().filter(f => f.telegramId === String(chatId));
     bot.answerCallbackQuery(query.id);
     if (favs.length === 0) {
-      await bot.sendMessage(chatId, 'Favori siparişiniz yok.', { reply_markup: buildMainKeyboard(chatId) });
+      await bot.sendMessage(chatId, 'Henüz favori siparişin yok. Geçmiş siparişlerden favorilere ekleyebilirsin.', { reply_markup: buildMainKeyboard(chatId) });
       return;
     }
     const text = '<b>⭐ Favorilerim</b>\n\n' + favs.map(f => `• ${f.name} — ${f.total}₺`).join('\n');
     const kb = {
-      inline_keyboard: favs.map(f => [{ text: `🛒 ${f.name}`, callback_data: `fav_order_${f.id}` }]).concat([[{ text: '« Geri', callback_data: 'my_orders' }]])
+      inline_keyboard: favs.map(f => [{ text: `🛒 ${f.name}`, callback_data: `fav_order_${f.id}` }]).concat([[{ text: '⬅️ Geri', callback_data: 'my_orders' }]])
     };
     await bot.editMessageText(text, { chat_id: chatId, message_id: query.message.message_id, parse_mode: 'HTML', reply_markup: kb }).catch(() =>
       bot.sendMessage(chatId, text, { parse_mode: 'HTML', reply_markup: kb })
@@ -636,12 +689,12 @@ bot.on('callback_query', async (query) => {
     const fav = loadFavorites().find(f => f.id === favId && f.telegramId === String(chatId));
     bot.answerCallbackQuery(query.id);
     if (!fav) {
-      await bot.sendMessage(chatId, 'Favori bulunamadı.', { reply_markup: buildMainKeyboard(chatId) });
+      await bot.sendMessage(chatId, 'Bu favori bulunamadı.', { reply_markup: buildMainKeyboard(chatId) });
       return;
     }
     const useUrl = !isLocalhost();
-    await bot.sendMessage(chatId, useUrl ? 'Favori siparişiniz sepete eklenecek:' : `Menüyü açın:\n${menuUrl(chatId, `fav=${favId}`)}`, {
-      reply_markup: useUrl ? { inline_keyboard: [[menuButton(chatId, '🛒 Menüyü Aç', `fav=${favId}`)], [{ text: '« Geri', callback_data: 'favorites' }]] } : undefined
+    await bot.sendMessage(chatId, useUrl ? 'Bu favori sipariş sepete eklenecek. Butona tıkla:' : `Menüyü aç:\n${menuUrl(chatId, `fav=${favId}`)}`, {
+      reply_markup: useUrl ? { inline_keyboard: [[menuButton(chatId, '🍽️ Teşekkürler! Bu siparişi tekrar verin', `fav=${favId}`)], [{ text: '⬅️ Geri', callback_data: 'favorites' }]] } : undefined
     });
     return;
   }
@@ -658,17 +711,30 @@ bot.on('callback_query', async (query) => {
     const prefs = loadPrefs()[chatId] || { notify: true, addresses: [] };
     const addrs = prefs.addresses || [];
     let text = '<b>⚙️ Ayarlar</b>\n\n';
-    text += `Bildirimler: ${prefs.notify ? 'Açık' : 'Kapalı'}\n`;
-    if (addrs.length) text += '\n<b>Son adresler:</b>\n' + addrs.slice(-3).map((a, i) => `${i + 1}. ${a.slice(0, 40)}${a.length > 40 ? '...' : ''}`).join('\n');
+    text += `Bildirimler: ${prefs.notify ? 'Açık — Sipariş durumu güncellenince haberdar olursun.' : 'Kapalı'}\n`;
+    if (addrs.length) text += '\n<b>Kayıtlı adresler:</b>\n' + addrs.slice(-3).map((a, i) => `${i + 1}. ${a.slice(0, 40)}${a.length > 40 ? '...' : ''}`).join('\n');
     const kb = {
       inline_keyboard: [
-        [{ text: prefs.notify ? '🔕 Bildirimleri Kapat' : '🔔 Bildirimleri Aç', callback_data: prefs.notify ? 'notify_off' : 'notify_on' }],
-        [{ text: '« Ana Menü', callback_data: 'main_menu' }]
+        [{ text: prefs.notify ? '🔕 Bildirimleri kapat' : '🔔 Bildirimleri aç', callback_data: prefs.notify ? 'notify_off' : 'notify_on' }],
+        [{ text: '🏠 Ana sayfa', callback_data: 'main_menu' }]
       ]
     };
     await bot.editMessageText(text, { chat_id: chatId, message_id: query.message.message_id, parse_mode: 'HTML', reply_markup: kb }).catch(() =>
       bot.sendMessage(chatId, text, { parse_mode: 'HTML', reply_markup: kb })
     );
+    return;
+  }
+
+  if (data === 'campaigns') {
+    const campaign = getActiveCampaign();
+    bot.answerCallbackQuery(query.id);
+    if (!campaign) {
+      await bot.sendMessage(chatId, 'Şu an aktif kampanya yok.', { reply_markup: buildMainKeyboard(chatId) });
+      return;
+    }
+    const desc = campaign.description || 'Aktif kampanya';
+    const text = `🎯 <b>Aktif Kampanya</b>\n\n${desc}\n\nMenüden sipariş verirken otomatik uygulanacak.`;
+    await bot.sendMessage(chatId, text, { parse_mode: 'HTML', reply_markup: buildMainKeyboard(chatId) });
     return;
   }
 
@@ -680,7 +746,7 @@ bot.on('callback_query', async (query) => {
     const kb = {
       inline_keyboard: [
         ...(useUrl ? [[{ text: '🌐 Detaylı Bilgi', url: helpUrl() }]] : []),
-        [{ text: '« Ana Menü', callback_data: 'main_menu' }]
+        [{ text: '🏠 Ana sayfa', callback_data: 'main_menu' }]
       ]
     };
     await bot.sendMessage(chatId, text, { parse_mode: 'HTML', reply_markup: kb });

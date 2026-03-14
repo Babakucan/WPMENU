@@ -164,18 +164,68 @@
     .coupon-row input { flex: 1; min-width: 100px; }
     .empty { text-align: center; padding: 48px 20px; color: var(--muted); }
     .last-update { font-size: 0.75rem; color: var(--muted); margin-top: 16px; }
+    .login-screen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      padding: 20px;
+    }
+    .login-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      width: 100%;
+      max-width: 380px;
+      text-align: center;
+    }
+    .login-logo { font-size: 1.75rem; font-weight: 700; margin-bottom: 8px; }
+    .login-sub { color: var(--muted); font-size: 0.95rem; margin-bottom: 28px; }
+    .login-card input { margin-bottom: 16px; }
+    .login-error { color: #ef4444; font-size: 0.9rem; margin-bottom: 12px; min-height: 20px; }
+    .login-card .btn-primary { width: 100%; padding: 14px; }
+    .logout-btn { background: transparent; border: 1px solid var(--border); color: var(--muted); margin-left: auto; }
+    .logout-btn:hover { color: var(--text); background: var(--surface-2); }
+    .campaign-card { border: 1px solid var(--border); border-radius: 12px; margin-bottom: 16px; overflow: hidden; }
+    .campaign-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: var(--surface-2); cursor: pointer; }
+    .campaign-header:hover { background: #252529; }
+    .campaign-header h4 { font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+    .campaign-body { padding: 20px; display: none; border-top: 1px solid var(--border); }
+    .campaign-card.open .campaign-body { display: block; }
+    .campaign-desc { font-size: 0.85rem; color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
+    .campaign-toggle { display: flex; align-items: center; gap: 8px; }
+    .toggle-switch { width: 44px; height: 24px; background: var(--border); border-radius: 12px; cursor: pointer; position: relative; transition: background 0.2s; }
+    .toggle-switch.on { background: var(--accent); }
+    .toggle-switch::after { content: ''; position: absolute; width: 20px; height: 20px; background: #fff; border-radius: 50%; top: 2px; left: 2px; transition: transform 0.2s; }
+    .toggle-switch.on::after { transform: translateX(20px); }
+    .campaign-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
   </style>
 </head>
 <body>
-  <div class="layout">
+  <div id="login-screen" class="login-screen" style="display:none">
+    <div class="login-card">
+      <div class="login-logo">🍽️ MeraPaket</div>
+      <div class="login-sub">Restoran Paneli</div>
+      <form id="login-form" onsubmit="doLogin(event)">
+        <input type="password" id="login-password" placeholder="Şifre" required autocomplete="current-password">
+        <div id="login-error" class="login-error"></div>
+        <button type="submit" class="btn btn-primary">Giriş Yap</button>
+      </form>
+    </div>
+  </div>
+  <div id="panel-layout" class="layout" style="display:none">
     <aside class="sidebar">
       <div class="sidebar-logo">🍽️ MeraPaket</div>
       <nav>
         <a class="nav-item active" data-tab="orders">📋 Siparişler</a>
         <a class="nav-item" data-tab="menu">🍴 Menü</a>
         <a class="nav-item" data-tab="restaurant">⚙️ Restoran</a>
+        <a class="nav-item" data-tab="campaigns">🎯 Kampanyalar</a>
         <a class="nav-item" data-tab="stats">📊 İstatistik</a>
       </nav>
+      <button class="btn logout-btn nav-item" onclick="doLogout()" style="margin:20px;width:calc(100% - 40px)">🚪 Çıkış</button>
     </aside>
     <main class="main">
       <section id="section-orders" class="section active">
@@ -234,6 +284,15 @@
         </div>
       </section>
 
+      <section id="section-campaigns" class="section">
+        <div class="section-header">
+          <h1 class="section-title">Kampanya & Müdavim Sistemi</h1>
+          <button class="btn btn-primary" onclick="saveCampaigns()">Kaydet</button>
+        </div>
+        <p style="color:var(--muted);margin-bottom:24px">Sadece <b>tek kampanya</b> aktif olabilir. Birini açtığınızda diğerleri otomatik kapanır.</p>
+        <div id="campaigns-list"></div>
+      </section>
+
       <section id="section-stats" class="section">
         <div class="section-header">
           <h1 class="section-title">İstatistikler</h1>
@@ -265,6 +324,7 @@
         if (n.dataset.tab === 'stats') loadStats();
         if (n.dataset.tab === 'menu') loadMenuEditor();
         if (n.dataset.tab === 'restaurant') loadRestaurantForm();
+        if (n.dataset.tab === 'campaigns') loadCampaignsForm();
       });
     });
 
@@ -441,6 +501,123 @@
       loadRestaurantForm();
     }
 
+    const CAMPAIGN_DEFS = {
+      orderCount: { title: '📦 Sipariş Sayısı Kampanyası', desc: 'Her X siparişte müşteriye indirim veya bedava ürün. Örn: Her 5 siparişte %10 indirim.', fields: [
+        { key: 'orderThreshold', label: 'Sipariş eşiği', type: 'number', min: 2, placeholder: '5' },
+        { key: 'rewardType', label: 'Ödül türü', type: 'select', options: [{ v: 'percent', l: 'Yüzde (%)' }, { v: 'fixed', l: 'Sabit (₺)' }] },
+        { key: 'rewardValue', label: 'Ödül değeri', type: 'number', min: 0, placeholder: '10' },
+        { key: 'description', label: 'Açıklama (müşteriye gösterilir)', type: 'text', placeholder: 'Her 5 siparişte %10 indirim' }
+      ]},
+      points: { title: '⭐ Puan Sistemi', desc: 'Her X₺ harcamada puan kazanır, Y puanda indirim kullanır. Örn: 10₺=1 puan, 100 puan=10₺ indirim.', fields: [
+        { key: 'pointsPerLira', label: 'Her kaç ₺ için 1 puan', type: 'number', min: 1, placeholder: '10' },
+        { key: 'redeemPoints', label: 'İndirim için gereken puan', type: 'number', min: 1, placeholder: '100' },
+        { key: 'redeemValue', label: 'Bu puanda kaç ₺ indirim', type: 'number', min: 0, placeholder: '10' },
+        { key: 'description', label: 'Açıklama', type: 'text', placeholder: '10₺ harcamada 1 puan, 100 puanda 10₺ indirim' }
+      ]},
+      totalSpent: { title: '💰 Toplam Harcama Kampanyası', desc: 'Belirli tutarda harcama yapan müşteriye ödül. Örn: Bu ay 200₺ harcadıysan %15 indirim.', fields: [
+        { key: 'spendThreshold', label: 'Harcama eşiği (₺)', type: 'number', min: 0, placeholder: '200' },
+        { key: 'rewardType', label: 'Ödül türü', type: 'select', options: [{ v: 'percent', l: 'Yüzde (%)' }, { v: 'fixed', l: 'Sabit (₺)' }] },
+        { key: 'rewardValue', label: 'Ödül değeri', type: 'number', min: 0, placeholder: '15' },
+        { key: 'description', label: 'Açıklama', type: 'text', placeholder: 'Bu ay 200₺ harcamada %15 indirim' }
+      ]},
+      firstOrder: { title: '🎉 İlk Sipariş İndirimi', desc: 'İlk kez sipariş veren müşteriye hoş geldin indirimi.', fields: [
+        { key: 'discountPercent', label: 'İndirim yüzdesi (%)', type: 'number', min: 0, max: 100, placeholder: '10' },
+        { key: 'description', label: 'Açıklama', type: 'text', placeholder: 'İlk siparişte %10 indirim' }
+      ]}
+    };
+
+    async function loadCampaignsForm() {
+      try {
+        const r = await authFetch('/api/restaurant');
+        restaurantData = await r.json();
+        if (!restaurantData.campaigns) restaurantData.campaigns = {};
+        const keys = Object.keys(restaurantData.campaigns);
+        const enabledKeys = keys.filter(k => restaurantData.campaigns[k]?.enabled);
+        if (enabledKeys.length > 1) {
+          enabledKeys.slice(1).forEach(k => { restaurantData.campaigns[k].enabled = false; });
+        }
+        const list = document.getElementById('campaigns-list');
+        list.innerHTML = Object.entries(CAMPAIGN_DEFS).map(([key, def], i) => {
+          const c = restaurantData.campaigns[key] || {};
+          const enabled = !!c.enabled;
+          return `
+            <div class="campaign-card ${i === 0 ? 'open' : ''}" id="camp-${key}">
+              <div class="campaign-header" onclick="toggleCampaignCard('${key}')">
+                <h4>${def.title}</h4>
+                <div class="campaign-toggle">
+                  <span style="font-size:0.85rem;color:var(--muted)">${enabled ? 'Açık' : 'Kapalı'}</span>
+                  <div class="toggle-switch ${enabled ? 'on' : ''}" onclick="event.stopPropagation();toggleCampaign('${key}')" id="toggle-${key}"></div>
+                </div>
+              </div>
+              <div class="campaign-body">
+                <div class="campaign-desc">${def.desc}</div>
+                <div class="campaign-fields">
+                  ${def.fields.map(f => {
+                    const val = c[f.key] ?? '';
+                    if (f.type === 'select') return `
+                      <div class="form-group">
+                        <label>${f.label}</label>
+                        <select onchange="setCampaign('${key}','${f.key}',this.value)">
+                          ${(f.options || []).map(o => `<option value="${o.v}" ${val === o.v ? 'selected' : ''}>${o.l}</option>`).join('')}
+                        </select>
+                      </div>`;
+                    return `
+                      <div class="form-group">
+                        <label>${f.label}</label>
+                        <input type="${f.type}" value="${val}" min="${f.min || ''}" max="${f.max || ''}" placeholder="${f.placeholder || ''}" onchange="setCampaign('${key}','${f.key}',this.value)">
+                      </div>`;
+                  }).join('')}
+                </div>
+              </div>
+            </div>`;
+        }).join('');
+      } catch (e) {
+        document.getElementById('campaigns-list').innerHTML = '<div class="empty">Yüklenemedi</div>';
+      }
+    }
+
+    function toggleCampaignCard(key) {
+      document.getElementById('camp-' + key)?.classList.toggle('open');
+    }
+
+    function toggleCampaign(key) {
+      if (!restaurantData.campaigns) restaurantData.campaigns = {};
+      if (!restaurantData.campaigns[key]) restaurantData.campaigns[key] = {};
+      const turningOn = !restaurantData.campaigns[key].enabled;
+      if (turningOn) {
+        Object.keys(restaurantData.campaigns).forEach(k => {
+          if (restaurantData.campaigns[k]) restaurantData.campaigns[k].enabled = k === key;
+        });
+        document.querySelectorAll('.toggle-switch').forEach(sw => sw.classList.remove('on'));
+        document.querySelectorAll('.campaign-header span').forEach(s => s.textContent = 'Kapalı');
+      } else {
+        restaurantData.campaigns[key].enabled = false;
+      }
+      const sw = document.getElementById('toggle-' + key);
+      const lbl = sw?.closest('.campaign-header')?.querySelector('span');
+      if (sw) sw.classList.toggle('on', restaurantData.campaigns[key].enabled);
+      if (lbl) lbl.textContent = restaurantData.campaigns[key].enabled ? 'Açık' : 'Kapalı';
+    }
+
+    function setCampaign(key, field, val) {
+      if (!restaurantData.campaigns) restaurantData.campaigns = {};
+      if (!restaurantData.campaigns[key]) restaurantData.campaigns[key] = {};
+      const numFields = ['orderThreshold','rewardValue','pointsPerLira','redeemPoints','redeemValue','spendThreshold','discountPercent'];
+      restaurantData.campaigns[key][field] = numFields.includes(field) ? (Number(val) || 0) : val;
+    }
+
+    async function saveCampaigns() {
+      try {
+        const r = await authFetch('/api/restaurant', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(restaurantData)
+        });
+        const d = await r.json();
+        alert(d.error ? d.error : 'Kampanyalar kaydedildi.');
+      } catch (e) { alert('Kayıt başarısız'); }
+    }
+
     async function saveRestaurant() {
       restaurantData.name = document.getElementById('r-name').value;
       restaurantData.address = document.getElementById('r-address').value;
@@ -479,8 +656,200 @@
       ).join('');
     }
 
-    loadOrders();
-    setInterval(loadOrders, 4000);
+    function startPanel() { loadOrders(); setInterval(loadOrders, 4000); }
+  </script>
+  <script>
+    const TOKEN_KEY = 'admin_token';
+
+    function getToken() { return sessionStorage.getItem(TOKEN_KEY); }
+    function setToken(t) { if (t && t !== 'no-auth') sessionStorage.setItem(TOKEN_KEY, t); else sessionStorage.removeItem(TOKEN_KEY); }
+    function clearToken() { sessionStorage.removeItem(TOKEN_KEY); }
+
+    function authFetch(url, opts = {}) {
+      const token = getToken();
+      opts.headers = { ...opts.headers, 'X-Admin-Token': token || '' };
+      return fetch(url, opts).then(r => {
+        if (r.status === 401) { clearToken(); showLogin(); return Promise.reject(new Error('Yetkisiz')); }
+        return r;
+      });
+    }
+
+    function showLogin() {
+      document.getElementById('login-screen').style.display = 'flex';
+      document.getElementById('panel-layout').style.display = 'none';
+    }
+    function showPanel() {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('panel-layout').style.display = 'flex';
+    }
+
+    async function doLogin(e) {
+      e.preventDefault();
+      const pw = document.getElementById('login-password').value;
+      document.getElementById('login-error').textContent = '';
+      try {
+        const r = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: pw })
+        });
+        const d = await r.json();
+        if (d.ok && d.token) { setToken(d.token); showPanel(); startPanel(); }
+        else document.getElementById('login-error').textContent = d.error || 'Giriş başarısız';
+      } catch (err) { document.getElementById('login-error').textContent = 'Bağlantı hatası'; }
+    }
+
+    async function doLogout() {
+      try { await authFetch('/api/auth/logout', { method: 'POST' }); } catch (_) {}
+      clearToken(); showLogin();
+    }
+
+    (function initAuth() {
+      authFetch('/api/orders').then(r => {
+        if (r.ok) { showPanel(); startPanel(); }
+        else { clearToken(); showLogin(); }
+      }).catch(() => showLogin());
+    })();
+
+    const _loadOrders = loadOrders;
+    loadOrders = function() {
+      authFetch('/api/orders').then(r => r.json()).then(d => {
+        const prevCount = orders.length;
+        orders = d.orders || [];
+        if (orders.length > prevCount && prevCount > 0) playNewOrderSound();
+        const statusFilter = document.getElementById('filter-status')?.value || '';
+        let filtered = statusFilter ? orders.filter(o => o.status === statusFilter) : orders;
+        const today = orders.filter(o => isToday(o.createdAt));
+        document.getElementById('today-count').textContent = today.length;
+        document.getElementById('today-total').textContent = today.reduce((s, o) => s + o.total, 0) + '₺';
+        document.getElementById('active-count').textContent = orders.filter(o => o.status !== 'Teslim Edildi' && o.status !== 'İptal').length;
+        document.getElementById('orders-update').textContent = 'Son güncelleme: ' + new Date().toLocaleTimeString('tr-TR');
+        const statuses = ['Alındı', 'Hazırlanıyor', 'Hazır', 'Yola Çıktı', 'Teslim Edildi', 'İptal'];
+        const el = document.getElementById('orders-list');
+        if (!filtered.length) { el.innerHTML = '<div class="empty">Sipariş yok</div>'; return; }
+        el.innerHTML = filtered.map(o => `
+          <div class="order-card">
+            <div class="order-row">
+              <span class="order-id">#${o.id}</span>
+              <span class="order-time">${formatDate(o.createdAt)}</span>
+            </div>
+            <div class="order-items">${o.items}</div>
+            <div class="order-meta">📍 ${o.address}${o.notes ? ' · 📝 ' + o.notes : ''}</div>
+            <div class="order-footer">
+              <span class="stat-value" style="font-size:1rem">${o.total}₺</span>
+              <span class="badge">${o.orderType === 'restoran' ? '🏠' : '📦'}</span>
+              <span class="badge">${(o.paymentMethod || 'kapida_nakit') === 'kapida_pos' ? '💳' : '💵'}</span>
+              <select onchange="updateStatus(${o.id}, this.value)">
+                ${statuses.map(s => `<option ${o.status === s ? 'selected' : ''}>${s}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+        `).join('');
+      }).catch(() => { document.getElementById('orders-list').innerHTML = '<div class="empty">Bağlantı hatası</div>'; });
+    };
+
+    const _updateStatus = updateStatus;
+    updateStatus = async function(id, status) {
+      await authFetch(`/api/orders/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
+      loadOrders();
+    };
+
+    const _loadMenuEditor = loadMenuEditor;
+    loadMenuEditor = async function() {
+      try {
+        const r = await authFetch('/api/menu');
+        menuData = await r.json();
+        const cats = menuData.categories || [];
+        const el = document.getElementById('menu-editor');
+        el.innerHTML = cats.map((cat, ci) => `
+          <div class="category-block">
+            <h3>${cat.icon || '🍽️'} ${cat.name}</h3>
+            ${(cat.products || []).map((p, pi) => `
+              <div class="product-row">
+                <input type="text" value="${(p.name || '').replace(/"/g, '&quot;')}" onchange="setProduct(${ci},${pi},'name',this.value)" placeholder="Ürün adı">
+                <input type="number" value="${p.price || 0}" min="0" onchange="setProduct(${ci},${pi},'price',this.value)" placeholder="₺">
+                <button class="btn" style="background:#dc2626;color:#fff;padding:6px 10px" onclick="removeProduct(${ci},${pi})">Sil</button>
+              </div>
+            `).join('')}
+            <button class="btn" style="margin-top:8px;background:var(--accent-dim);color:var(--accent)" onclick="addProduct(${ci})">+ Ürün Ekle</button>
+          </div>
+        `).join('');
+      } catch (e) { document.getElementById('menu-editor').innerHTML = '<div class="empty">Menü yüklenemedi</div>'; }
+    };
+
+    const _saveMenu = saveMenu;
+    saveMenu = async function() {
+      try {
+        const r = await authFetch('/api/menu', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(menuData) });
+        const d = await r.json();
+        alert(d.ok ? 'Menü kaydedildi.' : (d.error || 'Hata'));
+      } catch (e) { alert('Kayıt başarısız'); }
+    };
+
+    const _loadRestaurantForm = loadRestaurantForm;
+    loadRestaurantForm = async function() {
+      try {
+        const r = await authFetch('/api/restaurant');
+        restaurantData = await r.json();
+        document.getElementById('r-name').value = restaurantData.name || '';
+        document.getElementById('r-address').value = restaurantData.address || '';
+        document.getElementById('r-phone').value = restaurantData.phone || '';
+        document.getElementById('r-hoursOpen').value = restaurantData.hoursOpen || '10:00';
+        document.getElementById('r-hoursClose').value = restaurantData.hoursClose || '23:00';
+        document.getElementById('r-minOrder').value = restaurantData.minOrderAmount || 30;
+        document.getElementById('r-estMinutes').value = restaurantData.estimatedMinutes || 25;
+        const coupons = restaurantData.coupons || [];
+        const cl = document.getElementById('coupons-list');
+        cl.innerHTML = coupons.map((c, i) => `
+          <div class="coupon-row">
+            <input type="text" value="${c.code || ''}" placeholder="Kod" onchange="setCoupon(${i},'code',this.value)">
+            <input type="number" value="${c.discount || 0}" placeholder="Değer" onchange="setCoupon(${i},'discount',this.value)">
+            <select onchange="setCoupon(${i},'type',this.value)">
+              <option ${c.type === 'percent' ? 'selected' : ''}>percent</option>
+              <option ${c.type === 'fixed' ? 'selected' : ''}>fixed</option>
+            </select>
+            <input type="text" value="${c.description || ''}" placeholder="Açıklama" onchange="setCoupon(${i},'description',this.value)">
+            <button class="btn" style="background:#dc2626;color:#fff" onclick="removeCoupon(${i})">Sil</button>
+          </div>
+        `).join('');
+      } catch (e) {}
+    };
+
+    const _saveRestaurant = saveRestaurant;
+    saveRestaurant = async function() {
+      restaurantData.name = document.getElementById('r-name').value;
+      restaurantData.address = document.getElementById('r-address').value;
+      restaurantData.phone = document.getElementById('r-phone').value;
+      restaurantData.hoursOpen = document.getElementById('r-hoursOpen').value;
+      restaurantData.hoursClose = document.getElementById('r-hoursClose').value;
+      restaurantData.minOrderAmount = Number(document.getElementById('r-minOrder').value) || 0;
+      restaurantData.estimatedMinutes = Number(document.getElementById('r-estMinutes').value) || 25;
+      restaurantData.hours = `${restaurantData.hoursOpen} - ${restaurantData.hoursClose}`;
+      try {
+        const r = await authFetch('/api/restaurant', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(restaurantData) });
+        const d = await r.json();
+        alert(d.ok ? 'Ayarlar kaydedildi.' : (d.error || 'Hata'));
+      } catch (e) { alert('Kayıt başarısız'); }
+    };
+
+    const _loadStats = loadStats;
+    loadStats = async function() {
+      const today = orders.filter(o => isToday(o.createdAt));
+      document.getElementById('stat-total-orders').textContent = orders.length;
+      document.getElementById('stat-total-revenue').textContent = orders.reduce((s, o) => s + o.total, 0) + '₺';
+      document.getElementById('stat-today-orders').textContent = today.length;
+      document.getElementById('stat-today-revenue').textContent = today.reduce((s, o) => s + o.total, 0) + '₺';
+      try {
+        const r = await authFetch('/api/admin/stats');
+        const d = await r.json();
+        document.getElementById('stat-favorites').textContent = d.favoritesCount || 0;
+      } catch { document.getElementById('stat-favorites').textContent = '-'; }
+      const statuses = ['Alındı', 'Hazırlanıyor', 'Hazır', 'Yola Çıktı', 'Teslim Edildi', 'İptal'];
+      const byStatus = statuses.map(s => ({ s, c: orders.filter(o => o.status === s).length }));
+      document.getElementById('status-breakdown').innerHTML = byStatus.map(x =>
+        `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>${x.s}</span><span>${x.c}</span></div>`
+      ).join('');
+    };
   </script>
 </body>
 </html>

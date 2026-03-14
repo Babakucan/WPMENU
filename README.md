@@ -55,7 +55,9 @@ WhatsApp ve Telegram üzerinden restoran menüsü ve sipariş yönetimi. Müşte
    PORT=3005
    USE_NGROK=true
    NGROK_AUTHTOKEN=ngrok_dashboard_token
+   ADMIN_PASSWORD=panel_sifreniz
    ```
+   `ADMIN_PASSWORD` boş bırakılırsa panel şifresiz açılır.
 
 3. **Uygulamayı başlat**
    ```bash
