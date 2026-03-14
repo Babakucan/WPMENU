@@ -1,5 +1,7 @@
 {
   "name": "Doyuran",
+  "logo": "/uploads/b27479a00f1eb876f024cfea554a7895.png",
+  "banner": "/uploads/eaaeafb379ff7b22a2ad790bb974b95c.png",
   "address": "Örnek Mah. Restoran Sok. No:1",
   "estimatedMinutes": 25,
   "phone": "+90 555 000 00 00",
@@ -8,10 +10,32 @@
   "hoursClose": "23:00",
   "minOrderAmount": 30,
   "campaigns": {
-    "orderCount": { "enabled": false, "orderThreshold": 5, "rewardType": "percent", "rewardValue": 10, "description": "Her 5 siparişte %10 indirim" },
-    "points": { "enabled": false, "pointsPerLira": 1, "redeemPoints": 100, "redeemValue": 10, "description": "10₺ harcamada 1 puan, 100 puanda 10₺ indirim" },
-    "totalSpent": { "enabled": false, "spendThreshold": 200, "rewardType": "percent", "rewardValue": 15, "description": "Bu ay 200₺ harcamada %15 indirim" },
-    "firstOrder": { "enabled": false, "discountPercent": 10, "description": "İlk siparişte %10 indirim" }
+    "orderCount": {
+      "enabled": false,
+      "orderThreshold": 5,
+      "rewardType": "percent",
+      "rewardValue": 10,
+      "description": "Her 5 siparişte %10 indirim"
+    },
+    "points": {
+      "enabled": false,
+      "pointsPerLira": 1,
+      "redeemPoints": 100,
+      "redeemValue": 10,
+      "description": "10₺ harcamada 1 puan, 100 puanda 10₺ indirim"
+    },
+    "totalSpent": {
+      "enabled": false,
+      "spendThreshold": 200,
+      "rewardType": "percent",
+      "rewardValue": 15,
+      "description": "Bu ay 200₺ harcamada %15 indirim"
+    },
+    "firstOrder": {
+      "enabled": false,
+      "discountPercent": 10,
+      "description": "İlk siparişte %10 indirim"
+    }
   },
   "coupons": [
     {

@@ -8,57 +8,167 @@
   <script src="telegram-web-app.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --bg: #0f0e0d;
+      --surface: #1c1917;
+      --surface-2: #292524;
+      --border: #3f3935;
+      --accent: #ea580c;
+      --accent-dim: rgba(234, 88, 12, 0.15);
+      --text: #fafaf9;
+      --muted: #a8a29e;
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'DM Sans', sans-serif;
-      background: linear-gradient(180deg, #0c0c0c 0%, #18181b 100%);
-      color: #e4e4e7;
+      background: var(--bg);
+      color: var(--text);
       min-height: 100vh;
       padding-bottom: 220px;
     }
     .header {
-      text-align: center;
-      padding: 24px 20px;
-      background: linear-gradient(135deg, rgba(34,197,94,0.1) 0%, transparent 100%);
-      border-bottom: 1px solid #27272a;
+      position: relative;
+      padding: 0 0 20px;
+      background: linear-gradient(180deg, var(--surface) 0%, var(--bg) 100%);
     }
-    .header h1 { font-size: 1.5rem; font-weight: 700; }
-    .header p { color: #71717a; font-size: 0.9rem; margin-top: 4px; }
-    .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-    .search-box { padding: 10px 14px; border-radius: 10px; border: 1px solid #27272a; background: #18181b; color: #e4e4e7; width: 100%; max-width: 280px; font-size: 0.95rem; }
-    .theme-btn { padding: 8px 14px; border-radius: 10px; border: 1px solid #27272a; background: #18181b; color: #a1a1aa; cursor: pointer; font-size: 0.9rem; }
-    body.light { background: #f4f4f5; color: #18181b; }
-    body.light .product, body.light .cart { background: #fff; border-color: #e4e4e7; }
-    body.light .product-name, body.light .cart-total { color: #18181b; }
-    .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #27272a; border-top-color: #22c55e; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    .header-top { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px 12px; gap: 12px; }
+    .search-box {
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      flex: 1;
+      min-width: 0;
+      font-size: 0.9rem;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    .search-box:focus { outline: none; border-color: var(--accent); }
+    .search-box::placeholder { color: var(--muted); }
+    .theme-btn {
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .header-inner { padding: 0 20px 20px; border-bottom: 1px solid var(--border); }
+    .header-hero {
+      position: relative;
+      width: 100%;
+      margin-bottom: 0;
+      overflow: hidden;
+      background: var(--surface);
+    }
+    .header-banner-wrap {
+      position: relative;
+      width: 100%;
+      height: 160px;
+      background: var(--surface-2);
+      overflow: hidden;
+    }
+    .header-banner-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center center;
+      display: block;
+    }
+    .header-banner-wrap::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(15,14,13,0.3) 0%, rgba(15,14,13,0.6) 50%, rgba(15,14,13,0.92) 100%);
+      pointer-events: none;
+    }
+    .header-brand-block {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 20px 20px 16px;
+      z-index: 1;
+    }
+    .header-logo {
+      width: 52px;
+      height: 52px;
+      border-radius: 12px;
+      overflow: hidden;
+      flex-shrink: 0;
+      background: rgba(28,25,23,0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid rgba(255,255,255,0.15);
+      font-size: 1.6rem;
+    }
+    .header-logo img { width: 100%; height: 100%; object-fit: contain; padding: 6px; }
+    .header-brand-text { flex: 1; min-width: 0; }
+    .header h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 2px; color: #fff; letter-spacing: -0.02em; }
+    .header-sub { color: rgba(255,255,255,0.85); font-size: 0.88rem; margin: 0; }
+    .header-hero:not(.has-banner) .header-brand-block { padding: 24px 20px; flex-direction: row; }
+    .header-hero.has-banner .header-brand-block { position: absolute; bottom: 0; left: 0; right: 0; }
+    .header-hero:not(.has-banner) h1 { color: var(--text); }
+    .header-hero:not(.has-banner) .header-sub { color: var(--muted); }
+    .header-hero:not(.has-banner) .header-logo { background: var(--surface-2); border-color: var(--border); }
+    body.light {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-2: #f1f5f9;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+    }
+    body.light .product { background: var(--surface); border-color: var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    body.light .product:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    body.light .cart { background: var(--surface); border-color: var(--border); box-shadow: 0 -4px 20px rgba(0,0,0,0.08); }
+    body.light .header-hero { background: var(--surface); }
+    body.light .header-banner-wrap::after { background: linear-gradient(180deg, rgba(248,250,252,0.4) 0%, rgba(248,250,252,0.7) 50%, rgba(248,250,252,0.95) 100%); }
+    body.light .header h1 { color: #0f172a; }
+    body.light .header-sub { color: #475569; }
+    body.light .header-logo { background: rgba(255,255,255,0.95); border-color: rgba(0,0,0,0.08); }
+    body.light .category-nav { background: rgba(248,250,252,0.98); border-color: var(--border); }
+    body.light .category-pill { background: var(--surface-2); }
+    body.light .category-pill:hover { background: var(--border); }
+    body.light .category-pill.active { background: rgba(234,88,12,0.12); color: #c2410c; border-color: rgba(234,88,12,0.4); }
+    body.light .section-tab { background: var(--surface-2); }
+    body.light .section-tab:hover { background: var(--border); }
+    body.light .section-tab.active { background: rgba(234,88,12,0.12); color: #c2410c; border-color: rgba(234,88,12,0.4); }
+    body.light .favorite-card { background: var(--surface); border-color: var(--border); }
+    .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .categories { padding: 20px; max-width: 480px; margin: 0 auto; }
+    .categories { padding: 24px 20px; max-width: 520px; margin: 0 auto; }
     .category { margin-bottom: 32px; }
     .category h2 {
-      font-size: 1rem;
-      color: #a1a1aa;
+      font-size: 0.95rem;
+      color: var(--muted);
       margin-bottom: 12px;
       display: flex;
       align-items: center;
       gap: 8px;
+      font-weight: 600;
     }
     .product {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 14px;
       padding: 16px;
-      background: #18181b;
+      background: var(--surface);
       border-radius: 14px;
       margin-bottom: 10px;
-      border: 1px solid transparent;
-      transition: border-color 0.2s, background 0.2s;
+      border: 1px solid var(--border);
+      transition: all 0.2s;
     }
-    .product:hover { border-color: #27272a; background: #1f1f23; }
+    .product:hover { border-color: var(--accent); box-shadow: 0 4px 16px rgba(234,88,12,0.15); }
     .product-img {
       width: 56px;
       height: 56px;
-      background: #27272a;
-      border-radius: 10px;
+      background: var(--surface-2);
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -68,22 +178,22 @@
     .product-img img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
     .product-info { flex: 1; min-width: 0; }
     .product-name { font-weight: 600; margin-bottom: 2px; }
-    .product-price { color: #22c55e; font-size: 0.95rem; }
+    .product-price { color: var(--accent); font-size: 1rem; font-weight: 700; }
     .product-actions { display: flex; align-items: center; gap: 8px; }
     .qty-btn {
       width: 36px;
       height: 36px;
       border-radius: 10px;
-      border: 1px solid #3f3f46;
-      background: #27272a;
-      color: #e4e4e7;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
       font-size: 1.2rem;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
     }
-    .qty-btn:hover { background: #3f3f46; }
+    .qty-btn:hover { background: var(--accent-dim); border-color: var(--accent); }
     .qty-val { min-width: 24px; text-align: center; font-weight: 600; }
 
     .cart {
@@ -91,36 +201,37 @@
       bottom: 0;
       left: 0;
       right: 0;
-      background: #18181b;
-      border-top: 1px solid #27272a;
-      padding: 20px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 20px 20px;
       max-width: 520px;
       margin: 0 auto;
-      box-shadow: 0 -4px 24px rgba(0,0,0,0.4);
+      box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
     }
     .cart-items {
       max-height: 100px;
       overflow-y: auto;
       font-size: 0.9rem;
-      color: #a1a1aa;
+      color: var(--muted);
       margin-bottom: 12px;
     }
     .cart-line { display: flex; justify-content: space-between; margin-bottom: 4px; }
-    .cart-total { font-size: 1.3rem; font-weight: 700; color: #22c55e; margin-bottom: 12px; }
+    .cart-total { font-size: 1.35rem; font-weight: 700; color: var(--accent); margin-bottom: 12px; }
     .order-btn {
       width: 100%;
       padding: 14px;
-      background: #22c55e;
+      background: var(--accent);
       color: white;
       border: none;
       border-radius: 12px;
       font-size: 1rem;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: all 0.2s;
+      font-family: inherit;
     }
-    .order-btn:hover { background: #16a34a; }
-    .order-btn:disabled { background: #3f3f46; cursor: not-allowed; }
+    .order-btn:hover { filter: brightness(1.1); }
+    .order-btn:disabled { background: var(--border); cursor: not-allowed; filter: none; }
 
     .form-section { display: none; padding: 20px; max-width: 480px; margin: 0 auto; }
     .form-section.show { display: block; }
@@ -132,28 +243,31 @@
     }
     .order-type-btn {
       flex: 1;
-      padding: 14px;
-      border-radius: 12px;
-      border: 2px solid #3f3f46;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
       background: transparent;
-      color: #a1a1aa;
+      color: var(--muted);
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
     }
-    .order-type-btn.active { border-color: #22c55e; background: rgba(34,197,94,0.1); color: #22c55e; }
+    .order-type-btn.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
     .form-group { margin-bottom: 16px; }
-    .form-group label { display: block; font-size: 0.9rem; color: #a1a1aa; margin-bottom: 6px; }
+    .form-group label { display: block; font-size: 0.9rem; color: var(--muted); margin-bottom: 6px; }
     input, textarea {
       width: 100%;
-      padding: 14px;
+      padding: 12px 14px;
       border-radius: 10px;
-      border: 1px solid #3f3f46;
-      background: #27272a;
-      color: #e4e4e7;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
       font-size: 1rem;
+      font-family: inherit;
+      transition: border-color 0.2s;
     }
-    input:focus, textarea:focus { outline: none; border-color: #22c55e; }
+    input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+    .form-select, select.form-select { background: var(--surface-2); border: 1px solid var(--border); color: var(--text); font-family: inherit; }
     .error { color: #ef4444; font-size: 0.9rem; margin-top: 8px; }
     .success { display: none; text-align: center; padding: 60px 20px; }
     .success.show { display: block; }
@@ -161,74 +275,96 @@
     .success p { color: #71717a; }
     .loading { text-align: center; padding: 40px; color: #71717a; }
     .loading .spinner { display: block; margin: 0 auto 12px; }
-    .retry-btn { margin-top: 16px; padding: 10px 20px; background: #22c55e; color: #fff; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; }
-    .retry-btn:hover { background: #16a34a; }
+    .retry-btn { margin-top: 16px; padding: 12px 24px; background: var(--accent); color: #fff; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-family: inherit; }
+    .retry-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
     .category-nav {
       position: sticky;
       top: 0;
       z-index: 10;
-      background: rgba(12, 12, 12, 0.95);
+      background: rgba(15,14,13,0.95);
       backdrop-filter: blur(8px);
-      border-bottom: 1px solid #27272a;
+      border-bottom: 1px solid var(--border);
       padding: 12px 0;
       margin: 0 -20px 16px -20px;
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
       scrollbar-width: none;
     }
-    body.light .category-nav { background: rgba(244, 244, 245, 0.95); border-color: #e4e4e7; }
     .category-nav::-webkit-scrollbar { display: none; }
     .category-nav-inner { display: flex; gap: 8px; padding: 0 20px; min-width: max-content; }
     .category-pill {
       flex-shrink: 0;
-      padding: 8px 16px;
-      border-radius: 20px;
-      background: #27272a;
-      color: #a1a1aa;
+      padding: 10px 18px;
+      border-radius: 12px;
+      background: var(--surface-2);
+      color: var(--muted);
       font-size: 0.9rem;
-      font-weight: 500;
+      font-weight: 600;
       cursor: pointer;
       white-space: nowrap;
       transition: all 0.2s;
       border: 1px solid transparent;
     }
-    .category-pill:hover { background: #3f3f46; color: #e4e4e7; }
-    .category-pill.active { background: rgba(34, 197, 94, 0.2); color: #22c55e; border-color: #22c55e; }
-    body.light .category-pill { background: #e4e4e7; color: #52525b; }
-    body.light .category-pill:hover { background: #d4d4d8; }
-    body.light .category-pill.active { background: rgba(34, 197, 94, 0.15); color: #16a34a; }
-    .section-tabs { display: flex; gap: 8px; padding: 0 20px 12px; max-width: 480px; margin: 0 auto; }
-    .section-tab { padding: 10px 20px; border-radius: 20px; background: #27272a; color: #a1a1aa; font-size: 0.95rem; font-weight: 500; cursor: pointer; border: 1px solid transparent; transition: all 0.2s; }
-    .section-tab:hover { background: #3f3f46; color: #e4e4e7; }
-    .section-tab.active { background: rgba(34, 197, 94, 0.2); color: #22c55e; border-color: #22c55e; }
-    body.light .section-tab { background: #e4e4e7; color: #52525b; }
-    body.light .section-tab:hover { background: #d4d4d8; }
-    body.light .section-tab.active { background: rgba(34, 197, 94, 0.15); color: #16a34a; }
+    .category-pill:hover { background: var(--border); color: var(--text); }
+    .category-pill.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+    .section-tabs { display: flex; gap: 10px; padding: 0 20px 16px; max-width: 520px; margin: 0 auto; justify-content: center; }
+    .section-tab {
+      padding: 12px 24px;
+      border-radius: 12px;
+      background: var(--surface-2);
+      color: var(--muted);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+    }
+    .section-tab:hover { background: var(--border); color: var(--text); }
+    .section-tab.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
     .favorites-section { display: none; padding: 0 20px 120px; max-width: 480px; margin: 0 auto; }
     .favorites-section.show { display: block; }
-    .favorite-card { background: #18181b; border: 1px solid #27272a; border-radius: 14px; padding: 16px; margin-bottom: 12px; transition: border-color 0.2s; }
-    .favorite-card:hover { border-color: #3f3f46; }
-    body.light .favorite-card { background: #fff; border-color: #e4e4e7; }
+    .favorite-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 10px; transition: border-color 0.2s; }
+    .favorite-card:hover { border-color: var(--accent); }
     .favorite-card h3 { font-size: 1rem; margin-bottom: 6px; }
     .favorite-card .fav-items { font-size: 0.9rem; color: #71717a; margin-bottom: 8px; }
-    .favorite-card .fav-total { font-weight: 600; color: #22c55e; margin-bottom: 12px; }
-    .favorite-card .fav-add-btn { width: 100%; padding: 10px; background: #22c55e; color: #fff; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.9rem; }
-    .favorite-card .fav-add-btn:hover { background: #16a34a; }
+    .favorite-card .fav-total { font-weight: 700; color: var(--accent); margin-bottom: 10px; }
+    .favorite-card .fav-add-btn { width: 100%; padding: 10px; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.9rem; font-family: inherit; transition: filter 0.2s; }
+    .favorite-card .fav-add-btn:hover { filter: brightness(1.1); }
+    .favorite-card .fav-add-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    .product-img { cursor: pointer; }
+    .product-img:has(img) { cursor: pointer; }
+    .product-img:not(:has(img)) { cursor: default; }
+    .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .lightbox img { max-width: 100%; max-height: 90vh; border-radius: 12px; }
+    .lightbox-close { position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.2); color: #fff; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 1.5rem; cursor: pointer; }
+    #offline-banner { display: none; position: fixed; top: 0; left: 0; right: 0; background: #dc2626; color: #fff; padding: 10px 20px; text-align: center; z-index: 9998; font-size: 0.9rem; }
+    @media print { .cart, .theme-btn, .search-box, .section-tabs, .category-nav { display: none !important; } body { padding-bottom: 0; } }
   </style>
 </head>
 <body>
+  <div id="offline-banner">📡 İnternet bağlantısı yok. Lütfen kontrol edin.</div>
   <div id="app">
     <div class="header">
       <div class="header-top">
         <input type="text" id="search" class="search-box" placeholder="🔍 Ürün ara...">
         <button type="button" id="theme-btn" class="theme-btn">☀️</button>
       </div>
-      <h1>🍽️ MeraPaket</h1>
-      <p>Menüden seçim yapın</p>
-      <div id="closed-banner" style="display:none;margin-top:12px;padding:12px;background:rgba(239,68,68,0.2);border-radius:10px;color:#f87171">🕐 Restoran şu an kapalı. Çalışma saatleri: <span id="hours-text"></span></div>
-      <div class="section-tabs" id="section-tabs" style="display:none">
-        <button type="button" class="section-tab active" data-section="menu">🍽️ Menü</button>
-        <button type="button" class="section-tab" data-section="favorites">⭐ Favorilerim</button>
+      <div id="header-hero" class="header-hero">
+        <div id="header-banner" class="header-banner-wrap" style="display:none"></div>
+        <div class="header-brand-block">
+          <div id="header-logo" class="header-logo">🍽️</div>
+          <div class="header-brand-text">
+            <h1 id="header-title">MeraPaket</h1>
+            <p class="header-sub">Menüden seçim yapın</p>
+          </div>
+        </div>
+      </div>
+      <div class="header-inner">
+        <div id="closed-banner" style="display:none;margin-bottom:12px;padding:12px;background:rgba(239,68,68,0.12);border-radius:10px;color:#f87171;border:1px solid rgba(239,68,68,0.25)">🕐 Restoran şu an kapalı. <span id="hours-text"></span> <span id="opens-in-text"></span></div>
+        <div class="section-tabs" id="section-tabs" style="display:none">
+          <button type="button" class="section-tab active" data-section="menu">🍽️ Menü</button>
+          <button type="button" class="section-tab" data-section="favorites">⭐ Favorilerim</button>
+        </div>
       </div>
     </div>
 
@@ -255,7 +391,7 @@
       </div>
       <div class="form-group" id="address-group">
         <label>Adres</label>
-        <select id="saved-addresses" style="width:100%;padding:12px;border-radius:10px;margin-bottom:8px;background:#27272a;border:1px solid #3f3f46;color:#e4e4e7;display:none"><option value="">Kayıtlı adresler...</option></select>
+        <select id="saved-addresses" style="width:100%;padding:12px;border-radius:10px;margin-bottom:8px;display:none" class="form-select"><option value="">Kayıtlı adresler...</option></select>
         <div style="display:flex;gap:8px;margin-bottom:8px">
           <input type="text" id="address" placeholder="Teslimat adresi" style="flex:1">
           <button type="button" id="location-btn" class="order-type-btn" style="white-space:nowrap">📍 Konum</button>
@@ -295,6 +431,11 @@
     </div>
   </div>
 
+  <div id="lightbox" class="lightbox" style="display:none" role="dialog" aria-label="Ürün fotoğrafı">
+    <button type="button" class="lightbox-close" aria-label="Kapat">×</button>
+    <img src="" alt="">
+  </div>
+
   <script>
     const params = new URLSearchParams(location.search);
     let telegramId = params.get('tg');
@@ -323,6 +464,15 @@
       let allProducts = [];
 
       const icons = { 'ana-yemekler': '🍽️', 'icecekler': '🥤', 'tatlilar': '🍰' };
+      const lb = document.getElementById('lightbox');
+      if (lb) { lb.addEventListener('click', (e) => { if (e.target === lb || e.target.classList.contains('lightbox-close')) lb.style.display = 'none'; }); lb.querySelector('.lightbox-close')?.addEventListener('click', () => { lb.style.display = 'none'; }); }
+      window.addEventListener('online', () => { const b = document.getElementById('offline-banner'); if (b) b.style.display = 'none'; });
+      window.addEventListener('offline', () => { const b = document.getElementById('offline-banner'); if (b) b.style.display = 'block'; });
+      if (!navigator.onLine) { const b = document.getElementById('offline-banner'); if (b) b.style.display = 'block'; }
+      let ptrStartY = 0, ptrLastY = 0;
+      document.addEventListener('touchstart', (e) => { if (window.scrollY === 0) { ptrStartY = ptrLastY = e.touches[0].clientY; } }, { passive: true });
+      document.addEventListener('touchmove', (e) => { if (ptrStartY) ptrLastY = e.touches[0].clientY; }, { passive: true });
+      document.addEventListener('touchend', () => { if (ptrStartY && window.scrollY === 0 && ptrLastY - ptrStartY > 80) loadMenu(); ptrStartY = ptrLastY = 0; }, { passive: true });
       if (localStorage.getItem('theme') === 'light') { document.body.classList.add('light'); document.getElementById('theme-btn').textContent = '🌙'; }
       document.getElementById('theme-btn').addEventListener('click', () => {
         document.body.classList.toggle('light');
@@ -335,9 +485,40 @@
         try {
           const r = await fetch('/api/restaurant');
           restaurantInfo = await r.json();
+          const title = document.getElementById('header-title');
+          const logoEl = document.getElementById('header-logo');
+          const bannerEl = document.getElementById('header-banner');
+          if (title) title.textContent = restaurantInfo.name || 'MeraPaket';
+          const logoUrl = (restaurantInfo.logo || '').trim();
+          if (logoEl) logoEl.innerHTML = logoUrl ? `<img src="${logoUrl.replace(/"/g,'&quot;')}" alt="">` : '🍽️';
+          const bannerUrl = (restaurantInfo.banner || '').trim();
+          if (bannerEl) {
+            if (bannerUrl) { bannerEl.innerHTML = `<img src="${bannerUrl.replace(/"/g,'&quot;')}" alt="">`; bannerEl.style.display = 'block'; }
+            else bannerEl.style.display = 'none';
+          }
+          const hero = document.getElementById('header-hero');
+          if (hero) hero.classList.toggle('has-banner', !!bannerUrl);
           if (!restaurantInfo.isOpen) {
             document.getElementById('closed-banner').style.display = 'block';
-            document.getElementById('hours-text').textContent = restaurantInfo.hours || '10:00 - 23:00';
+            const hoursStr = restaurantInfo.hours || (restaurantInfo.hoursOpen && restaurantInfo.hoursClose ? restaurantInfo.hoursOpen + ' - ' + restaurantInfo.hoursClose : '10:00 - 23:00');
+            document.getElementById('hours-text').textContent = 'Çalışma saatleri: ' + hoursStr + '.';
+            const openStr = restaurantInfo.hoursOpen || '10:00';
+            const [oh, om] = openStr.split(':').map(Number);
+            const now = new Date();
+            const nowMin = now.getHours() * 60 + now.getMinutes();
+            const openMin = (oh || 10) * 60 + (om || 0);
+            const closeStr = restaurantInfo.hoursClose || '23:00';
+            const [ch, cm] = closeStr.split(':').map(Number);
+            const closeMin = (ch || 23) * 60 + (cm || 0);
+            let opensIn = '';
+            if (nowMin < openMin) {
+              const m = openMin - nowMin;
+              if (m >= 60) opensIn = Math.floor(m / 60) + ' saat ' + (m % 60 ? m % 60 + ' dk ' : '') + 'sonra açılıyor (' + openStr + ')';
+              else opensIn = m + ' dakika sonra açılıyor';
+            } else {
+              opensIn = 'Yarın ' + openStr + '\u2019da açılıyor';
+            }
+            document.getElementById('opens-in-text').textContent = opensIn ? '— ' + opensIn : '';
             document.getElementById('order-btn').disabled = true;
           }
         } catch (_) {}
@@ -360,8 +541,8 @@
           <div class="category" id="cat-${ci}">
             <h2>${cat.icon || icons[cat.id] || '🍽️'} ${cat.name}</h2>
             ${cat.products.map(p => `
-              <div class="product" data-id="${p.id}" data-name="${p.name}" data-price="${p.price}">
-                <div class="product-img">${p.image ? `<img src="${p.image}" alt="">` : '🍽️'}</div>
+              <div class="product" data-id="${p.id}" data-name="${p.name}" data-price="${p.price}" data-image="${(p.image || '').replace(/"/g,'&quot;')}">
+                <div class="product-img" ${p.image ? 'role="button" tabindex="0"' : ''}>${p.image ? `<img src="${p.image}" alt="${(p.name || '').replace(/"/g,'&quot;')}">` : '🍽️'}</div>
                 <div class="product-info">
                   <div class="product-name">${p.name}</div>
                   <div class="product-price">${p.price}₺</div>
@@ -419,6 +600,13 @@
         });
         document.querySelectorAll('.section-tab').forEach(tab => {
           tab.addEventListener('click', () => showSection(tab.dataset.section));
+        });
+        el.querySelectorAll('.product-img:has(img)').forEach(imgWrap => {
+          const img = imgWrap.querySelector('img');
+          if (img) imgWrap.addEventListener('click', () => {
+            const lb = document.getElementById('lightbox');
+            if (lb) { lb.querySelector('img').src = img.src; lb.style.display = 'flex'; }
+          });
         });
         } catch (e) {
           el.innerHTML = '<div class="loading" style="color:#f87171"><span class="spinner"></span>Menü yüklenemedi.<br><small>' + (e.name === 'AbortError' ? 'Zaman aşımı.' : 'Bağlantı hatası.') + '</small><button type="button" class="retry-btn" onclick="loadMenu()">Tekrar Dene</button></div>';
@@ -587,7 +775,7 @@
           if (d.ok) {
             appliedCoupon = { code, discount: d.discount };
             document.getElementById('coupon-result').textContent = '✓ ' + d.discount + '₺ indirim uygulandı';
-            document.getElementById('coupon-result').style.color = '#22c55e';
+            document.getElementById('coupon-result').style.color = '#ea580c';
           } else {
             appliedCoupon = null;
             document.getElementById('coupon-result').textContent = d.error || 'Geçersiz kupon';

@@ -4,6 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
+const multer = require('multer');
 const ngrok = require('@ngrok/ngrok');
 const rateLimit = require('express-rate-limit');
 const { logError } = require('./lib/logger');
@@ -195,9 +196,11 @@ bot.on('polling_error', (err) => {
   logError('Telegram polling', err);
   console.error('❌ Telegram polling:', err.message);
 });
-bot.on('message', (msg) => {
-  console.log('📩', msg.from?.username || msg.from?.id, '→', (msg.text || '').slice(0, 40));
-});
+bot.on('message', () => {});
+
+const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+const upload = multer({ dest: UPLOADS_DIR, limits: { fileSize: 5 * 1024 * 1024 } });
 
 const app = express();
 app.use(express.json());
@@ -418,6 +421,15 @@ app.post('/api/coupon/validate', (req, res) => {
   if (!result) return res.json({ ok: false, error: 'Geçersiz kupon' });
   res.json({ ok: true, discount: result.discount, finalTotal: Math.max(0, (Number(subtotal) || 0) - result.discount) });
 });
+app.post('/api/upload', requireAdmin, upload.single('file'), (req, res) => {
+  if (!req.file) return res.status(400).json({ ok: false, error: 'Dosya yok' });
+  const ext = (req.file.originalname || '').split('.').pop() || 'jpg';
+  const newName = req.file.filename + '.' + ext.replace(/[^a-z0-9]/gi, '');
+  const newPath = path.join(UPLOADS_DIR, newName);
+  fs.renameSync(req.file.path, newPath);
+  res.json({ ok: true, url: '/uploads/' + newName });
+});
+
 app.put('/api/restaurant', requireAdmin, (req, res) => {
   try {
     fs.writeFileSync(RESTAURANT_PATH, JSON.stringify(req.body, null, 2));
@@ -498,7 +510,6 @@ app.post('/api/order', (req, res) => {
       pendingLocationForOrder.set('wa_' + String(whatsappId), id);
       sendWhatsAppMessage(whatsappId, '📍 Teslimat adresi için konumunuzu paylaşabilirsiniz (konum gönderin).');
     }
-    console.log('📥 Sipariş ' + id);
     res.json({ ok: true, orderId: id });
   } catch (e) {
     logError('Sipariş hatası', e);
@@ -537,12 +548,14 @@ app.post('/api/orders/:id/add', (req, res) => {
 
 app.patch('/api/orders/:id', requireAdmin, (req, res) => {
   const id = parseInt(req.params.id);
-  const { status } = req.body;
+  const { status, cancelReason } = req.body;
   const order = orders.find(o => o.id === id);
   if (!order || !status) return res.status(400).json({ ok: false });
   const valid = ['Alındı', 'Hazırlanıyor', 'Hazır', 'Yola Çıktı', 'Teslim Edildi', 'İptal'];
   if (!valid.includes(status)) return res.status(400).json({ ok: false });
   order.status = status;
+  if (status === 'İptal') order.cancelReason = (cancelReason || '').trim();
+  else order.cancelReason = undefined;
   saveOrders(orders);
   const msgs = {
     'Hazırlanıyor': '👨‍🍳 Siparişin hazırlanıyor.',
@@ -833,6 +846,7 @@ bot.on('callback_query', async (query) => {
       return;
     }
     order.status = 'İptal';
+    order.cancelReason = 'Müşteri iptali';
     saveOrders(orders);
     await bot.sendMessage(chatId, 'Siparişin iptal edildi.', { reply_markup: buildMainKeyboard(chatId) });
     return;

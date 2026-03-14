@@ -4,54 +4,60 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Panel - MeraPaket</title>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg: #09090b;
-      --surface: #18181b;
-      --surface-2: #1f1f23;
-      --border: #27272a;
-      --accent: #22c55e;
-      --accent-dim: rgba(34, 197, 94, 0.12);
-      --muted: #71717a;
-      --text: #fafafa;
+      --bg: #0a0a0f;
+      --surface: #141419;
+      --surface-2: #1c1c24;
+      --border: #2a2a36;
+      --accent: #10b981;
+      --accent-dim: rgba(16, 185, 129, 0.12);
+      --muted: #6b7280;
+      --text: #f8fafc;
     }
-    body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
     .layout {
       display: flex;
       min-height: 100vh;
     }
     .sidebar {
-      width: 220px;
-      background: var(--surface);
+      width: 240px;
+      background: linear-gradient(180deg, var(--surface) 0%, #0d0d12 100%);
       border-right: 1px solid var(--border);
-      padding: 20px 0;
+      padding: 24px 0;
       flex-shrink: 0;
+      box-shadow: 4px 0 24px rgba(0,0,0,0.3);
     }
     .sidebar-logo {
-      padding: 0 20px 24px;
-      font-size: 1.25rem;
+      padding: 0 24px 24px;
+      font-size: 1.3rem;
       font-weight: 700;
       border-bottom: 1px solid var(--border);
       margin-bottom: 20px;
+      letter-spacing: -0.02em;
+      color: var(--text);
     }
     .nav-item {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 12px 20px;
+      gap: 12px;
+      padding: 12px 24px;
+      margin: 0 12px;
       color: var(--muted);
       text-decoration: none;
       cursor: pointer;
-      transition: color 0.2s, background 0.2s;
+      border-radius: 12px;
+      transition: all 0.2s ease;
     }
     .nav-item:hover { color: var(--text); background: var(--surface-2); }
-    .nav-item.active { color: var(--accent); background: var(--accent-dim); }
+    .nav-item.active { color: var(--accent); background: var(--accent-dim); font-weight: 600; }
     .main {
       flex: 1;
-      padding: 24px;
+      padding: 32px;
       overflow-y: auto;
+      background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(16,185,129,0.06) 0%, transparent 50%);
     }
     .section { display: none; }
     .section.active { display: block; }
@@ -68,9 +74,20 @@
       background: var(--surface);
       border-radius: 16px;
       border: 1px solid var(--border);
-      padding: 24px;
-      margin-bottom: 20px;
+      padding: 28px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+      transition: box-shadow 0.2s, border-color 0.2s;
     }
+    .card:hover { border-color: #353545; }
+    .media-card { background: linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%); }
+    .media-preview-wrap {
+      width: 120px; height: 120px; border-radius: 14px; overflow: hidden; background: var(--bg);
+      border: 2px dashed var(--border); display: flex; align-items: center; justify-content: center;
+    }
+    .media-preview-wrap.banner-wrap { width: 100%; max-width: 320px; height: 90px; }
+    .media-preview-wrap img { width: 100%; height: 100%; object-fit: cover; }
+    .media-preview-wrap .ph { font-size: 2rem; color: var(--muted); }
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -78,20 +95,24 @@
       margin-bottom: 24px;
     }
     .stat {
-      background: var(--surface);
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px;
+      border-radius: 14px;
+      padding: 24px;
+      transition: transform 0.2s, box-shadow 0.2s;
     }
-    .stat-value { font-size: 1.75rem; font-weight: 700; color: var(--accent); }
+    .stat:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+    .stat-value { font-size: 1.85rem; font-weight: 700; color: var(--accent); letter-spacing: -0.02em; }
     .stat-label { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
     .order-card {
-      background: var(--bg);
-      border-radius: 12px;
-      padding: 16px;
+      background: var(--surface);
+      border-radius: 14px;
+      padding: 20px;
       border: 1px solid var(--border);
-      margin-bottom: 12px;
+      margin-bottom: 14px;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
+    .order-card:hover { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(16,185,129,0.15); }
     .order-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
     .order-id { font-weight: 700; color: var(--accent); }
     .order-time { font-size: 0.8rem; color: var(--muted); }
@@ -134,14 +155,15 @@
       border: none;
       font-family: inherit;
     }
-    .btn-primary { background: var(--accent); color: #000; }
-    .btn-primary:hover { filter: brightness(1.1); }
+    .btn-primary { background: linear-gradient(135deg, var(--accent) 0%, #0d9488 100%); color: #fff; box-shadow: 0 4px 14px rgba(16,185,129,0.35); }
+    .btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(16,185,129,0.4); }
     .category-block {
-      background: var(--bg);
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 20px;
+      background: var(--surface);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
       border: 1px solid var(--border);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
     }
     .category-block h3 { font-size: 1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
     .product-row {
@@ -150,6 +172,7 @@
       gap: 12px;
       padding: 10px 0;
       border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
     }
     .product-row:last-child { border-bottom: none; }
     .product-row input { flex: 2; }
@@ -171,17 +194,19 @@
       justify-content: center;
       background: var(--bg);
       padding: 20px;
+      background-image: radial-gradient(ellipse 60% 40% at 50% 20%, rgba(16,185,129,0.08) 0%, transparent 50%);
     }
     .login-card {
-      background: var(--surface);
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%);
       border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 40px;
+      border-radius: 24px;
+      padding: 48px 40px;
       width: 100%;
-      max-width: 380px;
+      max-width: 400px;
       text-align: center;
+      box-shadow: 0 24px 48px rgba(0,0,0,0.4);
     }
-    .login-logo { font-size: 1.75rem; font-weight: 700; margin-bottom: 8px; }
+    .login-logo { font-size: 1.9rem; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.03em; }
     .login-sub { color: var(--muted); font-size: 0.95rem; margin-bottom: 28px; }
     .login-card input { margin-bottom: 16px; }
     .login-error { color: #ef4444; font-size: 0.9rem; margin-bottom: 12px; min-height: 20px; }
@@ -201,6 +226,84 @@
     .toggle-switch::after { content: ''; position: absolute; width: 20px; height: 20px; background: #fff; border-radius: 50%; top: 2px; left: 2px; transition: transform 0.2s; }
     .toggle-switch.on::after { transform: translateX(20px); }
     .campaign-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+    .btn-period { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
+    .btn-period:hover { border-color: var(--accent); color: var(--text); }
+    .btn-period.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+    .stats-hero { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 28px; }
+    @media (max-width: 1200px) { .stats-hero { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 600px) { .stats-hero { grid-template-columns: 1fr; } }
+    .stat-card {
+      position: relative; overflow: hidden;
+      border-radius: 20px; padding: 28px 24px;
+      border: 1px solid rgba(255,255,255,0.06);
+      background: linear-gradient(160deg, rgba(30,30,38,0.95) 0%, rgba(20,20,28,0.98) 100%);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.35), 0 1px 0 rgba(255,255,255,0.04) inset;
+      transition: transform 0.25s ease, box-shadow 0.3s ease, border-color 0.25s;
+    }
+    .stat-card:hover { transform: translateY(-6px); box-shadow: 0 20px 50px rgba(0,0,0,0.4); }
+    .stat-card::before { content: ''; position: absolute; top: -60px; right: -60px; width: 140px; height: 140px; border-radius: 50%; opacity: 0.15; }
+    .stat-card.green { border-left: 4px solid #10b981; }
+    .stat-card.green::before { background: radial-gradient(circle, #10b981 0%, transparent 70%); }
+    .stat-card.blue { border-left: 4px solid #3b82f6; }
+    .stat-card.blue::before { background: radial-gradient(circle, #3b82f6 0%, transparent 70%); }
+    .stat-card.amber { border-left: 4px solid #f59e0b; }
+    .stat-card.amber::before { background: radial-gradient(circle, #f59e0b 0%, transparent 70%); }
+    .stat-card.rose { border-left: 4px solid #ef4444; }
+    .stat-card.rose::before { background: radial-gradient(circle, #ef4444 0%, transparent 70%); }
+    .stat-card-icon {
+      width: 56px; height: 56px; border-radius: 16px;
+      display: flex; align-items: center; justify-content: center; font-size: 1.75rem;
+      margin-bottom: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .stat-card.green .stat-card-icon { background: linear-gradient(145deg, #10b981 0%, #059669 100%); }
+    .stat-card.blue .stat-card-icon { background: linear-gradient(145deg, #3b82f6 0%, #2563eb 100%); }
+    .stat-card.amber .stat-card-icon { background: linear-gradient(145deg, #f59e0b 0%, #d97706 100%); }
+    .stat-card.rose .stat-card-icon { background: linear-gradient(145deg, #ef4444 0%, #dc2626 100%); }
+    .stat-card-value { font-size: 2.25rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1.15; margin-bottom: 6px; }
+    .stat-card.green .stat-card-value { color: #34d399; text-shadow: 0 0 40px rgba(16,185,129,0.3); }
+    .stat-card.blue .stat-card-value { color: #60a5fa; text-shadow: 0 0 40px rgba(59,130,246,0.3); }
+    .stat-card.amber .stat-card-value { color: #fbbf24; text-shadow: 0 0 40px rgba(245,158,11,0.3); }
+    .stat-card.rose .stat-card-value { color: #f87171; text-shadow: 0 0 40px rgba(239,68,68,0.3); }
+    .stat-card-label { font-size: 0.875rem; color: rgba(156,163,175,0.9); font-weight: 500; letter-spacing: 0.02em; }
+    .stats-hero-secondary { grid-template-columns: repeat(3, 1fr); }
+    @media (max-width: 900px) { .stats-hero-secondary { grid-template-columns: 1fr; } }
+    .stat-card-sm { padding: 20px; }
+    .stat-card-sm .stat-card-icon { display: none; }
+    .stat-card-sm .stat-card-value { font-size: 1.75rem; }
+    .stat-card-sub { font-size: 0.9rem; color: var(--muted); margin-top: 4px; }
+    .stat-card-purple { border-left: 4px solid #8b5cf6; }
+    .stat-card-purple .stat-card-value { color: #a78bfa; text-shadow: 0 0 40px rgba(139,92,246,0.3); }
+    .stats-filter-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .stats-date-input { padding: 8px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.9rem; font-family: inherit; }
+    .stats-period-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+    .stats-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    .stats-table th { text-align: left; padding: 12px 16px; background: var(--surface-2); color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); }
+    .stats-table td { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+    .stats-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .stats-table .num { text-align: right; font-weight: 600; color: var(--accent); }
+    .bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+    .bar-row span { min-width: 120px; font-size: 0.9rem; }
+    .bar-track { flex: 1; height: 24px; background: var(--surface-2); border-radius: 8px; overflow: hidden; }
+    .bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #0d9488); border-radius: 8px; min-width: 4px; transition: width 0.3s; }
+    .bar-val { min-width: 70px; text-align: right; font-weight: 600; color: var(--accent); }
+    .stats-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px; }
+    @media (max-width: 1000px) { .stats-charts { grid-template-columns: 1fr; } }
+    .chart-card { background: var(--surface); border-radius: 18px; border: 1px solid var(--border); padding: 24px; box-shadow: 0 4px 24px rgba(0,0,0,0.12); }
+    .chart-card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .chart-wrap { position: relative; height: 260px; }
+    .products-chart-wrap { height: 320px; }
+    @media print {
+      .sidebar, .section-header .btn, .section-header select, #filter-status, #bulk-status-bar, .nav-item, .last-update, .no-print { display: none !important; }
+      body { background: #fff; color: #111; }
+      .main { padding: 0; }
+      .section { display: block !important; }
+      .section:not(.active) { display: none !important; }
+      .card, .order-card { border: 1px solid #ccc; box-shadow: none; background: #fff; color: #111; break-inside: avoid; }
+      .stat { border: 1px solid #ddd; background: #f9f9f9 !important; }
+      .stat-value { color: #0d9488; }
+      .order-id { color: #0d9488; }
+      .section-title { margin-bottom: 16px; }
+    }
   </style>
 </head>
 <body>
@@ -249,6 +352,18 @@
           <div class="stat"><div class="stat-value" id="today-total">0₺</div><div class="stat-label">Bugün Toplam</div></div>
           <div class="stat"><div class="stat-value" id="active-count">0</div><div class="stat-label">Aktif</div></div>
         </div>
+        <div id="bulk-status-bar" class="bulk-status-bar" style="display:none;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+          <select id="bulk-status-select" style="padding:8px 12px;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--text)">
+            <option value="">Durum seçin</option>
+            <option value="Alındı">Alındı</option>
+            <option value="Hazırlanıyor">Hazırlanıyor</option>
+            <option value="Hazır">Hazır</option>
+            <option value="Yola Çıktı">Yola Çıktı</option>
+            <option value="Teslim Edildi">Teslim Edildi</option>
+            <option value="İptal">İptal</option>
+          </select>
+          <button class="btn btn-primary" onclick="bulkUpdateStatus()">Seçilenleri güncelle</button>
+        </div>
         <div id="orders-list"></div>
         <div class="last-update" id="orders-update">Son güncelleme: -</div>
       </section>
@@ -256,8 +371,12 @@
       <section id="section-menu" class="section">
         <div class="section-header">
           <h1 class="section-title">Menü Yönetimi</h1>
-          <button class="btn btn-primary" onclick="saveMenu()">Kaydet</button>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn" style="background:var(--surface-2);color:var(--text)" onclick="window.open('/menu.html?tg=preview','_blank')">👁️ Menüyü Önizle</button>
+            <button class="btn btn-primary" onclick="saveMenu()">Kaydet</button>
+          </div>
         </div>
+        <p style="font-size:0.8rem;color:var(--muted);margin-bottom:16px">Ürün görseli önerilen boyut: <b>400×400 px</b></p>
         <div id="menu-editor"></div>
       </section>
 
@@ -265,6 +384,36 @@
         <div class="section-header">
           <h1 class="section-title">Restoran Ayarları</h1>
           <button class="btn btn-primary" onclick="saveRestaurant()">Kaydet</button>
+        </div>
+        <div class="card media-card">
+          <h3 style="margin-bottom:20px;font-size:1.1rem">🖼️ Görsel Ayarları</h3>
+          <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:24px">
+            <div class="form-group">
+              <label>Logo</label>
+              <span style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:8px">Önerilen: 200×200 px</span>
+              <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+                <div class="media-preview-wrap" id="logo-preview"><span class="ph">🏪</span></div>
+                <div style="flex:1;min-width:180px">
+                  <input type="file" id="logo-file" accept="image/*" style="display:none" onchange="uploadAndSet('logo',this)">
+                  <button type="button" class="btn btn-primary" onclick="document.getElementById('logo-file').click()" style="width:100%;margin-bottom:8px">📤 Yükle</button>
+                  <input type="url" id="r-logo" placeholder="URL yapıştır" oninput="updateMediaPreview('logo',this.value)">
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Banner</label>
+              <span style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:8px">Önerilen: 1200×300 px</span>
+              <div style="display:flex;flex-direction:column;gap:12px">
+                <div class="media-preview-wrap banner-wrap" id="banner-preview"><span class="ph">🖼️</span></div>
+                <div style="display:flex;gap:8px">
+                  <input type="file" id="banner-file" accept="image/*" style="display:none" onchange="uploadAndSet('banner',this)">
+                  <button type="button" class="btn btn-primary" onclick="document.getElementById('banner-file').click()">📤 Yükle</button>
+                  <input type="url" id="r-banner" placeholder="URL yapıştır" style="flex:1" oninput="updateMediaPreview('banner',this.value)">
+                </div>
+              </div>
+            </div>
+          </div>
+          <p style="font-size:0.8rem;color:var(--muted);margin-top:16px">Dosya yükleyin veya harici URL yapıştırın. Değişiklikleri görmek için Kaydet'e basın.</p>
         </div>
         <div class="card">
           <div class="form-grid">
@@ -289,24 +438,88 @@
           <h1 class="section-title">Kampanya & Müdavim Sistemi</h1>
           <button class="btn btn-primary" onclick="saveCampaigns()">Kaydet</button>
         </div>
-        <p style="color:var(--muted);margin-bottom:24px">Sadece <b>tek kampanya</b> aktif olabilir. Birini açtığınızda diğerleri otomatik kapanır.</p>
+        <p style="color:var(--muted);margin-bottom:24px"><b>İlk sipariş indirimi</b> diğer kampanyalarla birlikte açılabilir. Tüm kampanyalar aynı anda aktif olabilir.</p>
         <div id="campaigns-list"></div>
       </section>
 
       <section id="section-stats" class="section">
         <div class="section-header">
           <h1 class="section-title">İstatistikler</h1>
+          <div class="stats-filter-bar">
+            <input type="date" id="stats-date" class="stats-date-input" title="Seçili gün">
+            <div class="stats-period-btns">
+              <button type="button" class="btn-period active" data-period="all">Tümü</button>
+              <button type="button" class="btn-period" data-period="today">Bugün</button>
+              <button type="button" class="btn-period" data-period="week">Bu Hafta</button>
+              <button type="button" class="btn-period" data-period="month">Bu Ay</button>
+            </div>
+          </div>
         </div>
-        <div class="stats-grid">
-          <div class="stat"><div class="stat-value" id="stat-total-orders">0</div><div class="stat-label">Toplam Sipariş</div></div>
-          <div class="stat"><div class="stat-value" id="stat-total-revenue">0₺</div><div class="stat-label">Toplam Ciro</div></div>
-          <div class="stat"><div class="stat-value" id="stat-today-orders">0</div><div class="stat-label">Bugün Sipariş</div></div>
-          <div class="stat"><div class="stat-value" id="stat-today-revenue">0₺</div><div class="stat-label">Bugün Ciro</div></div>
-          <div class="stat"><div class="stat-value" id="stat-favorites">0</div><div class="stat-label">Favori</div></div>
+        <div class="stats-hero">
+          <div class="stat-card green">
+            <div class="stat-card-icon">📦</div>
+            <div class="stat-card-value" id="stat-total-orders">0</div>
+            <div class="stat-card-label">Toplam Sipariş</div>
+          </div>
+          <div class="stat-card blue">
+            <div class="stat-card-icon">💰</div>
+            <div class="stat-card-value" id="stat-total-revenue">0₺</div>
+            <div class="stat-card-label">Toplam Ciro</div>
+          </div>
+          <div class="stat-card amber">
+            <div class="stat-card-icon">📅</div>
+            <div class="stat-card-value" id="stat-today-combo">0 / 0₺</div>
+            <div class="stat-card-label">Bugün · Sipariş / Ciro</div>
+          </div>
+          <div class="stat-card rose">
+            <div class="stat-card-icon">❌</div>
+            <div class="stat-card-value" id="stat-cancelled-count">0</div>
+            <div class="stat-card-label">İptal Edilen</div>
+          </div>
         </div>
-        <div class="card">
-          <h3 style="margin-bottom:16px">Sipariş Durumları</h3>
-          <div id="status-breakdown"></div>
+        <div class="stats-hero stats-hero-secondary">
+          <div class="stat-card stat-card-sm green">
+            <div class="stat-card-value" id="stat-week-orders">0</div>
+            <div class="stat-card-label">Bu Hafta Sipariş</div>
+            <div class="stat-card-sub" id="stat-week-revenue">0₺</div>
+          </div>
+          <div class="stat-card stat-card-sm blue">
+            <div class="stat-card-value" id="stat-month-orders">0</div>
+            <div class="stat-card-label">Bu Ay Sipariş</div>
+            <div class="stat-card-sub" id="stat-month-revenue">0₺</div>
+          </div>
+          <div class="stat-card stat-card-sm stat-card-purple">
+            <div class="stat-card-value" id="stat-completed-rate">0%</div>
+            <div class="stat-card-label">Teslim Oranı</div>
+          </div>
+        </div>
+        <div class="stats-charts">
+          <div class="chart-card">
+            <h3>📊 Sipariş Durumları</h3>
+            <div id="status-breakdown-html"></div>
+          </div>
+          <div class="chart-card">
+            <h3>🍽️ En Çok Satan Ürünler</h3>
+            <div id="products-chart-html"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:24px">
+          <h3 style="margin-bottom:16px">📅 Günlük Kazanç (Son 7 Gün)</h3>
+          <div id="daily-revenue-table"></div>
+        </div>
+        <div class="card" style="margin-bottom:24px">
+          <h3 style="margin-bottom:16px">🍽️ Ürün Bazlı Detay — Adet & Kazanç</h3>
+          <div id="product-detail-table"></div>
+        </div>
+        <div class="stats-charts">
+          <div class="chart-card">
+            <h3>❌ İptal Sebepleri</h3>
+            <div id="cancel-breakdown-html"></div>
+          </div>
+          <div class="chart-card">
+            <h3>📈 Özet</h3>
+            <div id="stat-summary" style="display:grid;gap:12px"></div>
+          </div>
         </div>
       </section>
     </main>
@@ -315,13 +528,45 @@
   <script>
     let orders = [], menuData = {}, restaurantData = {}, favorites = [];
 
+    async function doUpload(file) {
+      const fd = new FormData(); fd.append('file', file);
+      const r = await (typeof authFetch === 'function' ? authFetch : fetch)('/api/upload', { method: 'POST', body: fd });
+      const d = await r.json();
+      if (d.ok && d.url) return d.url;
+      throw new Error(d.error || 'Yükleme hatası');
+    }
+    function updateMediaPreview(field, url) {
+      const u = (url || '').trim();
+      const el = document.getElementById(field + '-preview');
+      if (!el) return;
+      el.innerHTML = u ? `<img src="${u.replace(/"/g,'&quot;')}" alt="" onerror="this.parentElement.innerHTML='<span class=ph>❌</span>'">` : '<span class="ph">' + (field === 'logo' ? '🏪' : '🖼️') + '</span>';
+    }
+    async function uploadAndSet(field, fileInput) {
+      const file = fileInput?.files?.[0]; if (!file) return;
+      try {
+        const url = await doUpload(file);
+        const el = document.getElementById('r-' + field);
+        if (el) { el.value = url; restaurantData[field] = url; updateMediaPreview(field, url); }
+      } catch (e) { alert(e.message || 'Yükleme başarısız'); }
+      fileInput.value = '';
+    }
+    async function uploadProductImage(ci, pi, fileInput) {
+      const file = fileInput?.files?.[0]; if (!file) return;
+      try {
+        const url = await doUpload(file);
+        setProduct(ci, pi, 'image', url);
+        renderMenuEditor();
+      } catch (e) { alert(e.message || 'Yükleme başarısız'); }
+      fileInput.value = '';
+    }
+
     document.querySelectorAll('.nav-item').forEach(n => {
       n.addEventListener('click', () => {
         document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
         document.querySelectorAll('.section').forEach(x => x.classList.remove('active'));
         n.classList.add('active');
         document.getElementById('section-' + n.dataset.tab).classList.add('active');
-        if (n.dataset.tab === 'stats') loadStats();
+        if (n.dataset.tab === 'stats') { setTimeout(() => loadStats(), 50); }
         if (n.dataset.tab === 'menu') loadMenuEditor();
         if (n.dataset.tab === 'restaurant') loadRestaurantForm();
         if (n.dataset.tab === 'campaigns') loadCampaignsForm();
@@ -334,8 +579,42 @@
     function isToday(iso) {
       return new Date(iso).toDateString() === new Date().toDateString();
     }
+    function isThisWeek(iso) {
+      const d = new Date(iso);
+      const n = new Date();
+      const day = n.getDay() || 7;
+      const monday = new Date(n);
+      monday.setDate(n.getDate() - day + 1);
+      monday.setHours(0, 0, 0, 0);
+      const nextMonday = new Date(monday);
+      nextMonday.setDate(monday.getDate() + 7);
+      return d >= monday && d < nextMonday;
+    }
+    function isThisMonth(iso) {
+      const d = new Date(iso);
+      const n = new Date();
+      return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth();
+    }
+    function isDate(iso, y, m, d) {
+      const x = new Date(iso);
+      return x.getFullYear() === y && x.getMonth() === m && x.getDate() === d;
+    }
+    function getFilteredOrders() {
+      const valid = orders.filter(o => o.status !== 'İptal');
+      if (statsPeriod === 'today') return valid.filter(o => isToday(o.createdAt));
+      if (statsPeriod === 'week') return valid.filter(o => isThisWeek(o.createdAt));
+      if (statsPeriod === 'month') return valid.filter(o => isThisMonth(o.createdAt));
+      if (statsDate) {
+        const d = new Date(statsDate);
+        return valid.filter(o => isDate(o.createdAt, d.getFullYear(), d.getMonth(), d.getDate()));
+      }
+      return valid;
+    }
 
     let lastOrderCount = 0;
+    let statsPeriod = 'all';
+    let statsDate = null;
+
     const playNewOrderSound = () => {
       try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -348,13 +627,35 @@
       } catch (_) {}
     };
 
+    async function requestNotificationPermission() {
+      if (!('Notification' in window)) return false;
+      if (Notification.permission === 'granted') return true;
+      if (Notification.permission !== 'denied') {
+        const p = await Notification.requestPermission();
+        return p === 'granted';
+      }
+      return false;
+    }
+
+    function showNewOrderNotifications(newOrders) {
+      if (!newOrders || !newOrders.length) return;
+      requestNotificationPermission().then(granted => {
+        if (granted) newOrders.forEach(o => new Notification('Yeni sipariş #' + o.id));
+      });
+    }
+
     async function loadOrders() {
       try {
         const r = await fetch('/api/orders');
         const d = await r.json();
+        const prevIds = new Set((orders || []).map(o => o.id));
         const prevCount = orders.length;
         orders = d.orders || [];
-        if (orders.length > prevCount && prevCount > 0) playNewOrderSound();
+        const newOrders = orders.filter(o => !prevIds.has(o.id));
+        if (newOrders.length > 0 && prevCount > 0) {
+          playNewOrderSound();
+          showNewOrderNotifications(newOrders);
+        }
         const statusFilter = document.getElementById('filter-status')?.value || '';
         let filtered = orders;
         if (statusFilter) filtered = orders.filter(o => o.status === statusFilter);
@@ -370,9 +671,14 @@
           el.innerHTML = '<div class="empty">Sipariş yok</div>';
           return;
         }
+        const bulkBar = document.getElementById('bulk-status-bar');
+        if (bulkBar) bulkBar.style.display = filtered.length ? 'flex' : 'none';
         el.innerHTML = filtered.map(o => `
           <div class="order-card">
             <div class="order-row">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex-shrink:0">
+                <input type="checkbox" class="order-select-cb" data-order-id="${o.id}">
+              </label>
               <span class="order-id">${o.id}</span>
               <span class="order-time">${formatDate(o.createdAt)}</span>
             </div>
@@ -394,33 +700,46 @@
     }
 
     async function updateStatus(id, status) {
-      await fetch(`/api/orders/${id}`, {
+      let cancelReason = '';
+      if (status === 'İptal') {
+        const r = prompt('İptal sebebi (isteğe bağlı):');
+        cancelReason = (r || '').trim();
+      }
+      const fn = typeof authFetch === 'function' ? authFetch : fetch;
+      await fn(`/api/orders/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
+        body: JSON.stringify({ status, cancelReason })
       });
       loadOrders();
     }
 
+    function renderMenuEditor() {
+      const cats = (menuData && menuData.categories) || [];
+      const el = document.getElementById('menu-editor');
+      if (!el) return;
+      el.innerHTML = cats.map((cat, ci) => `
+        <div class="category-block">
+          <h3>${cat.icon || '🍽️'} ${cat.name}</h3>
+          ${(cat.products || []).map((p, pi) => `
+            <div class="product-row">
+              <input type="text" value="${(p.name || '').replace(/"/g, '&quot;')}" onchange="setProduct(${ci},${pi},'name',this.value)" placeholder="Ürün adı">
+              <input type="number" value="${p.price || 0}" min="0" onchange="setProduct(${ci},${pi},'price',this.value)" placeholder="₺">
+              <input type="file" id="prod-img-${ci}-${pi}" accept="image/*" style="display:none" onchange="uploadProductImage(${ci},${pi},this)">
+              <button type="button" class="btn" style="background:var(--accent);color:#000;padding:6px 10px;font-size:0.85rem" onclick="document.getElementById('prod-img-${ci}-${pi}').click()">📤 Yükle</button>
+              <input type="url" value="${(p.image || '').replace(/"/g,'&quot;')}" onchange="setProduct(${ci},${pi},'image',this.value)" placeholder="URL" style="flex:1;min-width:80px;font-size:0.85rem">
+              <button class="btn" style="background:#dc2626;color:#fff;padding:6px 10px" onclick="removeProduct(${ci},${pi})">Sil</button>
+            </div>
+          `).join('')}
+          <button class="btn" style="margin-top:8px;background:var(--accent-dim);color:var(--accent)" onclick="addProduct(${ci})">+ Ürün Ekle</button>
+        </div>
+      `).join('');
+    }
     async function loadMenuEditor() {
       try {
         const r = await fetch('/api/menu');
         menuData = await r.json();
-        const cats = menuData.categories || [];
-        const el = document.getElementById('menu-editor');
-        el.innerHTML = cats.map((cat, ci) => `
-          <div class="category-block">
-            <h3>${cat.icon || '🍽️'} ${cat.name}</h3>
-            ${(cat.products || []).map((p, pi) => `
-              <div class="product-row">
-                <input type="text" value="${(p.name || '').replace(/"/g, '&quot;')}" onchange="setProduct(${ci},${pi},'name',this.value)" placeholder="Ürün adı">
-                <input type="number" value="${p.price || 0}" min="0" onchange="setProduct(${ci},${pi},'price',this.value)" placeholder="₺">
-                <button class="btn" style="background:#dc2626;color:#fff;padding:6px 10px" onclick="removeProduct(${ci},${pi})">Sil</button>
-              </div>
-            `).join('')}
-            <button class="btn" style="margin-top:8px;background:var(--accent-dim);color:var(--accent)" onclick="addProduct(${ci})">+ Ürün Ekle</button>
-          </div>
-        `).join('');
+        renderMenuEditor();
       } catch (e) {
         document.getElementById('menu-editor').innerHTML = '<div class="empty">Menü yüklenemedi</div>';
       }
@@ -429,19 +748,19 @@
     function setProduct(ci, pi, field, val) {
       if (!menuData.categories) return;
       const p = menuData.categories[ci]?.products?.[pi];
-      if (p) p[field] = field === 'price' ? Number(val) || 0 : val;
+      if (p) p[field] = field === 'price' ? Number(val) || 0 : (field === 'image' ? String(val || '').trim() : val);
     }
     function addProduct(ci) {
       if (!menuData.categories) return;
       const cat = menuData.categories[ci];
       if (!cat.products) cat.products = [];
       cat.products.push({ id: 'new-' + Date.now(), name: 'Yeni Ürün', price: 0, image: '' });
-      loadMenuEditor();
+      renderMenuEditor();
     }
     function removeProduct(ci, pi) {
       if (!menuData.categories) return;
       menuData.categories[ci].products?.splice(pi, 1);
-      loadMenuEditor();
+      renderMenuEditor();
     }
 
     async function saveMenu() {
@@ -461,6 +780,10 @@
         const r = await fetch('/api/restaurant');
         restaurantData = await r.json();
         document.getElementById('r-name').value = restaurantData.name || '';
+        const rLogo = document.getElementById('r-logo');
+        const rBanner = document.getElementById('r-banner');
+        if (rLogo) { rLogo.value = restaurantData.logo || ''; updateMediaPreview('logo', restaurantData.logo); }
+        if (rBanner) { rBanner.value = restaurantData.banner || ''; updateMediaPreview('banner', restaurantData.banner); }
         document.getElementById('r-address').value = restaurantData.address || '';
         document.getElementById('r-phone').value = restaurantData.phone || '';
         document.getElementById('r-hoursOpen').value = restaurantData.hoursOpen || '10:00';
@@ -531,11 +854,6 @@
         const r = await authFetch('/api/restaurant');
         restaurantData = await r.json();
         if (!restaurantData.campaigns) restaurantData.campaigns = {};
-        const keys = Object.keys(restaurantData.campaigns);
-        const enabledKeys = keys.filter(k => restaurantData.campaigns[k]?.enabled);
-        if (enabledKeys.length > 1) {
-          enabledKeys.slice(1).forEach(k => { restaurantData.campaigns[k].enabled = false; });
-        }
         const list = document.getElementById('campaigns-list');
         list.innerHTML = Object.entries(CAMPAIGN_DEFS).map(([key, def], i) => {
           const c = restaurantData.campaigns[key] || {};
@@ -583,16 +901,7 @@
     function toggleCampaign(key) {
       if (!restaurantData.campaigns) restaurantData.campaigns = {};
       if (!restaurantData.campaigns[key]) restaurantData.campaigns[key] = {};
-      const turningOn = !restaurantData.campaigns[key].enabled;
-      if (turningOn) {
-        Object.keys(restaurantData.campaigns).forEach(k => {
-          if (restaurantData.campaigns[k]) restaurantData.campaigns[k].enabled = k === key;
-        });
-        document.querySelectorAll('.toggle-switch').forEach(sw => sw.classList.remove('on'));
-        document.querySelectorAll('.campaign-header span').forEach(s => s.textContent = 'Kapalı');
-      } else {
-        restaurantData.campaigns[key].enabled = false;
-      }
+      restaurantData.campaigns[key].enabled = !restaurantData.campaigns[key].enabled;
       const sw = document.getElementById('toggle-' + key);
       const lbl = sw?.closest('.campaign-header')?.querySelector('span');
       if (sw) sw.classList.toggle('on', restaurantData.campaigns[key].enabled);
@@ -620,6 +929,10 @@
 
     async function saveRestaurant() {
       restaurantData.name = document.getElementById('r-name').value;
+      const rLogo = document.getElementById('r-logo');
+      const rBanner = document.getElementById('r-banner');
+      restaurantData.logo = rLogo ? (rLogo.value || '').trim() : '';
+      restaurantData.banner = rBanner ? (rBanner.value || '').trim() : '';
       restaurantData.address = document.getElementById('r-address').value;
       restaurantData.phone = document.getElementById('r-phone').value;
       restaurantData.hoursOpen = document.getElementById('r-hoursOpen').value;
@@ -640,23 +953,185 @@
 
     async function loadStats() {
       const today = orders.filter(o => isToday(o.createdAt));
+      const week = orders.filter(o => isThisWeek(o.createdAt));
+      const month = orders.filter(o => isThisMonth(o.createdAt));
       document.getElementById('stat-total-orders').textContent = orders.length;
-      document.getElementById('stat-total-revenue').textContent = orders.reduce((s, o) => s + o.total, 0) + '₺';
-      document.getElementById('stat-today-orders').textContent = today.length;
-      document.getElementById('stat-today-revenue').textContent = today.reduce((s, o) => s + o.total, 0) + '₺';
+      document.getElementById('stat-total-revenue').textContent = orders.reduce((s, o) => s + o.total, 0).toLocaleString('tr-TR') + '₺';
+      const todayRev = today.reduce((s, o) => s + o.total, 0);
+      document.getElementById('stat-today-combo').textContent = today.length + ' / ' + todayRev.toLocaleString('tr-TR') + '₺';
+      const cancelled = orders.filter(o => o.status === 'İptal');
+      const cancelledEl = document.getElementById('stat-cancelled-count');
+      if (cancelledEl) cancelledEl.textContent = cancelled.length;
+      const weekRev = week.reduce((s, o) => s + o.total, 0);
+      const monthRev = month.reduce((s, o) => s + o.total, 0);
+      const nonCancelled = orders.length - cancelled.length;
+      const completed = orders.filter(o => o.status === 'Teslim Edildi').length;
+      const completedRate = nonCancelled ? Math.round(100 * completed / nonCancelled) : 0;
+      const wEl = document.getElementById('stat-week-orders'); if (wEl) wEl.textContent = week.length;
+      const wrEl = document.getElementById('stat-week-revenue'); if (wrEl) wrEl.textContent = weekRev.toLocaleString('tr-TR') + '₺';
+      const mEl = document.getElementById('stat-month-orders'); if (mEl) mEl.textContent = month.length;
+      const mrEl = document.getElementById('stat-month-revenue'); if (mrEl) mrEl.textContent = monthRev.toLocaleString('tr-TR') + '₺';
+      const crEl = document.getElementById('stat-completed-rate'); if (crEl) crEl.textContent = completedRate + '%';
       try {
-        const r = await fetch('/api/admin/stats');
+        const fn = typeof authFetch === 'function' ? authFetch : fetch;
+        const r = await fn('/api/admin/stats');
         const d = await r.json();
-        document.getElementById('stat-favorites').textContent = d.favoritesCount || 0;
-      } catch { document.getElementById('stat-favorites').textContent = '-'; }
+        const favEl = document.getElementById('stat-favorites');
+        if (favEl) favEl.textContent = d.favoritesCount ?? '-';
+      } catch { const favEl = document.getElementById('stat-favorites'); if (favEl) favEl.textContent = '-'; }
       const statuses = ['Alındı', 'Hazırlanıyor', 'Hazır', 'Yola Çıktı', 'Teslim Edildi', 'İptal'];
       const byStatus = statuses.map(s => ({ s, c: orders.filter(o => o.status === s).length }));
-      document.getElementById('status-breakdown').innerHTML = byStatus.map(x =>
-        `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>${x.s}</span><span>${x.c}</span></div>`
-      ).join('');
+      const summaryEl = document.getElementById('stat-summary');
+      if (summaryEl) summaryEl.innerHTML = `
+        <div style="display:flex;justify-content:space-between;padding:12px;background:var(--surface-2);border-radius:12px"><span>Bu hafta</span><strong>${week.length} sipariş · ${week.reduce((s,o)=>s+o.total,0).toLocaleString('tr-TR')}₺</strong></div>
+        <div style="display:flex;justify-content:space-between;padding:12px;background:var(--surface-2);border-radius:12px"><span>Bu ay</span><strong>${month.length} sipariş · ${month.reduce((s,o)=>s+o.total,0).toLocaleString('tr-TR')}₺</strong></div>
+        <div style="display:flex;justify-content:space-between;padding:12px;background:var(--surface-2);border-radius:12px"><span>Teslim oranı</span><strong>${orders.length ? Math.round(100 * completed / (orders.length - cancelled.length) || 0) : 0}%</strong></div>
+      `;
+      const statusEl = document.getElementById('status-breakdown-html');
+      if (statusEl) statusEl.innerHTML = byStatus.map((x,i) => {
+        const pct = orders.length ? Math.round(100 * x.c / orders.length) : 0;
+        return `<div class="bar-row"><span>${x.s}</span><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div><span class="bar-val">${x.c}</span></div>`;
+      }).join('');
+      await loadProductStats(getFilteredOrders());
+      loadDailyRevenue();
+      loadProductDetailTable(getFilteredOrders());
+      loadCancelStats();
+      document.querySelectorAll('.stats-period-btns .btn-period').forEach(btn => {
+        btn.onclick = () => {
+          document.querySelectorAll('.stats-period-btns .btn-period').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          statsPeriod = btn.dataset.period;
+          statsDate = null;
+          document.getElementById('stats-date').value = '';
+          loadProductStats(getFilteredOrders());
+          loadProductDetailTable(getFilteredOrders());
+        };
+      });
+      document.getElementById('stats-date')?.addEventListener('change', (e) => {
+        statsDate = e.target.value || null;
+        if (statsDate) {
+          document.querySelectorAll('.stats-period-btns .btn-period').forEach(b => b.classList.remove('active'));
+          statsPeriod = 'date';
+        }
+        loadProductStats(getFilteredOrders());
+        loadProductDetailTable(getFilteredOrders());
+      });
+    }
+    function loadDailyRevenue() {
+      const valid = orders.filter(o => o.status !== 'İptal');
+      const byDay = {};
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().slice(0, 10);
+        byDay[key] = { rev: 0, count: 0 };
+      }
+      valid.forEach(o => {
+        const key = new Date(o.createdAt).toISOString().slice(0, 10);
+        if (byDay[key]) { byDay[key].rev += o.total; byDay[key].count += 1; }
+      });
+      const labels = Object.keys(byDay).sort().map(k => new Date(k).toLocaleDateString('tr-TR', { weekday: 'short', day: 'numeric', month: 'short' }));
+      const data = Object.keys(byDay).sort().map(k => byDay[k].rev);
+      const tableEl = document.getElementById('daily-revenue-table');
+      if (tableEl) tableEl.innerHTML = `<table class="stats-table"><thead><tr><th>Tarih</th><th class="num">Sipariş</th><th class="num">Kazanç</th></tr></thead><tbody>${
+        Object.entries(byDay).sort((a,b)=>a[0].localeCompare(b[0])).map(([k,v]) =>
+          `<tr><td>${new Date(k).toLocaleDateString('tr-TR')}</td><td class="num">${v.count}</td><td class="num">${v.rev.toLocaleString('tr-TR')}₺</td></tr>`
+        ).join('')
+      }</tbody></table>`;
+    }
+    function loadProductDetailTable(filteredOrders) {
+      const menu = menuData?.categories || [];
+      const map = {};
+      (menu || []).flatMap(c => (c.products || []).map(p => p.name)).filter(Boolean).forEach(n => { map[n] = { qty: 0, revenue: 0 }; });
+      for (const o of filteredOrders) {
+        for (const item of parseItemsForStats(o.items)) {
+          if (!map[item.name]) map[item.name] = { qty: 0, revenue: 0 };
+          map[item.name].qty += item.qty;
+          map[item.name].revenue += item.revenue;
+        }
+      }
+      const rows = Object.entries(map).sort((a, b) => b[1].revenue - a[1].revenue);
+      const totalRev = rows.reduce((s, [,d]) => s + d.revenue, 0);
+      const el = document.getElementById('product-detail-table');
+      if (!el) return;
+      el.innerHTML = rows.length ? `<table class="stats-table"><thead><tr><th>Ürün</th><th class="num">Adet</th><th class="num">Kazanç</th></tr></thead><tbody>${
+        rows.map(([name, d]) => `<tr><td>${(name||'-').replace(/</g,'&lt;')}</td><td class="num">${d.qty}</td><td class="num">${d.revenue.toLocaleString('tr-TR')}₺</td></tr>`).join('')
+      }</tbody></table><p style="margin-top:12px;font-weight:700;color:var(--accent)">Toplam: ${totalRev.toLocaleString('tr-TR')}₺</p>` : '<p style="color:var(--muted)">Veri yok</p>';
+    }
+    function parseItemsForStats(itemsStr) {
+      if (!itemsStr) return [];
+      const parts = itemsStr.split(', ');
+      const out = [];
+      for (const p of parts) {
+        const m = p.match(/(\d+)x\s+(.+?)\s+\((\d+)₺\)/);
+        if (m) out.push({ name: m[2].trim(), qty: parseInt(m[1]), revenue: parseInt(m[3]) });
+      }
+      return out;
+    }
+    function loadCancelStats() {
+      const cancelled = orders.filter(o => o.status === 'İptal');
+      const byReason = {};
+      let noReason = 0;
+      cancelled.forEach(o => {
+        const r = (o.cancelReason || '').trim();
+        if (!r) noReason++; else { byReason[r] = (byReason[r] || 0) + 1; }
+      });
+      const rows = Object.entries(byReason).map(([r, c]) => ({ reason: r, count: c }));
+      if (noReason > 0) rows.push({ reason: 'Sebep belirtilmemiş', count: noReason });
+      const maxC = Math.max(...rows.map(x=>x.count), 1);
+      const el = document.getElementById('cancel-breakdown-html');
+      if (el) el.innerHTML = rows.length ? rows.map(x => { const pct = 100*x.count/maxC; return `<div class="bar-row"><span>${(x.reason||'-').replace(/</g,'&lt;')}</span><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:linear-gradient(90deg,#ef4444,#dc2626)"></div></div><span class="bar-val" style="color:#f87171">${x.count}</span></div>`; }).join('') : '<p style="color:var(--muted)">İptal edilen sipariş yok</p>';
+    }
+    async function loadProductStats(filteredOrders) {
+      let menu = menuData?.categories;
+      if (!menu?.length) {
+        try { const r = await (typeof authFetch === 'function' ? authFetch : fetch)('/api/menu'); const data = await r.json(); menuData = data; menu = data?.categories || []; } catch { menu = []; }
+      }
+      const map = {};
+      (menu || []).flatMap(c => (c.products || []).map(p => p.name)).forEach(name => {
+        if (name) map[name] = { qty: 0, revenue: 0 };
+      });
+      const subset = Array.isArray(filteredOrders) ? filteredOrders : orders.filter(o => o.status !== 'İptal');
+      for (const o of subset) {
+        for (const item of parseItemsForStats(o.items)) {
+          if (!map[item.name]) map[item.name] = { qty: 0, revenue: 0 };
+          map[item.name].qty += item.qty;
+          map[item.name].revenue += item.revenue;
+        }
+      }
+      const sorted = Object.entries(map).sort((a, b) => b[1].qty - a[1].qty);
+      const maxQty = Math.max(...sorted.map(([,d]) => d.qty), 1);
+      const productsEl = document.getElementById('products-chart-html');
+      if (productsEl) productsEl.innerHTML = sorted.length ? sorted.slice(0, 15).map(([name, d]) => {
+        const pct = Math.round(100 * d.qty / maxQty);
+        return `<div class="bar-row"><span>${(name||'-').replace(/</g,'&lt;').slice(0,25)}</span><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div><span class="bar-val">${d.qty} adet · ${d.revenue.toLocaleString('tr-TR')}₺</span></div>`;
+      }).join('') : '<p style="color:var(--muted)">Henüz veri yok</p>';
     }
 
-    function startPanel() { loadOrders(); setInterval(loadOrders, 4000); }
+    async function bulkUpdateStatus() {
+      const status = document.getElementById('bulk-status-select')?.value;
+      if (!status) { alert('Lütfen bir durum seçin'); return; }
+      const cbs = document.querySelectorAll('.order-select-cb:checked');
+      const ids = [...cbs].map(cb => cb.getAttribute('data-order-id')).filter(Boolean);
+      if (!ids.length) { alert('Lütfen en az bir sipariş seçin'); return; }
+      let cancelReason = '';
+      if (status === 'İptal') cancelReason = (prompt('İptal sebebi (seçili tüm siparişler için, isteğe bağlı):') || '').trim();
+      const fn = typeof authFetch === 'function' ? authFetch : fetch;
+      for (const id of ids) {
+        await fn(`/api/orders/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status, cancelReason })
+        });
+      }
+      loadOrders();
+    }
+
+    function startPanel() {
+      requestNotificationPermission();
+      loadOrders();
+      setInterval(loadOrders, 4000);
+    }
   </script>
   <script>
     const TOKEN_KEY = 'admin_token';
@@ -714,9 +1189,14 @@
     const _loadOrders = loadOrders;
     loadOrders = function() {
       authFetch('/api/orders').then(r => r.json()).then(d => {
+        const prevIds = new Set((orders || []).map(o => o.id));
         const prevCount = orders.length;
         orders = d.orders || [];
-        if (orders.length > prevCount && prevCount > 0) playNewOrderSound();
+        const newOrders = orders.filter(o => !prevIds.has(o.id));
+        if (newOrders.length > 0 && prevCount > 0) {
+          playNewOrderSound();
+          showNewOrderNotifications(newOrders);
+        }
         const statusFilter = document.getElementById('filter-status')?.value || '';
         let filtered = statusFilter ? orders.filter(o => o.status === statusFilter) : orders;
         const today = orders.filter(o => isToday(o.createdAt));
@@ -726,10 +1206,15 @@
         document.getElementById('orders-update').textContent = 'Son güncelleme: ' + new Date().toLocaleTimeString('tr-TR');
         const statuses = ['Alındı', 'Hazırlanıyor', 'Hazır', 'Yola Çıktı', 'Teslim Edildi', 'İptal'];
         const el = document.getElementById('orders-list');
+        const bulkBar = document.getElementById('bulk-status-bar');
+        if (bulkBar) bulkBar.style.display = filtered.length ? 'flex' : 'none';
         if (!filtered.length) { el.innerHTML = '<div class="empty">Sipariş yok</div>'; return; }
         el.innerHTML = filtered.map(o => `
           <div class="order-card">
             <div class="order-row">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex-shrink:0">
+                <input type="checkbox" class="order-select-cb" data-order-id="${o.id}">
+              </label>
               <span class="order-id">#${o.id}</span>
               <span class="order-time">${formatDate(o.createdAt)}</span>
             </div>
@@ -750,7 +1235,9 @@
 
     const _updateStatus = updateStatus;
     updateStatus = async function(id, status) {
-      await authFetch(`/api/orders/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
+      let cancelReason = '';
+      if (status === 'İptal') cancelReason = (prompt('İptal sebebi (isteğe bağlı):') || '').trim();
+      await authFetch(`/api/orders/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status, cancelReason }) });
       loadOrders();
     };
 
@@ -759,21 +1246,7 @@
       try {
         const r = await authFetch('/api/menu');
         menuData = await r.json();
-        const cats = menuData.categories || [];
-        const el = document.getElementById('menu-editor');
-        el.innerHTML = cats.map((cat, ci) => `
-          <div class="category-block">
-            <h3>${cat.icon || '🍽️'} ${cat.name}</h3>
-            ${(cat.products || []).map((p, pi) => `
-              <div class="product-row">
-                <input type="text" value="${(p.name || '').replace(/"/g, '&quot;')}" onchange="setProduct(${ci},${pi},'name',this.value)" placeholder="Ürün adı">
-                <input type="number" value="${p.price || 0}" min="0" onchange="setProduct(${ci},${pi},'price',this.value)" placeholder="₺">
-                <button class="btn" style="background:#dc2626;color:#fff;padding:6px 10px" onclick="removeProduct(${ci},${pi})">Sil</button>
-              </div>
-            `).join('')}
-            <button class="btn" style="margin-top:8px;background:var(--accent-dim);color:var(--accent)" onclick="addProduct(${ci})">+ Ürün Ekle</button>
-          </div>
-        `).join('');
+        renderMenuEditor();
       } catch (e) { document.getElementById('menu-editor').innerHTML = '<div class="empty">Menü yüklenemedi</div>'; }
     };
 
@@ -792,6 +1265,10 @@
         const r = await authFetch('/api/restaurant');
         restaurantData = await r.json();
         document.getElementById('r-name').value = restaurantData.name || '';
+        const rLogo = document.getElementById('r-logo');
+        const rBanner = document.getElementById('r-banner');
+        if (rLogo) { rLogo.value = restaurantData.logo || ''; updateMediaPreview('logo', restaurantData.logo); }
+        if (rBanner) { rBanner.value = restaurantData.banner || ''; updateMediaPreview('banner', restaurantData.banner); }
         document.getElementById('r-address').value = restaurantData.address || '';
         document.getElementById('r-phone').value = restaurantData.phone || '';
         document.getElementById('r-hoursOpen').value = restaurantData.hoursOpen || '10:00';
@@ -818,6 +1295,10 @@
     const _saveRestaurant = saveRestaurant;
     saveRestaurant = async function() {
       restaurantData.name = document.getElementById('r-name').value;
+      const rLogo = document.getElementById('r-logo');
+      const rBanner = document.getElementById('r-banner');
+      restaurantData.logo = rLogo ? (rLogo.value || '').trim() : '';
+      restaurantData.banner = rBanner ? (rBanner.value || '').trim() : '';
       restaurantData.address = document.getElementById('r-address').value;
       restaurantData.phone = document.getElementById('r-phone').value;
       restaurantData.hoursOpen = document.getElementById('r-hoursOpen').value;
@@ -832,24 +1313,11 @@
       } catch (e) { alert('Kayıt başarısız'); }
     };
 
-    const _loadStats = loadStats;
-    loadStats = async function() {
-      const today = orders.filter(o => isToday(o.createdAt));
-      document.getElementById('stat-total-orders').textContent = orders.length;
-      document.getElementById('stat-total-revenue').textContent = orders.reduce((s, o) => s + o.total, 0) + '₺';
-      document.getElementById('stat-today-orders').textContent = today.length;
-      document.getElementById('stat-today-revenue').textContent = today.reduce((s, o) => s + o.total, 0) + '₺';
-      try {
-        const r = await authFetch('/api/admin/stats');
-        const d = await r.json();
-        document.getElementById('stat-favorites').textContent = d.favoritesCount || 0;
-      } catch { document.getElementById('stat-favorites').textContent = '-'; }
-      const statuses = ['Alındı', 'Hazırlanıyor', 'Hazır', 'Yola Çıktı', 'Teslim Edildi', 'İptal'];
-      const byStatus = statuses.map(s => ({ s, c: orders.filter(o => o.status === s).length }));
-      document.getElementById('status-breakdown').innerHTML = byStatus.map(x =>
-        `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>${x.s}</span><span>${x.c}</span></div>`
-      ).join('');
-    };
+    loadStats = (function(orig) {
+      return async function() {
+        await orig.call(this);
+      };
+    })(loadStats);
   </script>
 </body>
 </html>
