@@ -1,0 +1,10 @@
+{
+  "name": "MeraPaket Menü",
+  "short_name": "Menü",
+  "description": "Restoran menüsü ve sipariş",
+  "start_url": "/menu.html",
+  "display": "standalone",
+  "background_color": "#0f0e0d",
+  "theme_color": "#ea580c",
+  "orientation": "portrait-primary"
+}

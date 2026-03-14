@@ -8,18 +8,18 @@ const multer = require('multer');
 const ngrok = require('@ngrok/ngrok');
 const rateLimit = require('express-rate-limit');
 const { logError } = require('./lib/logger');
+const helmet = require('helmet');
+const { validateRestaurant, validateMenu } = require('./lib/validators');
+const { loadOrders, saveOrders, loadFavorites, saveFavorites, loadPrefs, savePrefs, orderUserMatch, prefsKey } = require('./lib/orders');
+const restaurantLib = require('./lib/restaurant');
+const { getCachedRestaurant, getCachedMenu, invalidateRestaurantCache, invalidateMenuCache, isOpen, validateCoupon, formatOrderConfirm, getActiveCampaign, loadMenuForPreview, MENU_PATH, RESTAURANT_PATH } = restaurantLib;
+const getRestaurant = getCachedRestaurant;
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const PORT = parseInt(process.env.PORT) || 3005;
 const USE_NGROK = process.env.USE_NGROK === 'true' || process.env.USE_NGROK === '1';
 
 let baseUrl = process.env.BASE_URL || `http://localhost:${PORT}`;
-
-const ORDERS_PATH = path.join(__dirname, 'data', 'orders.json');
-const FAVORITES_PATH = path.join(__dirname, 'data', 'favorites.json');
-const PREFS_PATH = path.join(__dirname, 'data', 'userPrefs.json');
-const MENU_PATH = path.join(__dirname, 'config', 'menu.json');
-const RESTAURANT_PATH = path.join(__dirname, 'config', 'restaurant.json');
 
 if (!TOKEN) {
   console.error('❌ TELEGRAM_BOT_TOKEN bulunamadı. .env dosyasını oluştur ve token ekle.');
@@ -31,6 +31,7 @@ const WA_PHONE_NUMBER_ID = process.env.WA_PHONE_NUMBER_ID;
 const WA_ACCESS_TOKEN = process.env.WA_ACCESS_TOKEN;
 const WA_VERIFY_TOKEN = process.env.WA_VERIFY_TOKEN || 'wpmenu-verify';
 const WA_API_VERSION = process.env.WA_API_VERSION || 'v21.0';
+const WA_APP_SECRET = process.env.WA_APP_SECRET || '';
 const whatsappEnabled = !!(WA_PHONE_NUMBER_ID && WA_ACCESS_TOKEN);
 
 const waPhone = () => String(WA_PHONE_NUMBER_ID).trim();
@@ -139,45 +140,6 @@ async function sendWhatsAppUrlButton(to, bodyText, buttonText, url) {
   }
 }
 
-// Kullanıcı eşleştirme: sipariş/favori telegram veya whatsapp ile
-function orderUserMatch(order, telegramId, whatsappId) {
-  if (telegramId && order.telegramId === String(telegramId)) return true;
-  if (whatsappId && order.whatsappId === String(whatsappId)) return true;
-  return false;
-}
-function prefsKey(telegramId, whatsappId) {
-  if (whatsappId) return 'wa_' + String(whatsappId);
-  if (telegramId) return String(telegramId);
-  return null;
-}
-
-function loadOrders() {
-  try {
-    return JSON.parse(fs.readFileSync(ORDERS_PATH, 'utf8'));
-  } catch {
-    return [];
-  }
-}
-function saveOrders(arr) {
-  fs.writeFileSync(ORDERS_PATH, JSON.stringify(arr, null, 2));
-}
-function loadFavorites() {
-  try {
-    return JSON.parse(fs.readFileSync(FAVORITES_PATH, 'utf8'));
-  } catch {
-    return [];
-  }
-}
-function saveFavorites(arr) {
-  fs.writeFileSync(FAVORITES_PATH, JSON.stringify(arr, null, 2));
-}
-function loadPrefs() {
-  try { return JSON.parse(fs.readFileSync(PREFS_PATH, 'utf8')); } catch { return {}; }
-}
-function savePrefs(obj) {
-  fs.writeFileSync(PREFS_PATH, JSON.stringify(obj, null, 2));
-}
-
 let orders = loadOrders();
 let orderIdCounter = Math.max(1, ...orders.map(o => o.id), 0) + 1;
 
@@ -202,14 +164,26 @@ bot.on('message', () => {});
 
 const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-const upload = multer({ dest: UPLOADS_DIR, limits: { fileSize: 5 * 1024 * 1024 } });
+const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const ALLOWED_EXT = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+const upload = multer({
+  dest: UPLOADS_DIR,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ext = (file.originalname || '').split('.').pop()?.toLowerCase();
+    const mimeOk = ALLOWED_MIMES.includes(file.mimetype);
+    const extOk = ext && ALLOWED_EXT.includes(ext);
+    if (mimeOk && extOk) return cb(null, true);
+    cb(new Error('Sadece resim dosyaları (JPEG, PNG, WebP, GIF) yüklenebilir.'));
+  }
+});
 
 const app = express();
 app.set('trust proxy', 1);
-app.use(express.json());
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ——— WhatsApp Webhook (rate limit uygulanmaz) ———
+// ——— WhatsApp Webhook: raw body for signature (must be before express.json()) ———
 app.get('/webhook/whatsapp', (req, res) => {
   const mode = (req.query['hub.mode'] || '').trim();
   const token = (req.query['hub.verify_token'] || '').trim();
@@ -221,7 +195,24 @@ app.get('/webhook/whatsapp', (req, res) => {
   }
 });
 
-app.post('/webhook/whatsapp', (req, res) => {
+function verifyWhatsAppSignature(req, bodyRaw) {
+  if (!WA_APP_SECRET) return true;
+  const sig = req.headers['x-hub-signature-256'] || '';
+  if (!sig.startsWith('sha256=')) return false;
+  const expected = 'sha256=' + crypto.createHmac('sha256', WA_APP_SECRET).update(bodyRaw).digest('hex');
+  return crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
+}
+
+app.post('/webhook/whatsapp', express.raw({ type: 'application/json' }), (req, res) => {
+  const bodyRaw = Buffer.isBuffer(req.body) ? req.body : Buffer.from('');
+  if (WA_APP_SECRET && !verifyWhatsAppSignature(req, bodyRaw)) {
+    return res.sendStatus(403);
+  }
+  try {
+    req.body = bodyRaw.length ? JSON.parse(bodyRaw.toString()) : {};
+  } catch {
+    req.body = {};
+  }
   res.sendStatus(200);
   if (!whatsappEnabled) {
     console.log('[WhatsApp] Webhook alındı ama WhatsApp kapalı (WA_* .env)');
@@ -301,6 +292,8 @@ app.post('/webhook/whatsapp', (req, res) => {
   }
 });
 
+app.use(express.json());
+
 // Rate limiting: 60 istek/dakika
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -310,12 +303,15 @@ const apiLimiter = rateLimit({
 app.use('/api/', apiLimiter);
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
-const adminTokens = new Set();
+const ADMIN_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 saat
+const adminTokens = new Map(); // token -> expiry time
 
 function requireAdmin(req, res, next) {
   if (!ADMIN_PASSWORD) return next();
   const token = req.headers['x-admin-token'] || (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
-  if (token && adminTokens.has(token)) return next();
+  const expiry = adminTokens.get(token);
+  if (expiry && Date.now() < expiry) return next();
+  if (expiry) adminTokens.delete(token);
   res.status(401).json({ ok: false, error: 'Yetkisiz. Giriş yapın.' });
 }
 
@@ -324,7 +320,7 @@ app.post('/api/auth/login', (req, res) => {
   if (!ADMIN_PASSWORD) return res.json({ ok: true, token: 'no-auth' });
   if (password !== ADMIN_PASSWORD) return res.status(401).json({ ok: false, error: 'Geçersiz şifre' });
   const token = crypto.randomBytes(32).toString('hex');
-  adminTokens.add(token);
+  adminTokens.set(token, Date.now() + ADMIN_TOKEN_TTL_MS);
   res.json({ ok: true, token });
 });
 
@@ -340,11 +336,9 @@ function isLocalhost() {
 
 // ——— API ———
 app.get('/api/menu', (req, res) => {
-  try {
-    res.json(JSON.parse(fs.readFileSync(MENU_PATH, 'utf8')));
-  } catch {
-    res.status(500).json({ error: 'Menü yüklenemedi' });
-  }
+  const menu = getCachedMenu();
+  if (!menu) return res.status(500).json({ error: 'Menü yüklenemedi' });
+  res.json(menu);
 });
 app.get('/api/favorites', (req, res) => {
   const { telegramId, whatsappId } = req.query;
@@ -397,14 +391,10 @@ app.post('/api/favorites', (req, res) => {
   res.json({ ok: true, favoriteId: id });
 });
 app.get('/api/restaurant', (req, res) => {
-  try {
-    const rest = JSON.parse(fs.readFileSync(RESTAURANT_PATH, 'utf8'));
-    rest.isOpen = isOpen(rest);
-    rest.minOrderAmount = Number(rest.minOrderAmount) || 0;
-    res.json(rest);
-  } catch {
-    res.json({ name: '', address: '', phone: '', hours: '', isOpen: true, minOrderAmount: 0 });
-  }
+  const rest = getCachedRestaurant();
+  rest.isOpen = isOpen(rest);
+  rest.minOrderAmount = Number(rest.minOrderAmount) || 0;
+  res.json(rest);
 });
 app.get('/api/user/prefs', (req, res) => {
   const key = prefsKey(req.query.telegramId, req.query.whatsappId);
@@ -429,22 +419,35 @@ app.post('/api/user/prefs', (req, res) => {
 });
 app.post('/api/coupon/validate', (req, res) => {
   const { code, subtotal } = req.body;
-  const result = validateCoupon(code, Number(subtotal) || 0);
+  const result = validateCoupon(code, Number(subtotal) || 0, getRestaurant);
   if (!result) return res.json({ ok: false, error: 'Geçersiz kupon' });
   res.json({ ok: true, discount: result.discount, finalTotal: Math.max(0, (Number(subtotal) || 0) - result.discount) });
 });
-app.post('/api/upload', requireAdmin, upload.single('file'), (req, res) => {
+app.post('/api/upload', requireAdmin, (req, res, next) => {
+  upload.single('file')(req, res, (err) => {
+    if (err && err.message && err.message.includes('resim')) {
+      return res.status(400).json({ ok: false, error: err.message });
+    }
+    if (err) return next(err);
+    next();
+  });
+}, (req, res) => {
   if (!req.file) return res.status(400).json({ ok: false, error: 'Dosya yok' });
   const ext = (req.file.originalname || '').split('.').pop() || 'jpg';
-  const newName = req.file.filename + '.' + ext.replace(/[^a-z0-9]/gi, '');
+  const safeExt = ext.replace(/[^a-z0-9]/gi, '').toLowerCase();
+  const finalExt = ALLOWED_EXT.includes(safeExt) ? safeExt : 'jpg';
+  const newName = req.file.filename + '.' + finalExt;
   const newPath = path.join(UPLOADS_DIR, newName);
   fs.renameSync(req.file.path, newPath);
   res.json({ ok: true, url: '/uploads/' + newName });
 });
 
 app.put('/api/restaurant', requireAdmin, (req, res) => {
+  const { error, value } = validateRestaurant(req.body || {});
+  if (error) return res.status(400).json({ ok: false, error: 'Geçersiz veri: ' + error });
   try {
-    fs.writeFileSync(RESTAURANT_PATH, JSON.stringify(req.body, null, 2));
+    fs.writeFileSync(RESTAURANT_PATH, JSON.stringify(value, null, 2));
+    invalidateRestaurantCache();
     res.json({ ok: true });
   } catch (e) {
     logError('Restaurant save', e);
@@ -452,8 +455,11 @@ app.put('/api/restaurant', requireAdmin, (req, res) => {
   }
 });
 app.put('/api/menu', requireAdmin, (req, res) => {
+  const { error, value } = validateMenu(req.body || {});
+  if (error) return res.status(400).json({ ok: false, error: 'Geçersiz veri: ' + error });
   try {
-    fs.writeFileSync(MENU_PATH, JSON.stringify(req.body, null, 2));
+    fs.writeFileSync(MENU_PATH, JSON.stringify(value, null, 2));
+    invalidateMenuCache();
     res.json({ ok: true });
   } catch (e) {
     logError('Menu save', e);
@@ -481,7 +487,7 @@ app.post('/api/order', (req, res) => {
     let discountAmount = 0;
     let finalTotal = subtotal;
     if (couponCode) {
-      const coup = validateCoupon(couponCode, subtotal);
+      const coup = validateCoupon(couponCode, subtotal, getRestaurant);
       if (coup) {
         discountAmount = coup.discount;
         finalTotal = Math.max(0, subtotal - discountAmount);
@@ -517,7 +523,7 @@ app.post('/api/order', (req, res) => {
       prefs[prefsKeyUser].addresses = addrs.slice(-5);
       savePrefs(prefs);
     }
-    const confirmText = formatOrderConfirm(order);
+    const confirmText = formatOrderConfirm(order, getRestaurant);
     if (telegramId) {
       bot.sendMessage(telegramId, confirmText, { parse_mode: 'HTML' }).catch(e => logError('Bot mesaj', e));
       pendingLocationForOrder.set(String(telegramId), id);
@@ -536,6 +542,13 @@ app.post('/api/order', (req, res) => {
 
 app.get('/api/orders', requireAdmin, (req, res) => {
   res.json({ orders: [...orders].reverse() });
+});
+app.get('/api/my-orders', (req, res) => {
+  const { telegramId, whatsappId } = req.query;
+  const key = prefsKey(telegramId, whatsappId);
+  if (!key) return res.status(400).json({ error: 'telegramId veya whatsappId gerekli' });
+  const list = orders.filter(o => orderUserMatch(o, telegramId, whatsappId)).slice(-20).reverse();
+  res.json({ orders: list });
 });
 app.get('/api/orders/:id', (req, res) => {
   const { telegramId, whatsappId } = req.query;
@@ -563,11 +576,36 @@ app.post('/api/orders/:id/add', (req, res) => {
   res.json({ ok: true, order });
 });
 
-app.patch('/api/orders/:id', requireAdmin, (req, res) => {
+const CANCEL_MINUTES = 10;
+function canCustomerCancel(order) {
+  return order.status === 'Alındı' && (Date.now() - new Date(order.createdAt).getTime()) < CANCEL_MINUTES * 60 * 1000;
+}
+
+app.patch('/api/orders/:id', (req, res, next) => {
   const id = parseInt(req.params.id);
-  const { status, cancelReason, estimatedMinutes } = req.body;
+  const { status, cancelReason, estimatedMinutes, telegramId, whatsappId } = req.body || {};
   const order = orders.find(o => o.id === id);
   if (!order || !status) return res.status(400).json({ ok: false });
+  const isAdmin = ADMIN_PASSWORD && (() => {
+    const token = req.headers['x-admin-token'] || (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+    const expiry = adminTokens.get(token);
+    return expiry && Date.now() < expiry;
+  })();
+  if (status === 'İptal' && !isAdmin) {
+    const userId = telegramId || whatsappId;
+    if (!userId || !orderUserMatch(order, telegramId, whatsappId)) return res.status(403).json({ ok: false, error: 'Bu siparişe ait değilsiniz.' });
+    if (!canCustomerCancel(order)) return res.status(400).json({ ok: false, error: 'Sipariş artık iptal edilemez veya 10 dakika geçti.' });
+    order.status = 'İptal';
+    order.cancelReason = 'Müşteri iptali';
+    saveOrders(orders);
+    return res.json({ ok: true, order });
+  }
+  if (!isAdmin) return res.status(401).json({ ok: false, error: 'Yetkisiz. Giriş yapın.' });
+  next();
+}, (req, res) => {
+  const id = parseInt(req.params.id);
+  const { status, cancelReason, estimatedMinutes } = req.body || {};
+  const order = orders.find(o => o.id === id);
   const valid = ['Alındı', 'Hazırlanıyor', 'Hazır', 'Yola Çıktı', 'Teslim Edildi', 'İptal'];
   if (!valid.includes(status)) return res.status(400).json({ ok: false });
   order.status = status;
@@ -631,67 +669,6 @@ function menuButton(chatId, text, extra = '') {
   return { text, web_app: { url } };
 }
 
-function getRestaurant() {
-  try {
-    return JSON.parse(fs.readFileSync(RESTAURANT_PATH, 'utf8'));
-  } catch {
-    return { name: 'MeraPaket', address: '-', phone: '-', hours: '-', minOrderAmount: 0, hoursOpen: '00:00', hoursClose: '23:59' };
-  }
-}
-
-// Çalışma saatleri kontrolü (HH:mm formatı)
-function isOpen(rest) {
-  if (!rest.hoursOpen || !rest.hoursClose) return true;
-  const now = new Date();
-  const [oh, om] = rest.hoursOpen.split(':').map(Number);
-  const [ch, cm] = rest.hoursClose.split(':').map(Number);
-  const nowMin = now.getHours() * 60 + now.getMinutes();
-  const openMin = oh * 60 + om;
-  let closeMin = ch * 60 + cm;
-  if (closeMin <= openMin) closeMin += 24 * 60; // Gece yarısı geçiyorsa
-  const nowNorm = nowMin < openMin ? nowMin + 24 * 60 : nowMin;
-  return nowNorm >= openMin && nowNorm < closeMin;
-}
-
-// Kupon doğrulama
-function validateCoupon(code, subtotal) {
-  const rest = getRestaurant();
-  const coupons = rest.coupons || [];
-  const c = coupons.find(x => String(x.code).toUpperCase() === String(code || '').toUpperCase());
-  if (!c) return null;
-  let discount = 0;
-  if (c.type === 'percent') discount = Math.round(subtotal * (c.discount / 100));
-  else if (c.type === 'fixed') discount = Math.min(c.discount, subtotal);
-  return { discount, code: c.code };
-}
-
-function formatOrderConfirm(order) {
-  const r = getRestaurant();
-  const est = order.estimatedMinutes ?? r.estimatedMinutes ?? 25;
-  const payLabel = order.paymentMethod === 'kapida_pos' ? 'POS' : 'Nakit';
-  const disc = order.discountAmount ? `\n🏷 İndirim: -${order.discountAmount}₺` : '';
-  return `✅ <b>Siparişin alındı!</b>
-
-📦 ${order.items}
-
-📍 ${order.address}
-${order.notes ? `📝 ${order.notes}\n` : ''}💳 ${payLabel}${disc}
-💰 <b>${order.total}₺</b>
-
-⏱ Tahminen ${est} dakika içinde hazır olacak.
-
-Afiyet olsun!`;
-}
-
-function getActiveCampaign() {
-  const r = getRestaurant();
-  const campaigns = r.campaigns || {};
-  for (const [key, c] of Object.entries(campaigns)) {
-    if (c && c.enabled) return { key, ...c };
-  }
-  return null;
-}
-
 function buildMainKeyboard(chatId) {
   const useUrl = !isLocalhost();
   const siparisBtn = useUrl ? menuButton(chatId, '🍽️ Menüyü açın') : { text: '🍽️ Menüyü açın', callback_data: 'open_menu' };
@@ -717,18 +694,6 @@ function sendMainMenu(chatId, firstName) {
   const status = openNow ? '🟢 Açık' : '🔴 Kapalı';
   const text = `👋 Merhaba ${name}!\n\n<b>${r.name || 'MeraPaket'}</b> — ${status}\n${r.hours || ''}\n\nNe yapmak istersin? Aşağıdaki butonlardan seçebilirsin.`;
   return bot.sendMessage(chatId, text, { parse_mode: 'HTML', reply_markup: buildMainKeyboard(chatId) }).catch(e => logError('Bot mesaj', e));
-}
-
-function loadMenuForPreview() {
-  try {
-    const m = JSON.parse(fs.readFileSync(MENU_PATH, 'utf8'));
-    const cats = m.categories || [];
-    const all = [];
-    cats.forEach(c => {
-      (c.products || []).slice(0, 3).forEach(p => all.push({ name: p.name, price: p.price, icon: c.icon || '🍽️' }));
-    });
-    return all.slice(0, 6);
-  } catch { return []; }
 }
 
 // Konum sipariş verdikten sonra istenir (menüden değil)
@@ -1020,7 +985,7 @@ bot.on('callback_query', async (query) => {
   }
 
   if (data === 'campaigns') {
-    const campaign = getActiveCampaign();
+    const campaign = getActiveCampaign(getRestaurant);
     bot.answerCallbackQuery(query.id);
     if (!campaign) {
       await bot.sendMessage(chatId, 'Şu an aktif kampanya yok.', { reply_markup: buildMainKeyboard(chatId) });

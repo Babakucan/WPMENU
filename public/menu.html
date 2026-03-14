@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Menü - MeraPaket</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#ea580c">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="telegram-web-app.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -383,11 +385,15 @@
         <div id="closed-banner" style="display:none;margin-bottom:12px;padding:12px;background:rgba(239,68,68,0.12);border-radius:10px;color:#f87171;border:1px solid rgba(239,68,68,0.25)">🕐 Restoran şu an kapalı. <span id="hours-text"></span> <span id="opens-in-text"></span></div>
         <div class="section-tabs" id="section-tabs" style="display:none">
           <button type="button" class="section-tab active" data-section="menu">🍽️ Menü</button>
+          <button type="button" class="section-tab" data-section="orders">📋 Siparişlerim</button>
           <button type="button" class="section-tab" data-section="favorites">⭐ Favorilerim</button>
         </div>
       </div>
     </div>
 
+    <div id="orders-section" class="favorites-section" style="display:none">
+      <div class="loading"><span class="spinner"></span>Siparişler yükleniyor...</div>
+    </div>
     <div id="favorites-section" class="favorites-section">
       <div class="loading"><span class="spinner"></span>Favoriler yükleniyor...</div>
     </div>
@@ -457,6 +463,9 @@
   </div>
 
   <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
     const params = new URLSearchParams(location.search);
     let telegramId = params.get('tg');
     if (!telegramId && window.Telegram?.WebApp?.initData) {
@@ -613,6 +622,7 @@
         loadFavoritesSection();
         if (cart.length) updateCart();
         if (sectionParam === 'favorites') showSection('favorites');
+        else if (sectionParam === 'orders') showSection('orders');
         el.querySelectorAll('.product').forEach(row => {
           const pid = row.dataset.id;
           const name = row.dataset.name;
@@ -800,7 +810,7 @@
           fetch(`/api/orders/${addOrderId}/add`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ telegramId, items: itemsStr, total })
+            body: JSON.stringify({ ...(telegramId ? { telegramId } : { whatsappId }), items: itemsStr, total })
           }).then(r => r.json()).then(d => {
             const errEl = document.getElementById('add-error');
             if (d.ok) {
@@ -1015,12 +1025,66 @@
       }
       function showSection(section) {
         const isFav = section === 'favorites';
-        document.getElementById('menu-section').style.display = isFav ? 'none' : 'block';
+        const isOrders = section === 'orders';
+        document.getElementById('menu-section').style.display = (isFav || isOrders) ? 'none' : 'block';
         document.getElementById('favorites-section').classList.toggle('show', isFav);
+        document.getElementById('orders-section').style.display = isOrders ? 'block' : 'none';
+        if (isOrders) document.getElementById('orders-section').classList.add('show');
+        else document.getElementById('orders-section').classList.remove('show');
         document.querySelectorAll('.section-tab').forEach(t => t.classList.toggle('active', t.dataset.section === section));
         const url = new URL(location.href);
-        if (section === 'favorites') url.searchParams.set('section', 'favorites'); else url.searchParams.delete('section');
+        if (section === 'favorites') url.searchParams.set('section', 'favorites');
+        else if (section === 'orders') url.searchParams.set('section', 'orders');
+        else url.searchParams.delete('section');
         history.replaceState({}, '', url);
+        if (isOrders) loadMyOrders();
+      }
+      const CANCEL_MINUTES = 10;
+      function canCancelOrder(order) {
+        return order.status === 'Alındı' && (Date.now() - new Date(order.createdAt).getTime()) < CANCEL_MINUTES * 60 * 1000;
+      }
+      async function loadMyOrders() {
+        const el = document.getElementById('orders-section');
+        const q = telegramId ? 'telegramId=' + encodeURIComponent(telegramId) : 'whatsappId=' + encodeURIComponent(whatsappId);
+        try {
+          const r = await fetch('/api/my-orders?' + q);
+          if (!r.ok) { el.innerHTML = '<div class="loading" style="color:#f87171">Siparişler yüklenemedi.</div>'; return; }
+          const d = await r.json();
+          const list = d.orders || [];
+          if (list.length === 0) {
+            el.innerHTML = '<div class="loading" style="color:#71717a">Henüz siparişiniz yok.</div>';
+          } else {
+            el.innerHTML = list.map(o => {
+              const itemsPreview = (o.items || '-').replace(/</g, '&lt;').slice(0, 60) + ((o.items || '').length > 60 ? '…' : '');
+              const cancelable = canCancelOrder(o);
+              return `<div class="favorite-card" data-order-id="${o.id}">
+                <h3>#${o.id} — ${String(o.status).replace(/</g, '&lt;')}</h3>
+                <div class="fav-items">${itemsPreview}</div>
+                <div class="fav-total">${o.total || 0}₺</div>
+                ${cancelable ? '<button type="button" class="fav-add-btn order-cancel-btn">❌ İptal et</button>' : ''}
+              </div>`;
+            }).join('');
+            el.querySelectorAll('.order-cancel-btn').forEach(btn => {
+              btn.addEventListener('click', async () => {
+                const card = btn.closest('.favorite-card');
+                const oid = card?.getAttribute('data-order-id');
+                if (!oid) return;
+                btn.disabled = true;
+                try {
+                  const body = { status: 'İptal' };
+                  if (telegramId) body.telegramId = telegramId;
+                  if (whatsappId) body.whatsappId = whatsappId;
+                  const res = await fetch('/api/orders/' + oid, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                  const data = await res.json();
+                  if (data.ok) loadMyOrders();
+                  else { btn.disabled = false; alert(data.error || 'İptal edilemedi'); }
+                } catch (_) { btn.disabled = false; alert('Bağlantı hatası'); }
+              });
+            });
+          }
+        } catch (_) {
+          el.innerHTML = '<div class="loading" style="color:#f87171">Siparişler yüklenemedi.</div>';
+        }
       }
       async function loadReorderOrFav() {
         const q = telegramId ? 'telegramId=' + telegramId : 'whatsappId=' + whatsappId;
