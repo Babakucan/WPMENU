@@ -25,7 +25,7 @@
         { "id": "kola", "name": "Kola", "price": 25, "image": "" },
         { "id": "fanta", "name": "Fanta", "price": 25, "image": "" },
         { "id": "su", "name": "Su", "price": 10, "image": "" },
-        { "id": "cay", "name": "Çay", "price": 12, "image": "" }
+        { "id": "cay", "name": "Çay", "price": 12, "image": "", "onlyDineIn": true }
       ]
     },
     {

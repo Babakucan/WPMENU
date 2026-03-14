@@ -251,20 +251,18 @@
       <h2>📋 Sipariş Detayları</h2>
       <div class="order-type-toggle">
         <button type="button" class="order-type-btn active" data-type="paket">📦 Paket Servis</button>
-        <button type="button" class="order-type-btn" data-type="restoran">🏠 Restoran İçi</button>
+        <button type="button" class="order-type-btn" data-type="gel_al">🛵 Gel Al</button>
       </div>
       <div class="form-group" id="address-group">
         <label>Adres</label>
-        <select id="saved-addresses" style="width:100%;padding:12px;border-radius:10px;margin-bottom:8px;background:#27272a;border:1px solid #3f3f46;color:#e4e4e7;display:none"><option value="">Kayıtlı adresler...</option></select>
-        <div style="display:flex;gap:8px;margin-bottom:8px">
-          <input type="text" id="address" placeholder="Teslimat adresi" style="flex:1">
+        <select id="saved-addresses" style="width:100%;padding:12px;border-radius:10px;margin-bottom:8px;background:#27272a;border:1px solid #3f3f46;color:#e4e4e7"><option value="">Yeni adres yazın veya aşağıdan seçin</option></select>
+        <div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap">
+          <input type="text" id="address" placeholder="Teslimat adresi" style="flex:1;min-width:180px">
           <button type="button" id="location-btn" class="order-type-btn" style="white-space:nowrap">📍 Konum</button>
+          <button type="button" id="save-address-btn" class="order-type-btn" style="white-space:nowrap">💾 Adresi kaydet</button>
         </div>
+        <span id="address-save-msg" style="font-size:0.85rem;color:#22c55e;display:none;margin-bottom:6px">Adres kaydedildi. Bir sonraki siparişte listeden seçebilirsiniz.</span>
         <span style="font-size:0.85rem;color:#71717a">İsterseniz konum gönderebilirsiniz.</span>
-      </div>
-      <div class="form-group" id="table-group" style="display:none">
-        <label>Masa No</label>
-        <input type="text" id="table" placeholder="Örn: 5">
       </div>
       <div class="form-group" id="coupon-group">
         <label>Kupon Kodu (isteğe bağlı)</label>
@@ -276,9 +274,13 @@
       </div>
       <div class="form-group">
         <label>Ödeme Yöntemi</label>
-        <div class="order-type-toggle">
+        <div id="payment-paket" class="order-type-toggle">
           <button type="button" class="order-type-btn active" data-payment="kapida_nakit">💵 Kapıda Nakit</button>
           <button type="button" class="order-type-btn" data-payment="kapida_pos">💳 Kapıda POS</button>
+        </div>
+        <div id="payment-gelal" class="order-type-toggle" style="display:none">
+          <button type="button" class="order-type-btn active" data-payment="gelal_nakit">💵 Alırken Nakit</button>
+          <button type="button" class="order-type-btn" data-payment="gelal_pos">💳 Alırken Kart</button>
         </div>
       </div>
       <div class="form-group">
@@ -321,6 +323,22 @@
       let restaurantInfo = { isOpen: true, minOrderAmount: 0 };
       let appliedCoupon = null;
       let allProducts = [];
+      function applyDineInVisibility() {
+        document.querySelectorAll('.product[data-only-dine-in="true"]').forEach(el => {
+          el.style.display = orderType === 'gel_al' ? '' : 'none';
+        });
+      }
+      function getEffectivePrice(row) {
+        const base = parseInt(row.dataset.price, 10) || 0;
+        const restoran = row.dataset.priceRestoran !== '' && row.dataset.priceRestoran != null ? parseInt(row.dataset.priceRestoran, 10) : null;
+        return (orderType === 'gel_al' && restoran != null && !isNaN(restoran)) ? restoran : base;
+      }
+      function updateProductPrices() {
+        document.querySelectorAll('.product').forEach(row => {
+          const priceEl = row.querySelector('.product-price');
+          if (priceEl) priceEl.textContent = getEffectivePrice(row) + '₺';
+        });
+      }
 
       const icons = { 'ana-yemekler': '🍽️', 'icecekler': '🥤', 'tatlilar': '🍰' };
       if (localStorage.getItem('theme') === 'light') { document.body.classList.add('light'); document.getElementById('theme-btn').textContent = '🌙'; }
@@ -360,11 +378,11 @@
           <div class="category" id="cat-${ci}">
             <h2>${cat.icon || icons[cat.id] || '🍽️'} ${cat.name}</h2>
             ${cat.products.map(p => `
-              <div class="product" data-id="${p.id}" data-name="${p.name}" data-price="${p.price}">
+              <div class="product" data-id="${p.id}" data-name="${p.name}" data-price="${p.price ?? 0}" data-price-restoran="${p.priceRestoran ?? ''}" ${p.onlyDineIn ? 'data-only-dine-in="true" title="Sadece Gel Al"' : ''}>
                 <div class="product-img">${p.image ? `<img src="${p.image}" alt="">` : '🍽️'}</div>
                 <div class="product-info">
                   <div class="product-name">${p.name}</div>
-                  <div class="product-price">${p.price}₺</div>
+                  <div class="product-price" data-base-price="${p.price ?? 0}" data-restoran-price="${p.priceRestoran ?? ''}">${p.price ?? 0}₺</div>
                 </div>
                 <div class="product-actions">
                   <button class="qty-btn minus">−</button>
@@ -378,32 +396,72 @@
 
         await loadRestaurant();
         await loadSavedAddresses();
+        document.getElementById('saved-addresses').addEventListener('change', function() {
+          if (this.value) document.getElementById('address').value = this.value;
+        });
+        document.getElementById('save-address-btn').addEventListener('click', async () => {
+          const addrInput = document.getElementById('address');
+          const adr = (addrInput && addrInput.value || '').trim();
+          const msgEl = document.getElementById('address-save-msg');
+          if (!adr) {
+            msgEl.style.color = '#f87171';
+            msgEl.textContent = 'Önce bir adres yazın.';
+            msgEl.style.display = 'block';
+            setTimeout(() => { msgEl.style.display = 'none'; }, 3000);
+            return;
+          }
+          try {
+            const body = telegramId ? { telegramId, address: adr } : { whatsappId, address: adr };
+            const r = await fetch('/api/user/prefs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            const d = await r.json();
+            if (d.ok) {
+              await loadSavedAddresses();
+              msgEl.style.color = '#22c55e';
+              msgEl.textContent = 'Adres kaydedildi. Bir sonraki siparişte listeden seçebilirsiniz.';
+              msgEl.style.display = 'block';
+              setTimeout(() => { msgEl.style.display = 'none'; }, 4000);
+            } else {
+              msgEl.style.color = '#f87171';
+              msgEl.textContent = d.error || 'Kaydedilemedi.';
+              msgEl.style.display = 'block';
+              setTimeout(() => { msgEl.style.display = 'none'; }, 3000);
+            }
+          } catch (_) {
+            msgEl.style.color = '#f87171';
+            msgEl.textContent = 'Bağlantı hatası.';
+            msgEl.style.display = 'block';
+            setTimeout(() => { msgEl.style.display = 'none'; }, 3000);
+          }
+        });
         await loadReorderOrFav();
         loadFavoritesSection();
         if (cart.length) updateCart();
         if (sectionParam === 'favorites') showSection('favorites');
         el.querySelectorAll('.product').forEach(row => {
           const name = row.dataset.name;
-          const price = parseInt(row.dataset.price);
           const plus = row.querySelector('.plus');
           const minus = row.querySelector('.minus');
           const qtyEl = row.querySelector('.qty-val');
-          qtyEl.textContent = cart.filter(i => i.name === name && i.price === price).length;
+          function refreshQty() {
+            qtyEl.textContent = cart.filter(i => i.name === name).length;
+          }
+          refreshQty();
 
           plus.addEventListener('click', () => {
-            cart.push({ name, price });
+            cart.push({ name, price: getEffectivePrice(row) });
             updateCart();
-            qtyEl.textContent = cart.filter(i => i.name === name && i.price === price).length;
+            refreshQty();
           });
           minus.addEventListener('click', () => {
-            const idx = cart.findIndex(i => i.name === name && i.price === price);
+            const idx = cart.findIndex(i => i.name === name);
             if (idx >= 0) {
               cart.splice(idx, 1);
               updateCart();
-              qtyEl.textContent = cart.filter(i => i.name === name && i.price === price).length;
+              refreshQty();
             }
           });
         });
+        updateProductPrices();
         const pills = el.querySelectorAll('.category-pill');
         if (pills.length) pills[0].classList.add('active');
         pills.forEach(pill => {
@@ -420,6 +478,17 @@
         document.querySelectorAll('.section-tab').forEach(tab => {
           tab.addEventListener('click', () => showSection(tab.dataset.section));
         });
+        applyDineInVisibility();
+        const qrTable = params.get('table');
+        const qrAddress = params.get('address');
+        if (qrTable) {
+          orderType = 'gel_al';
+          document.getElementById('address-group').style.display = 'none';
+          document.querySelectorAll('.order-type-btn').forEach(b => { b.classList.remove('active'); if (b.dataset.type === 'gel_al') b.classList.add('active'); });
+          applyDineInVisibility();
+          updatePaymentSection();
+        }
+        if (qrAddress && document.getElementById('address')) document.getElementById('address').value = decodeURIComponent(qrAddress);
         } catch (e) {
           el.innerHTML = '<div class="loading" style="color:#f87171"><span class="spinner"></span>Menü yüklenemedi.<br><small>' + (e.name === 'AbortError' ? 'Zaman aşımı.' : 'Bağlantı hatası.') + '</small><button type="button" class="retry-btn" onclick="loadMenu()">Tekrar Dene</button></div>';
         }
@@ -429,7 +498,9 @@
         document.querySelectorAll('.category').forEach(cat => {
           let hasVisible = false;
           cat.querySelectorAll('.product').forEach(p => {
-            const ok = !q || (p.dataset.name || '').toLowerCase().includes(q);
+            const searchOk = !q || (p.dataset.name || '').toLowerCase().includes(q);
+            const dineInOk = p.dataset.onlyDineIn !== 'true' || orderType === 'gel_al';
+            const ok = searchOk && dineInOk;
             p.style.display = ok ? '' : 'none';
             if (ok) hasVisible = true;
           });
@@ -438,14 +509,22 @@
       });
       async function loadSavedAddresses() {
         try {
-          const q = telegramId ? 'telegramId=' + telegramId : 'whatsappId=' + whatsappId;
+          const q = telegramId ? 'telegramId=' + encodeURIComponent(telegramId) : 'whatsappId=' + encodeURIComponent(whatsappId);
           const r = await fetch('/api/user/prefs?' + q);
           const p = await r.json();
-          const addrs = p.addresses || [];
+          const allAddrs = p.addresses || [];
+          const addrs = allAddrs.filter(a => {
+            const t = (a || '').trim();
+            return t !== 'Gel Al' && !t.toLowerCase().startsWith('masa');
+          });
           const sel = document.getElementById('saved-addresses');
-          sel.innerHTML = '<option value="">Yeni adres</option>' + addrs.map(a => '<option value="' + a.replace(/"/g, '&quot;') + '">' + (a.length > 45 ? a.slice(0, 42) + '...' : a) + '</option>').join('');
-          sel.style.display = addrs.length ? 'block' : 'none';
-          sel.addEventListener('change', () => { if (sel.value) document.getElementById('address').value = sel.value; });
+          sel.innerHTML = '<option value="">Yeni adres yazın veya aşağıdan seçin</option>' +
+            addrs.map(a => {
+              const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+              const val = esc(a);
+              const label = a.length > 50 ? a.slice(0, 47) + '...' : a;
+              return '<option value="' + val + '">' + esc(label) + '</option>';
+            }).join('');
         } catch (_) {}
       }
 
@@ -484,13 +563,30 @@
         }
       }
 
+      function updatePaymentSection() {
+        const isPaket = orderType === 'paket';
+        document.getElementById('payment-paket').style.display = isPaket ? '' : 'none';
+        document.getElementById('payment-gelal').style.display = isPaket ? 'none' : '';
+        if (isPaket) {
+          paymentMethod = 'kapida_nakit';
+          document.querySelectorAll('#payment-paket [data-payment]').forEach((b, i) => { b.classList.toggle('active', i === 0); });
+          document.querySelectorAll('#payment-gelal [data-payment]').forEach(b => b.classList.remove('active'));
+        } else {
+          paymentMethod = 'gelal_nakit';
+          document.querySelectorAll('#payment-gelal [data-payment]').forEach((b, i) => { b.classList.toggle('active', i === 0); });
+          document.querySelectorAll('#payment-paket [data-payment]').forEach(b => b.classList.remove('active'));
+        }
+      }
       document.querySelectorAll('.order-type-btn').forEach(btn => {
         btn.addEventListener('click', () => {
+          if (!btn.dataset.type) return;
           document.querySelectorAll('.order-type-btn').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
           orderType = btn.dataset.type;
           document.getElementById('address-group').style.display = orderType === 'paket' ? 'block' : 'none';
-          document.getElementById('table-group').style.display = orderType === 'restoran' ? 'block' : 'none';
+          applyDineInVisibility();
+          updateProductPrices();
+          updatePaymentSection();
         });
       });
 
@@ -615,7 +711,7 @@
         }
         const address = orderType === 'paket'
           ? (document.getElementById('address').value.trim() || 'Belirtilmedi')
-          : ('Masa ' + (document.getElementById('table').value.trim() || '-'));
+          : 'Gel Al';
         const notes = document.getElementById('notes').value.trim();
 
         const groups = {};

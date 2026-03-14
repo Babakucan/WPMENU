@@ -87,16 +87,26 @@
     .stat-label { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
     .order-card {
       background: var(--bg);
-      border-radius: 12px;
-      padding: 16px;
+      border-radius: 14px;
+      padding: 18px;
       border: 1px solid var(--border);
-      margin-bottom: 12px;
+      margin-bottom: 14px;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
+    .order-card:hover { border-color: var(--accent); box-shadow: 0 2px 12px rgba(34,197,94,0.08); }
     .order-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-    .order-id { font-weight: 700; color: var(--accent); }
+    .order-id { font-weight: 700; color: var(--accent); font-size: 1.05rem; }
     .order-time { font-size: 0.8rem; color: var(--muted); }
-    .order-items { color: #a1a1aa; font-size: 0.9rem; margin-bottom: 6px; }
+    .order-items { color: #a1a1aa; font-size: 0.9rem; margin-bottom: 6px; line-height: 1.4; }
     .order-meta { font-size: 0.8rem; color: var(--muted); margin-bottom: 10px; }
+    .order-estimate { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .order-estimate-label { font-size: 0.8rem; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+    .order-estimate-input {
+      width: 64px; padding: 6px 10px; font-size: 0.85rem; text-align: center;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+    }
+    .order-estimate-input:focus { outline: none; border-color: var(--accent); }
+    .order-status-extra { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; width: 100%; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
     .order-footer { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .badge { font-size: 0.7rem; padding: 4px 8px; background: var(--border); border-radius: 6px; color: #a1a1aa; }
     select {
@@ -153,7 +163,11 @@
     }
     .product-row:last-child { border-bottom: none; }
     .product-row input { flex: 2; }
-    .product-row input[type="number"] { flex: 0.5; }
+    .product-row input[type="number"] { flex: 0.5; min-width: 56px; }
+    .product-row .price-group { display: flex; flex-direction: column; gap: 2px; }
+    .product-row .price-group span { font-size: 0.7rem; color: var(--muted); }
+    .product-row label.dine-in-label { display: flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer; font-size: 0.85rem; color: var(--muted); }
+    .product-row label.dine-in-label input { flex: none; width: auto; }
     .coupon-row {
       display: flex;
       gap: 12px;
@@ -274,7 +288,9 @@
             <div class="form-group"><label>Açılış (HH:mm)</label><input type="text" id="r-hoursOpen" placeholder="10:00"></div>
             <div class="form-group"><label>Kapanış (HH:mm)</label><input type="text" id="r-hoursClose" placeholder="23:00"></div>
             <div class="form-group"><label>Min. Sipariş (₺)</label><input type="number" id="r-minOrder" min="0" placeholder="30"></div>
-            <div class="form-group"><label>Tahmini teslimat (dk)</label><input type="number" id="r-estMinutes" min="5" placeholder="25"></div>
+            <div class="form-group"><label>Tahmini süre – Gel Al (dk)</label><input type="number" id="r-estMinutesGelAl" min="5" placeholder="15" title="Müşteri restorandan alacak"></div>
+            <div class="form-group"><label>Tahmini süre – Paket (dk)</label><input type="number" id="r-estMinutesPaket" min="5" placeholder="30" title="Teslimat süresi"></div>
+            <div class="form-group"><label>Varsayılan tahmini süre (dk)</label><input type="number" id="r-estMinutes" min="5" placeholder="25" title="Gel Al/Paket ayarı yoksa kullanılır"></div>
           </div>
           <div class="form-group" style="margin-top:24px">
             <label>Kuponlar</label>
@@ -336,6 +352,7 @@
     }
 
     let lastOrderCount = 0;
+    let orderTahminFormOpen = false;
     const playNewOrderSound = () => {
       try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -371,20 +388,21 @@
           return;
         }
         el.innerHTML = filtered.map(o => `
-          <div class="order-card">
+          <div class="order-card" data-estimated="${o.estimatedMinutes ?? ''}">
             <div class="order-row">
-              <span class="order-id">${o.id}</span>
+              <span class="order-id">#${o.id}</span>
               <span class="order-time">${formatDate(o.createdAt)}</span>
             </div>
             <div class="order-items">${o.items}</div>
             <div class="order-meta">📍 ${o.address}${o.notes ? ' · 📝 ' + o.notes : ''}</div>
             <div class="order-footer">
               <span class="stat-value" style="font-size:1rem">${o.total}₺</span>
-              <span class="badge">${o.orderType === 'restoran' ? '🏠' : '📦'}</span>
-              <span class="badge">${(o.paymentMethod || 'kapida_nakit') === 'kapida_pos' ? '💳' : '💵'}</span>
-              <select onchange="updateStatus(${o.id}, this.value)">
+              <span class="badge" title="${o.orderType === 'gel_al' ? 'Gel Al' : o.orderType === 'restoran' ? 'Restoran İçi' : 'Paket'}">${(o.orderType === 'gel_al' || o.orderType === 'restoran') ? '🛵' : '📦'}</span>
+              <span class="badge" title="${o.paymentMethod === 'gelal_pos' ? 'Alırken Kart' : o.paymentMethod === 'gelal_nakit' ? 'Alırken Nakit' : o.paymentMethod === 'masada_pos' ? 'Masada Kart' : o.paymentMethod === 'masada_nakit' ? 'Masada Nakit' : o.paymentMethod === 'kapida_pos' ? 'Kapıda POS' : 'Kapıda Nakit'}">${(o.paymentMethod === 'kapida_pos' || o.paymentMethod === 'masada_pos' || o.paymentMethod === 'gelal_pos') ? '💳' : '💵'}</span>
+              <select onchange="onOrderStatusChange(${o.id}, this)">
                 ${statuses.map(s => `<option ${o.status === s ? 'selected' : ''}>${s}</option>`).join('')}
               </select>
+              <div class="order-status-extra"></div>
             </div>
           </div>
         `).join('');
@@ -401,6 +419,48 @@
       });
       loadOrders();
     }
+    async function updateStatusAndTahmin(id, status, estimatedMinutes) {
+      await fetch(`/api/orders/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, estimatedMinutes: estimatedMinutes === '' || estimatedMinutes == null ? undefined : parseInt(estimatedMinutes, 10) })
+      });
+      loadOrders();
+    }
+    function onOrderStatusChange(id, selectEl) {
+      const status = selectEl.value;
+      const card = selectEl.closest('.order-card');
+      const extraDiv = card.querySelector('.order-status-extra');
+      if (status === 'Teslim Edildi' || status === 'İptal') {
+        extraDiv.innerHTML = '';
+        orderTahminFormOpen = false;
+        updateStatus(id, status);
+        return;
+      }
+      orderTahminFormOpen = true;
+      const curEst = card.dataset.estimated || '';
+      extraDiv.innerHTML = `<span class="order-estimate-label">⏱ Tahmin (dk)</span>
+        <input type="number" class="order-estimate-input" min="5" max="120" placeholder="—" value="${curEst}" style="width:56px">
+        <button type="button" class="btn" style="padding:6px 12px;font-size:0.85rem" onclick="confirmStatusAndTahmin(${id}, this)">Güncelle</button>`;
+      extraDiv.querySelector('input').focus();
+    }
+    async function confirmStatusAndTahmin(id, btn) {
+      orderTahminFormOpen = false;
+      const card = btn.closest('.order-card');
+      const status = card.querySelector('select').value;
+      const input = card.querySelector('.order-status-extra input');
+      const est = input ? input.value : '';
+      await updateStatusAndTahmin(id, status, est);
+    }
+    async function updateEstimatedMinutes(id, value) {
+      const v = value === '' || value == null ? undefined : parseInt(value, 10);
+      await fetch(`/api/orders/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estimatedMinutes: v })
+      });
+      loadOrders();
+    }
 
     async function loadMenuEditor() {
       try {
@@ -414,7 +474,18 @@
             ${(cat.products || []).map((p, pi) => `
               <div class="product-row">
                 <input type="text" value="${(p.name || '').replace(/"/g, '&quot;')}" onchange="setProduct(${ci},${pi},'name',this.value)" placeholder="Ürün adı">
-                <input type="number" value="${p.price || 0}" min="0" onchange="setProduct(${ci},${pi},'price',this.value)" placeholder="₺">
+                <div class="price-group">
+                  <span>Paket ₺</span>
+                  <input type="number" value="${p.price ?? ''}" min="0" onchange="setProduct(${ci},${pi},'price',this.value)" placeholder="0">
+                </div>
+                <div class="price-group">
+                  <span>Restoran ₺</span>
+                  <input type="number" value="${p.priceRestoran ?? ''}" min="0" onchange="setProduct(${ci},${pi},'priceRestoran',this.value)" placeholder="Opsiyonel">
+                </div>
+                <label class="dine-in-label">
+                  <input type="checkbox" ${p.onlyDineIn ? 'checked' : ''} onchange="setProduct(${ci},${pi},'onlyDineIn',this.checked)">
+                  Sadece restoran içi
+                </label>
                 <button class="btn" style="background:#dc2626;color:#fff;padding:6px 10px" onclick="removeProduct(${ci},${pi})">Sil</button>
               </div>
             `).join('')}
@@ -429,13 +500,17 @@
     function setProduct(ci, pi, field, val) {
       if (!menuData.categories) return;
       const p = menuData.categories[ci]?.products?.[pi];
-      if (p) p[field] = field === 'price' ? Number(val) || 0 : val;
+      if (!p) return;
+      if (field === 'price') p.price = Number(val) || 0;
+      else if (field === 'priceRestoran') { const n = Number(val); p.priceRestoran = (val === '' || isNaN(n)) ? undefined : n; }
+      else if (field === 'onlyDineIn') p.onlyDineIn = !!val;
+      else p[field] = val;
     }
     function addProduct(ci) {
       if (!menuData.categories) return;
       const cat = menuData.categories[ci];
       if (!cat.products) cat.products = [];
-      cat.products.push({ id: 'new-' + Date.now(), name: 'Yeni Ürün', price: 0, image: '' });
+      cat.products.push({ id: 'new-' + Date.now(), name: 'Yeni Ürün', price: 0, image: '', onlyDineIn: false });
       loadMenuEditor();
     }
     function removeProduct(ci, pi) {
@@ -466,6 +541,8 @@
         document.getElementById('r-hoursOpen').value = restaurantData.hoursOpen || '10:00';
         document.getElementById('r-hoursClose').value = restaurantData.hoursClose || '23:00';
         document.getElementById('r-minOrder').value = restaurantData.minOrderAmount || 30;
+        document.getElementById('r-estMinutesGelAl').value = restaurantData.estimatedMinutesGelAl ?? '';
+        document.getElementById('r-estMinutesPaket').value = restaurantData.estimatedMinutesPaket ?? '';
         document.getElementById('r-estMinutes').value = restaurantData.estimatedMinutes || 25;
         const coupons = restaurantData.coupons || [];
         const cl = document.getElementById('coupons-list');
@@ -625,7 +702,9 @@
       restaurantData.hoursOpen = document.getElementById('r-hoursOpen').value;
       restaurantData.hoursClose = document.getElementById('r-hoursClose').value;
       restaurantData.minOrderAmount = Number(document.getElementById('r-minOrder').value) || 0;
-      restaurantData.estimatedMinutes = Number(document.getElementById('r-estMinutes').value) || 25;
+      restaurantData.estimatedMinutesGelAl = document.getElementById('r-estMinutesGelAl').value !== '' ? Number(document.getElementById('r-estMinutesGelAl').value) : undefined;
+        restaurantData.estimatedMinutesPaket = document.getElementById('r-estMinutesPaket').value !== '' ? Number(document.getElementById('r-estMinutesPaket').value) : undefined;
+        restaurantData.estimatedMinutes = Number(document.getElementById('r-estMinutes').value) || 25;
       restaurantData.hours = `${restaurantData.hoursOpen} - ${restaurantData.hoursClose}`;
       try {
         const r = await fetch('/api/restaurant', {
@@ -656,7 +735,10 @@
       ).join('');
     }
 
-    function startPanel() { loadOrders(); setInterval(loadOrders, 4000); }
+    function startPanel() {
+      loadOrders();
+      setInterval(() => { if (orderTahminFormOpen) return; loadOrders(); }, 4000);
+    }
   </script>
   <script>
     const TOKEN_KEY = 'admin_token';
@@ -728,7 +810,7 @@
         const el = document.getElementById('orders-list');
         if (!filtered.length) { el.innerHTML = '<div class="empty">Sipariş yok</div>'; return; }
         el.innerHTML = filtered.map(o => `
-          <div class="order-card">
+          <div class="order-card" data-estimated="${o.estimatedMinutes ?? ''}">
             <div class="order-row">
               <span class="order-id">#${o.id}</span>
               <span class="order-time">${formatDate(o.createdAt)}</span>
@@ -737,11 +819,12 @@
             <div class="order-meta">📍 ${o.address}${o.notes ? ' · 📝 ' + o.notes : ''}</div>
             <div class="order-footer">
               <span class="stat-value" style="font-size:1rem">${o.total}₺</span>
-              <span class="badge">${o.orderType === 'restoran' ? '🏠' : '📦'}</span>
-              <span class="badge">${(o.paymentMethod || 'kapida_nakit') === 'kapida_pos' ? '💳' : '💵'}</span>
-              <select onchange="updateStatus(${o.id}, this.value)">
+              <span class="badge" title="${o.orderType === 'gel_al' ? 'Gel Al' : o.orderType === 'restoran' ? 'Restoran İçi' : 'Paket'}">${(o.orderType === 'gel_al' || o.orderType === 'restoran') ? '🛵' : '📦'}</span>
+              <span class="badge" title="${o.paymentMethod === 'gelal_pos' ? 'Alırken Kart' : o.paymentMethod === 'gelal_nakit' ? 'Alırken Nakit' : o.paymentMethod === 'masada_pos' ? 'Masada Kart' : o.paymentMethod === 'masada_nakit' ? 'Masada Nakit' : o.paymentMethod === 'kapida_pos' ? 'Kapıda POS' : 'Kapıda Nakit'}">${(o.paymentMethod === 'kapida_pos' || o.paymentMethod === 'masada_pos' || o.paymentMethod === 'gelal_pos') ? '💳' : '💵'}</span>
+              <select onchange="onOrderStatusChange(${o.id}, this)">
                 ${statuses.map(s => `<option ${o.status === s ? 'selected' : ''}>${s}</option>`).join('')}
               </select>
+              <div class="order-status-extra"></div>
             </div>
           </div>
         `).join('');
@@ -751,6 +834,20 @@
     const _updateStatus = updateStatus;
     updateStatus = async function(id, status) {
       await authFetch(`/api/orders/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
+      loadOrders();
+    };
+    updateStatusAndTahmin = async function(id, status, estimatedMinutes) {
+      await authFetch(`/api/orders/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, estimatedMinutes: estimatedMinutes === '' || estimatedMinutes == null ? undefined : parseInt(estimatedMinutes, 10) })
+      });
+      loadOrders();
+    };
+    const _updateEstimatedMinutes = updateEstimatedMinutes;
+    updateEstimatedMinutes = async function(id, value) {
+      const v = value === '' || value == null ? undefined : parseInt(value, 10);
+      await authFetch(`/api/orders/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estimatedMinutes: v }) });
       loadOrders();
     };
 
@@ -767,7 +864,9 @@
             ${(cat.products || []).map((p, pi) => `
               <div class="product-row">
                 <input type="text" value="${(p.name || '').replace(/"/g, '&quot;')}" onchange="setProduct(${ci},${pi},'name',this.value)" placeholder="Ürün adı">
-                <input type="number" value="${p.price || 0}" min="0" onchange="setProduct(${ci},${pi},'price',this.value)" placeholder="₺">
+                <div class="price-group"><span>Paket ₺</span><input type="number" value="${p.price ?? ''}" min="0" onchange="setProduct(${ci},${pi},'price',this.value)" placeholder="0"></div>
+                <div class="price-group"><span>Restoran ₺</span><input type="number" value="${p.priceRestoran ?? ''}" min="0" onchange="setProduct(${ci},${pi},'priceRestoran',this.value)" placeholder="Opsiyonel"></div>
+                <label class="dine-in-label"><input type="checkbox" ${p.onlyDineIn ? 'checked' : ''} onchange="setProduct(${ci},${pi},'onlyDineIn',this.checked)"> Sadece restoran içi</label>
                 <button class="btn" style="background:#dc2626;color:#fff;padding:6px 10px" onclick="removeProduct(${ci},${pi})">Sil</button>
               </div>
             `).join('')}
@@ -797,6 +896,8 @@
         document.getElementById('r-hoursOpen').value = restaurantData.hoursOpen || '10:00';
         document.getElementById('r-hoursClose').value = restaurantData.hoursClose || '23:00';
         document.getElementById('r-minOrder').value = restaurantData.minOrderAmount || 30;
+        document.getElementById('r-estMinutesGelAl').value = restaurantData.estimatedMinutesGelAl ?? '';
+        document.getElementById('r-estMinutesPaket').value = restaurantData.estimatedMinutesPaket ?? '';
         document.getElementById('r-estMinutes').value = restaurantData.estimatedMinutes || 25;
         const coupons = restaurantData.coupons || [];
         const cl = document.getElementById('coupons-list');
@@ -823,7 +924,9 @@
       restaurantData.hoursOpen = document.getElementById('r-hoursOpen').value;
       restaurantData.hoursClose = document.getElementById('r-hoursClose').value;
       restaurantData.minOrderAmount = Number(document.getElementById('r-minOrder').value) || 0;
-      restaurantData.estimatedMinutes = Number(document.getElementById('r-estMinutes').value) || 25;
+      restaurantData.estimatedMinutesGelAl = document.getElementById('r-estMinutesGelAl').value !== '' ? Number(document.getElementById('r-estMinutesGelAl').value) : undefined;
+        restaurantData.estimatedMinutesPaket = document.getElementById('r-estMinutesPaket').value !== '' ? Number(document.getElementById('r-estMinutesPaket').value) : undefined;
+        restaurantData.estimatedMinutes = Number(document.getElementById('r-estMinutes').value) || 25;
       restaurantData.hours = `${restaurantData.hoursOpen} - ${restaurantData.hoursClose}`;
       try {
         const r = await authFetch('/api/restaurant', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(restaurantData) });

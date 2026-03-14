@@ -13,6 +13,8 @@ const PORT = parseInt(process.env.PORT) || 3005;
 const USE_NGROK = process.env.USE_NGROK === 'true' || process.env.USE_NGROK === '1';
 
 let baseUrl = process.env.BASE_URL || `http://localhost:${PORT}`;
+// WhatsApp "Menüyü Aç" butonu sadece HTTPS ile çalışır; localhost tıklanmaz
+const whatsappBaseUrl = process.env.WA_BASE_URL || process.env.BASE_URL || baseUrl;
 
 const ORDERS_PATH = path.join(__dirname, 'data', 'orders.json');
 const FAVORITES_PATH = path.join(__dirname, 'data', 'favorites.json');
@@ -55,9 +57,13 @@ async function sendWhatsAppMessage(to, text) {
     });
     if (!res.ok) {
       const err = await res.text();
+      console.error('[WhatsApp] Gönderim hatası', res.status, err);
       logError('WhatsApp send', new Error(err));
+    } else {
+      console.log('[WhatsApp] Metin gönderildi, to:', waTo(to));
     }
   } catch (e) {
+    console.error('[WhatsApp] Gönderim exception:', e.message);
     logError('WhatsApp send', e);
   }
 }
@@ -91,9 +97,13 @@ async function sendWhatsAppReplyButtons(to, bodyText, buttons) {
     });
     if (!res.ok) {
       const err = await res.text();
+      console.error('[WhatsApp] Buton gönderim hatası', res.status, err);
       logError('WhatsApp buttons', new Error(err));
+    } else {
+      console.log('[WhatsApp] Butonlar gönderildi, to:', waTo(to));
     }
   } catch (e) {
+    console.error('[WhatsApp] Buton exception:', e.message);
     logError('WhatsApp buttons', e);
   }
 }
@@ -129,9 +139,13 @@ async function sendWhatsAppUrlButton(to, bodyText, buttonText, url) {
     });
     if (!res.ok) {
       const err = await res.text();
+      console.error('[WhatsApp] URL buton hatası', res.status, err);
       logError('WhatsApp url button', new Error(err));
+    } else {
+      console.log('[WhatsApp] URL buton gönderildi, to:', waTo(to));
     }
   } catch (e) {
+    console.error('[WhatsApp] URL buton exception:', e.message);
     logError('WhatsApp url button', e);
   }
 }
@@ -217,73 +231,78 @@ app.get('/webhook/whatsapp', (req, res) => {
 
 app.post('/webhook/whatsapp', (req, res) => {
   res.sendStatus(200);
-  if (!whatsappEnabled || req.body?.object !== 'whatsapp_business_account') return;
-  const entries = req.body.entry || [];
-  for (const entry of entries) {
-    const changes = entry.changes || [];
-    for (const change of changes) {
-      if (change.field !== 'messages') continue;
-      const value = change.value || {};
-      const messages = value.messages || [];
-      const contacts = value.contacts || [];
-      const profileName = (contacts[0]?.profile?.name) || 'Müşteri';
-      for (const msg of messages) {
-        const from = msg.from;
-        const type = msg.type;
-        if (type === 'location' && msg.location) {
-          const locKey = 'wa_' + from;
-          const orderId = pendingLocationForOrder.get(locKey);
-          if (orderId) {
-            pendingLocationForOrder.delete(locKey);
-            const order = orders.find(o => o.id === orderId && o.whatsappId === String(from));
-            if (order) {
-              order.location = { lat: msg.location.latitude, lng: msg.location.longitude };
-              saveOrders(orders);
-              sendWhatsAppMessage(from, '✅ Konumunuz siparişe eklendi. Teşekkürler!');
-            }
+  const body = req.body || {};
+  if (!whatsappEnabled) {
+    console.log('[WhatsApp] Webhook POST alındı ama WhatsApp kapalı (.env WA_*)');
+    return;
+  }
+  if (body.object !== 'whatsapp_business_account') {
+    console.log('[WhatsApp] Webhook POST alındı, object:', body.object || '(yok)');
+    return;
+  }
+  (async () => {
+    const entries = body.entry || [];
+    for (const entry of entries) {
+      const changes = entry.changes || [];
+      for (const change of changes) {
+        if (change.field !== 'messages') continue;
+        const value = change.value || {};
+        const messages = value.messages || [];
+        if (messages.length) console.log('[WhatsApp] Gelen mesaj sayısı:', messages.length);
+        const contacts = value.contacts || [];
+        const profileName = (contacts[0]?.profile?.name) || 'Müşteri';
+        for (const msg of messages) {
+          const from = msg.from;
+          const type = msg.type;
+          if (type === 'location') continue;
+          let msgBody = '';
+          if (type === 'text' && msg.text) msgBody = (msg.text.body || '').trim();
+          if (type === 'button' && msg.button) msgBody = (msg.button.text || '').trim();
+          if (type === 'interactive' && msg.interactive) {
+            const btn = msg.interactive.button_reply || msg.interactive.list_reply;
+            msgBody = (btn && (btn.title || btn.id)) || '';
           }
-          continue;
-        }
-        let body = '';
-        if (type === 'text' && msg.text) body = (msg.text.body || '').trim();
-        if (type === 'button' && msg.button) body = (msg.button.text || '').trim();
-        if (type === 'interactive' && msg.interactive) {
-          const btn = msg.interactive.button_reply || msg.interactive.list_reply;
-          body = (btn && (btn.title || btn.id)) || '';
-        }
-        // Buton yanıtı: interactive.button_reply.id
-        const buttonId = (type === 'interactive' && msg.interactive?.button_reply?.id) ? msg.interactive.button_reply.id.trim().toLowerCase() : '';
-        const cmd = buttonId || body.toLowerCase();
-        const menuLink = `${baseUrl}/menu.html?channel=whatsapp&userId=${from}`;
-        const r = getRestaurant();
-        const openNow = isOpen(r);
-        const status = openNow ? '🟢 Açık' : '🔴 Kapalı';
+          const buttonId = (type === 'interactive' && msg.interactive?.button_reply?.id) ? msg.interactive.button_reply.id.trim().toLowerCase() : '';
+          const cmd = buttonId || msgBody.toLowerCase();
+          console.log('[WhatsApp] Yanıtlanıyor:', from, 'tip:', type, 'cmd:', cmd || '(varsayılan)');
+          const menuLink = `${whatsappBaseUrl}/menu.html?channel=whatsapp&userId=${from}`;
+          if (whatsappBaseUrl.includes('localhost') || whatsappBaseUrl.startsWith('http://')) {
+            console.warn('[WhatsApp] Menü linki HTTPS değil; "Menüyü Aç" butonu tıklanmaz. .env\'de BASE_URL veya WA_BASE_URL ile https adresi verin (örn. ngrok).');
+          }
+          const r = getRestaurant();
+          const openNow = isOpen(r);
+          const status = openNow ? '🟢 Açık' : '🔴 Kapalı';
 
-        if (cmd === 'menu' || cmd === 'menü' || cmd === 'sipariş' || cmd === 'siparis' || cmd === '1') {
-          sendWhatsAppUrlButton(from, `${r.name || 'MeraPaket'} — ${status}\n\nSipariş vermek için aşağıdaki butona tıklayın.`, 'Menüyü Aç', menuLink);
-        } else if (cmd === 'siparişlerim' || cmd === 'siparislerim' || cmd === '2' || cmd === 'orders') {
-          const userOrders = orders.filter(o => o.whatsappId === String(from)).slice(-5).reverse();
-          if (userOrders.length === 0) {
-            sendWhatsAppReplyButtons(from, 'Henüz siparişiniz yok. Menüden sipariş verebilirsiniz.', [
-              { id: 'menu', title: '🛒 Menü Aç' }
-            ]);
-          } else {
-            const lines = userOrders.map(o => `#${o.id} — ${o.status} — ${o.total}₺`);
-            sendWhatsAppMessage(from, '📋 Son siparişleriniz:\n\n' + lines.join('\n'));
-            sendWhatsAppUrlButton(from, 'Yeni sipariş veya detay için menüyü açın.', 'Menüyü Aç', menuLink);
+          try {
+            if (cmd === 'menu' || cmd === 'menü' || cmd === 'sipariş' || cmd === 'siparis' || cmd === '1') {
+              await sendWhatsAppUrlButton(from, `${r.name || 'MeraPaket'} — ${status}\n\nSipariş vermek için aşağıdaki butona tıklayın.`, 'Menüyü Aç', menuLink);
+            } else if (cmd === 'siparişlerim' || cmd === 'siparislerim' || cmd === '2' || cmd === 'orders') {
+              const userOrders = orders.filter(o => o.whatsappId === String(from)).slice(-5).reverse();
+              if (userOrders.length === 0) {
+                await sendWhatsAppReplyButtons(from, 'Henüz siparişiniz yok. Menüden sipariş verebilirsiniz.', [
+                  { id: 'menu', title: '🛒 Menü Aç' }
+                ]);
+              } else {
+                const lines = userOrders.map(o => `#${o.id} — ${o.status} — ${o.total}₺`);
+                await sendWhatsAppMessage(from, '📋 Son siparişleriniz:\n\n' + lines.join('\n'));
+                await sendWhatsAppUrlButton(from, 'Yeni sipariş veya detay için menüyü açın.', 'Menüyü Aç', menuLink);
+              }
+            } else if (cmd === 'yardim' || cmd === 'yardım' || cmd === 'iletişim' || cmd === '3' || cmd === 'help') {
+              await sendWhatsAppMessage(from, `${r.name || 'MeraPaket'}\n\n📍 ${r.address || '-'}\n📞 ${r.phone || '-'}\n🕐 ${r.hours || '-'}`);
+            } else {
+              await sendWhatsAppReplyButtons(from, `Merhaba ${profileName}!\n\n${r.name || 'MeraPaket'} — ${status}\n\nAşağıdaki butonlardan seçin:`, [
+                { id: 'menu', title: '🛒 Menü Aç' },
+                { id: 'orders', title: '📋 Siparişlerim' },
+                { id: 'help', title: 'ℹ️ Yardım' }
+              ]);
+            }
+          } catch (e) {
+            console.error('[WhatsApp] Yanıt atarken hata:', e.message);
           }
-        } else if (cmd === 'yardim' || cmd === 'yardım' || cmd === 'iletişim' || cmd === '3' || cmd === 'help') {
-          sendWhatsAppMessage(from, `${r.name || 'MeraPaket'}\n\n📍 ${r.address || '-'}\n📞 ${r.phone || '-'}\n🕐 ${r.hours || '-'}`);
-        } else {
-          sendWhatsAppReplyButtons(from, `Merhaba ${profileName}!\n\n${r.name || 'MeraPaket'} — ${status}\n\nAşağıdaki butonlardan seçin:`, [
-            { id: 'menu', title: '🛒 Menü Aç' },
-            { id: 'orders', title: '📋 Siparişlerim' },
-            { id: 'help', title: 'ℹ️ Yardım' }
-          ]);
         }
       }
     }
-  }
+  })();
 });
 
 // Rate limiting: 60 istek/dakika
@@ -464,7 +483,8 @@ app.post('/api/order', (req, res) => {
       }
     }
     const id = orderIdCounter++;
-    const payMethod = ['kapida_nakit', 'kapida_pos'].includes(paymentMethod) ? paymentMethod : 'kapida_nakit';
+    const validPay = ['kapida_nakit', 'kapida_pos', 'masada_nakit', 'masada_pos', 'gelal_nakit', 'gelal_pos'];
+const payMethod = validPay.includes(paymentMethod) ? paymentMethod : 'kapida_nakit';
     const order = {
       id, items,
       total: finalTotal, subtotal, discountAmount,
@@ -488,15 +508,14 @@ app.post('/api/order', (req, res) => {
       prefs[prefsKeyUser].addresses = addrs.slice(-5);
       savePrefs(prefs);
     }
-    const confirmText = formatOrderConfirm(order);
+    const confirmText = formatOrderConfirm(order, orders);
     if (telegramId) {
       bot.sendMessage(telegramId, confirmText, { parse_mode: 'HTML' }).catch(e => logError('Bot mesaj', e));
       pendingLocationForOrder.set(String(telegramId), id);
       bot.sendMessage(telegramId, '📍 Teslimat adresi için konumunuzu paylaşır mısınız?\n\n<b>Atamaya tıklayın → Konum</b>', { parse_mode: 'HTML' }).catch(() => {});
     } else if (whatsappId) {
       sendWhatsAppMessage(whatsappId, confirmText.replace(/<[^>]+>/g, '').trim());
-      pendingLocationForOrder.set('wa_' + String(whatsappId), id);
-      sendWhatsAppMessage(whatsappId, '📍 Teslimat adresi için konumunuzu paylaşabilirsiniz (konum gönderin).');
+      // Adres yalnızca sipariş panelinden (menü formu) alınır, WhatsApp'tan konum istenmez
     }
     console.log('📥 Sipariş ' + id);
     res.json({ ok: true, orderId: id });
@@ -537,13 +556,34 @@ app.post('/api/orders/:id/add', (req, res) => {
 
 app.patch('/api/orders/:id', requireAdmin, (req, res) => {
   const id = parseInt(req.params.id);
-  const { status } = req.body;
+  const { status, estimatedMinutes } = req.body;
   const order = orders.find(o => o.id === id);
-  if (!order || !status) return res.status(400).json({ ok: false });
-  const valid = ['Alındı', 'Hazırlanıyor', 'Hazır', 'Yola Çıktı', 'Teslim Edildi', 'İptal'];
-  if (!valid.includes(status)) return res.status(400).json({ ok: false });
-  order.status = status;
+  if (!order) return res.status(400).json({ ok: false });
+  if (status != null) {
+    const valid = ['Alındı', 'Hazırlanıyor', 'Hazır', 'Yola Çıktı', 'Teslim Edildi', 'İptal'];
+    if (!valid.includes(status)) return res.status(400).json({ ok: false });
+    order.status = status;
+  }
+  let estimatedMinutesSent = false;
+  if (estimatedMinutes !== undefined) {
+    const n = parseInt(estimatedMinutes, 10);
+    const newVal = (n >= 5 && n <= 120) ? n : undefined;
+    if (newVal !== undefined) estimatedMinutesSent = true;
+    order.estimatedMinutes = newVal;
+  }
   saveOrders(orders);
+  const statusExcludedForTahmin = ['Teslim Edildi', 'İptal'];
+  const sendTahminDurum = (st) => !statusExcludedForTahmin.includes(st);
+  const statusLabels = { 'Alındı': 'Alındı', 'Hazırlanıyor': 'Hazırlanıyor', 'Hazır': 'Hazır', 'Yola Çıktı': 'Yola Çıktı', 'Teslim Edildi': 'Teslim Edildi', 'İptal': 'İptal' };
+  const buildTahminDurumMessage = () => {
+    const label = statusLabels[order.status] || order.status || 'Alındı';
+    if (order.estimatedMinutes != null) {
+      return { text: `📦 Sipariş #${id}\n\n⏱ Tahmini süre: ${order.estimatedMinutes} dk\n📌 Durum: ${label}`, html: `📦 <b>Sipariş #${id}</b>\n\n⏱ Tahmini süre: <b>${order.estimatedMinutes} dk</b>\n📌 Durum: ${label}` };
+    }
+    return { text: `📦 Sipariş #${id}\n\n📌 Durum: ${label}`, html: `📦 <b>Sipariş #${id}</b>\n\n📌 Durum: ${label}` };
+  };
+
+  let tahminDurumMessageSent = false;
   const msgs = {
     'Hazırlanıyor': '👨‍🍳 Siparişin hazırlanıyor.',
     'Hazır': '✅ Hazır, birazdan yola çıkacak.',
@@ -556,28 +596,47 @@ app.patch('/api/orders/:id', requireAdmin, (req, res) => {
     const prefs = loadPrefs();
     const notify = (prefsKeyUser && (prefs[prefsKeyUser] || {}).notify) !== false;
     if (notify) {
-      const statusText = `📦 Sipariş #${id}\n\n${msgs[status]}`;
-      if (order.telegramId) {
-        let opts = {};
-        if (status === 'Teslim Edildi') {
-          const favs = loadFavorites();
-          const isFav = favs.some(f => f.telegramId === order.telegramId && f.orderId === id);
-          if (!isFav) opts.reply_markup = { inline_keyboard: [[{ text: '⭐ Favorilere Ekle', callback_data: `fav_add_${id}` }]] };
-        }
-        bot.sendMessage(order.telegramId, `📦 <b>Sipariş #${id}</b>\n\n${msgs[status]}`, { parse_mode: 'HTML', ...opts }).catch(() => {});
-        if (status === 'Teslim Edildi') {
-          setTimeout(() => {
-            bot.sendMessage(order.telegramId, 'Siparişiniz nasıldı? Yorumlarınız bizim için önemli 💚').catch(() => {});
-          }, 60 * 1000);
-        }
-      } else if (order.whatsappId) {
-        sendWhatsAppMessage(order.whatsappId, statusText);
-        if (status === 'Teslim Edildi') {
-          setTimeout(() => {
-            sendWhatsAppMessage(order.whatsappId, 'Siparişiniz nasıldı? Yorumlarınız bizim için önemli 💚');
-          }, 60 * 1000);
+      if (status !== 'Teslim Edildi' && status !== 'İptal') {
+        const msg = buildTahminDurumMessage();
+        if (order.telegramId) bot.sendMessage(order.telegramId, msg.html, { parse_mode: 'HTML' }).catch(() => {});
+        if (order.whatsappId) sendWhatsAppMessage(order.whatsappId, msg.text);
+        tahminDurumMessageSent = true;
+      } else {
+        const statusText = `📦 Sipariş #${id}\n\n${msgs[status]}`;
+        if (order.telegramId) {
+          let opts = {};
+          if (status === 'Teslim Edildi') {
+            const favs = loadFavorites();
+            const isFav = favs.some(f => f.telegramId === order.telegramId && f.orderId === id);
+            if (!isFav) opts.reply_markup = { inline_keyboard: [[{ text: '⭐ Favorilere Ekle', callback_data: `fav_add_${id}` }]] };
+          }
+          bot.sendMessage(order.telegramId, `📦 <b>Sipariş #${id}</b>\n\n${msgs[status]}`, { parse_mode: 'HTML', ...opts }).catch(() => {});
+          if (status === 'Teslim Edildi') {
+            setTimeout(() => {
+              bot.sendMessage(order.telegramId, 'Siparişiniz nasıldı? Yorumlarınız bizim için önemli 💚').catch(() => {});
+            }, 60 * 1000);
+          }
+        } else if (order.whatsappId) {
+          sendWhatsAppMessage(order.whatsappId, statusText);
+          if (status === 'Teslim Edildi') {
+            setTimeout(() => {
+              sendWhatsAppMessage(order.whatsappId, 'Siparişiniz nasıldı? Yorumlarınız bizim için önemli 💚');
+            }, 60 * 1000);
+          }
         }
       }
+    }
+  }
+  if (!tahminDurumMessageSent && estimatedMinutesSent && order.estimatedMinutes != null && sendTahminDurum(order.status)) {
+    const prefsKeyUser = prefsKey(order.telegramId, order.whatsappId);
+    const prefs = loadPrefs();
+    const notify = (prefsKeyUser && (prefs[prefsKeyUser] || {}).notify) !== false;
+    if (notify) {
+      const statusLabel = statusLabels[order.status] || order.status || 'Alındı';
+      const msg = buildTahminDurumMessage();
+      console.log('[Panel] Tahmin bildirimi gönderiliyor:', id, order.estimatedMinutes + ' dk', statusLabel);
+      if (order.telegramId) bot.sendMessage(order.telegramId, msg.html, { parse_mode: 'HTML' }).catch(() => {});
+      if (order.whatsappId) sendWhatsAppMessage(order.whatsappId, msg.text);
     }
   }
   res.json({ ok: true, order });
@@ -628,20 +687,42 @@ function validateCoupon(code, subtotal) {
   return { discount, code: c.code };
 }
 
-function formatOrderConfirm(order) {
+// Tahmini süre: sipariş tipine göre (Gel Al / Paket) + yoğunluğa göre ek süre (son 30 dk aktif sipariş sayısı)
+function getEstimatedMinutes(order, ordersList) {
   const r = getRestaurant();
-  const est = r.estimatedMinutes || 25;
-  const payLabel = order.paymentMethod === 'kapida_pos' ? 'POS' : 'Nakit';
+  const isGelAl = order.orderType === 'gel_al' || (order.address || '').trim() === 'Gel Al';
+  const baseGelAl = r.estimatedMinutesGelAl ?? r.estimatedMinutes ?? 15;
+  const basePaket = r.estimatedMinutesPaket ?? r.estimatedMinutes ?? 30;
+  let base = isGelAl ? baseGelAl : basePaket;
+
+  const now = Date.now();
+  const thirtyMin = 30 * 60 * 1000;
+  const activeCount = (ordersList || []).filter(o => o.id !== order.id
+    && ['Alındı', 'Hazırlanıyor', 'Hazır'].includes(o.status)
+    && (now - new Date(o.createdAt).getTime()) < thirtyMin
+  ).length;
+  const extra = activeCount <= 2 ? 0 : activeCount <= 5 ? 5 : 10;
+  return Math.min(base + extra, 90);
+}
+
+function formatOrderConfirm(order, ordersList) {
+  const payLabels = { kapida_nakit: 'Kapıda Nakit', kapida_pos: 'Kapıda POS', masada_nakit: 'Masada Nakit', masada_pos: 'Masada Kart', gelal_nakit: 'Alırken Nakit', gelal_pos: 'Alırken Kart' };
+  const payLabel = payLabels[order.paymentMethod] || (order.paymentMethod === 'kapida_pos' ? 'POS' : 'Nakit');
   const disc = order.discountAmount ? `\n🏷 İndirim: -${order.discountAmount}₺` : '';
+  const isGelAl = order.orderType === 'gel_al' || (order.address || '').trim() === 'Gel Al';
+  const isRestoranEski = order.orderType === 'restoran' || (order.address || '').startsWith('Masa ');
+  const locationLine = isGelAl
+    ? '🛵 Teslim: Gel Al'
+    : isRestoranEski
+      ? `🍽️ Masa: ${(order.address || '').replace(/^Masa\s*/i, '').trim() || '-'}`
+      : `📍 Adres: ${order.address || 'Belirtilmedi'}`;
   return `✅ <b>Siparişin alındı!</b>
 
 📦 ${order.items}
 
-📍 ${order.address}
+${locationLine}
 ${order.notes ? `📝 ${order.notes}\n` : ''}💳 ${payLabel}${disc}
 💰 <b>${order.total}₺</b>
-
-⏱ Tahminen ${est} dakika içinde hazır olacak.
 
 Afiyet olsun!`;
 }

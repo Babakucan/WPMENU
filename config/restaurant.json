@@ -2,6 +2,8 @@
   "name": "Doyuran",
   "address": "Örnek Mah. Restoran Sok. No:1",
   "estimatedMinutes": 25,
+  "estimatedMinutesGelAl": 15,
+  "estimatedMinutesPaket": 30,
   "phone": "+90 555 000 00 00",
   "hours": "10:00 - 23:00",
   "hoursOpen": "10:00",
