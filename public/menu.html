@@ -68,7 +68,40 @@
     .product-img img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
     .product-info { flex: 1; min-width: 0; }
     .product-name { font-weight: 600; margin-bottom: 2px; }
-    .product-price { color: #22c55e; font-size: 0.95rem; }
+    .product-detail-box {
+      margin-top: 12px; padding: 14px 14px; background: linear-gradient(145deg, rgba(39, 39, 46, 0.9) 0%, rgba(24, 24, 27, 0.95) 100%); border-radius: 12px; border: 1px solid rgba(63, 63, 70, 0.5); box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    body.light .product-detail-box { background: linear-gradient(145deg, #fafafa 0%, #f4f4f5 100%); border-color: rgba(212, 212, 216, 0.7); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .product-contents-wrap { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 0; }
+    .product-contents-wrap .label { font-size: 0.7rem; color: #71717a; font-weight: 600; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px; margin-bottom: 8px; width: 100%; }
+    .product-contents-wrap .label::before { content: '🍽'; font-size: 0.9rem; }
+    .product-contents-chip {
+      display: inline-flex; align-items: center; padding: 6px 12px; background: #27272a; color: #d4d4d8; border-radius: 999px; font-size: 0.8rem; border: 1px solid transparent; cursor: pointer; transition: all 0.2s; user-select: none;
+    }
+    .product-contents-chip:hover { background: #3f3f46; color: #e4e4e7; border-color: #52525b; }
+    .product-contents-chip.removed { text-decoration: line-through; opacity: 0.65; color: #71717a; border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.08); }
+    .product-contents-chip.removed:hover { background: rgba(239,68,68,0.15); }
+    body.light .product-contents-chip { background: #e4e4e7; color: #52525b; }
+    body.light .product-contents-chip.removed { border-color: rgba(239,68,68,0.5); background: rgba(254,226,226,0.6); }
+    .product-extras-wrap { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(63, 63, 70, 0.4); }
+    body.light .product-extras-wrap { border-top-color: rgba(212, 212, 216, 0.5); }
+    .product-extras-wrap .label { font-size: 0.7rem; color: #71717a; font-weight: 600; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+    .product-extras-wrap .label::before { content: '➕'; }
+    .product-extra-chip {
+      display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; margin: 4px 6px 4px 0; background: #27272a; color: #a1a1aa; border-radius: 999px; font-size: 0.78rem; border: 1px solid #3f3f46; cursor: pointer; transition: all 0.2s; user-select: none;
+    }
+    .product-extra-chip:hover { background: #3f3f46; color: #e4e4e7; }
+    .product-extra-chip.selected { border-color: #22c55e; background: rgba(34,197,94,0.15); color: #22c55e; }
+    .product-extra-chip .extra-price { font-size: 0.75rem; color: #22c55e; margin-left: 2px; }
+    body.light .product-extra-chip { background: #f4f4f5; color: #52525b; }
+    body.light .product-extra-chip.selected { background: rgba(34,197,94,0.12); color: #16a34a; }
+    .product-desc {
+      font-size: 0.82rem; color: #a1a1aa; line-height: 1.5; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(63, 63, 70, 0.4);
+    }
+    body.light .product-desc { color: #52525b; border-top-color: rgba(212, 212, 216, 0.5); }
+    .product-price { color: #22c55e; font-size: 0.95rem; margin-top: 4px; }
+    .customize-hint { font-size: 0.72rem; color: #22c55e; margin-top: 8px; display: flex; align-items: center; gap: 4px; }
+    .customize-hint::before { content: '💡'; }
     .product-actions { display: flex; align-items: center; gap: 8px; }
     .qty-btn {
       width: 36px;
@@ -214,6 +247,44 @@
     .favorite-card .fav-total { font-weight: 600; color: #22c55e; margin-bottom: 12px; }
     .favorite-card .fav-add-btn { width: 100%; padding: 10px; background: #22c55e; color: #fff; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.9rem; }
     .favorite-card .fav-add-btn:hover { background: #16a34a; }
+
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
+    .modal-overlay.show { display: flex; }
+    .modal-card {
+      background: #18181b; border: 1px solid #27272a; border-radius: 16px; max-width: 400px; width: 100%; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    }
+    body.light .modal-card { background: #fff; border-color: #e4e4e7; }
+    .modal-header { padding: 16px 20px; border-bottom: 1px solid #27272a; display: flex; justify-content: space-between; align-items: center; }
+    body.light .modal-header { border-color: #e4e4e7; }
+    .modal-header h3 { font-size: 1.1rem; margin: 0; }
+    .modal-close { background: none; border: none; color: #a1a1aa; font-size: 1.5rem; cursor: pointer; padding: 0 4px; line-height: 1; }
+    .modal-close:hover { color: #e4e4e7; }
+    .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+    .modal-section { margin-bottom: 20px; }
+    .modal-section:last-child { margin-bottom: 0; }
+    .modal-section-title { font-size: 0.75rem; color: #71717a; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 10px; }
+    .ingredient-toggles { display: flex; flex-wrap: wrap; gap: 8px; }
+    .ingredient-toggle {
+      display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; background: #27272a; border: 1px solid #3f3f46; border-radius: 10px; color: #a1a1aa; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; user-select: none;
+    }
+    .ingredient-toggle:hover { background: #3f3f46; color: #e4e4e7; }
+    .ingredient-toggle.removed { opacity: 0.5; text-decoration: line-through; border-color: #ef4444; background: rgba(239,68,68,0.1); }
+    .ingredient-toggle .check { color: #22c55e; font-size: 0.9rem; }
+    body.light .ingredient-toggle { background: #f4f4f5; border-color: #e4e4e7; color: #52525b; }
+    body.light .ingredient-toggle.removed { border-color: #f87171; background: rgba(248,113,113,0.1); }
+    .extra-option { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: #27272a; border-radius: 10px; margin-bottom: 8px; cursor: pointer; border: 1px solid transparent; transition: all 0.2s; }
+    .extra-option:hover { background: #3f3f46; }
+    .extra-option.selected { border-color: #22c55e; background: rgba(34,197,94,0.1); }
+    body.light .extra-option { background: #f4f4f5; }
+    body.light .extra-option.selected { border-color: #22c55e; background: rgba(34,197,94,0.08); }
+    .extra-option span:first-child { font-size: 0.9rem; }
+    .extra-option .extra-price { color: #22c55e; font-weight: 600; font-size: 0.9rem; }
+    .modal-footer { padding: 16px 20px; border-top: 1px solid #27272a; }
+    body.light .modal-footer { border-color: #e4e4e7; }
+    .modal-add-btn { width: 100%; padding: 14px; background: #22c55e; color: #fff; border: none; border-radius: 12px; font-weight: 600; font-size: 1rem; cursor: pointer; }
+    .modal-add-btn:hover { background: #16a34a; }
+    .modal-total { font-size: 0.85rem; color: #a1a1aa; margin-bottom: 10px; }
+    .modal-total strong { color: #22c55e; }
   </style>
 </head>
 <body>
@@ -245,6 +316,29 @@
       <div class="cart-total" id="cart-total">0₺</div>
       <button class="order-btn" id="order-btn" disabled>Sipariş Ver</button>
       <div id="add-error" class="error" style="margin-top:8px"></div>
+    </div>
+
+    <div id="customize-modal" class="modal-overlay">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 id="customize-modal-title">Malzeme seçin</h3>
+          <button type="button" class="modal-close" id="customize-modal-close" aria-label="Kapat">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-section" id="customize-remove-section" style="display:none">
+            <div class="modal-section-title">Çıkarılacak malzemeler (işaretlenen çıkarılır)</div>
+            <div class="ingredient-toggles" id="customize-remove-list"></div>
+          </div>
+          <div class="modal-section" id="customize-add-section" style="display:none">
+            <div class="modal-section-title">Ekstra malzemeler</div>
+            <div id="customize-add-list"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div class="modal-total" id="customize-modal-total">Toplam: <strong>0₺</strong></div>
+          <button type="button" class="modal-add-btn" id="customize-modal-add-btn">Sepete Ekle</button>
+        </div>
+      </div>
     </div>
 
     <div id="form-section" class="form-section">
@@ -323,6 +417,7 @@
       let restaurantInfo = { isOpen: true, minOrderAmount: 0 };
       let appliedCoupon = null;
       let allProducts = [];
+      const customizationState = {};
       function applyDineInVisibility() {
         document.querySelectorAll('.product[data-only-dine-in="true"]').forEach(el => {
           el.style.display = orderType === 'gel_al' ? '' : 'none';
@@ -377,11 +472,24 @@
         el.innerHTML = navHtml + menu.categories.map((cat, ci) => `
           <div class="category" id="cat-${ci}">
             <h2>${cat.icon || icons[cat.id] || '🍽️'} ${cat.name}</h2>
-            ${cat.products.map(p => `
-              <div class="product" data-id="${p.id}" data-name="${p.name}" data-price="${p.price ?? 0}" data-price-restoran="${p.priceRestoran ?? ''}" ${p.onlyDineIn ? 'data-only-dine-in="true" title="Sadece Gel Al"' : ''}>
+            ${cat.products.map(p => {
+              const hasContents = (p.contents || '').trim();
+              const hasExtras = (p.extras && p.extras.length);
+              const hasCustomize = !!hasContents || !!hasExtras;
+              const esc = s => (s+'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+              const chips = hasContents ? (p.contents+'').split(',').map(x => x.trim()).filter(Boolean) : [];
+              const extras = p.extras || [];
+              return `
+              <div class="product" data-id="${p.id}" data-name="${p.name}" data-price="${p.price ?? 0}" data-price-restoran="${p.priceRestoran ?? ''}" data-base-price="${p.price ?? 0}" data-contents="${esc(p.contents || '')}" data-extras="${esc(JSON.stringify(extras))}" data-has-customize="${hasCustomize ? '1' : '0'}" ${p.onlyDineIn ? 'data-only-dine-in="true" title="Sadece Gel Al"' : ''}>
                 <div class="product-img">${p.image ? `<img src="${p.image}" alt="">` : '🍽️'}</div>
                 <div class="product-info">
                   <div class="product-name">${p.name}</div>
+                  ${(chips.length || extras.length || p.description) ? `<div class="product-detail-box">
+                    ${chips.length ? `<div class="product-contents-wrap"><span class="label">İçindekiler</span>${chips.map(c => `<button type="button" class="product-contents-chip" data-ingredient="${esc(c)}">${esc(c)}</button>`).join('')}</div>` : ''}
+                    ${extras.length ? `<div class="product-extras-wrap"><span class="label">Ekstra malzeme</span>${extras.map(ex => `<button type="button" class="product-extra-chip" data-name="${esc(ex.name||'')}" data-price="${ex.price||0}"><span>${esc(ex.name||'')}</span><span class="extra-price">+${ex.price||0}₺</span></button>`).join('')}</div>` : ''}
+                    ${p.description ? `<div class="product-desc">${esc(p.description)}</div>` : ''}
+                  </div>` : ''}
+                  ${hasCustomize ? '<div class="customize-hint">Çıkarmak istediğiniz malzemeye tıklayın (üstü çizilir). Ekstra eklemek için tıklayın.</div>' : ''}
                   <div class="product-price" data-base-price="${p.price ?? 0}" data-restoran-price="${p.priceRestoran ?? ''}">${p.price ?? 0}₺</div>
                 </div>
                 <div class="product-actions">
@@ -390,7 +498,7 @@
                   <button class="qty-btn plus">+</button>
                 </div>
               </div>
-            `).join('')}
+            `}).join('')}
           </div>
         `).join('');
 
@@ -438,19 +546,67 @@
         if (cart.length) updateCart();
         if (sectionParam === 'favorites') showSection('favorites');
         el.querySelectorAll('.product').forEach(row => {
+          const pid = row.dataset.id;
           const name = row.dataset.name;
           const plus = row.querySelector('.plus');
           const minus = row.querySelector('.minus');
           const qtyEl = row.querySelector('.qty-val');
+          const hasCustomize = row.dataset.hasCustomize === '1';
+          if (hasCustomize && pid) customizationState[pid] = { removed: [], added: [] };
           function refreshQty() {
             qtyEl.textContent = cart.filter(i => i.name === name).length;
           }
           refreshQty();
 
+          row.querySelectorAll('.product-contents-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+              const ing = chip.dataset.ingredient;
+              if (!pid || !customizationState[pid]) return;
+              const idx = (customizationState[pid].removed || []).indexOf(ing);
+              if (idx >= 0) {
+                customizationState[pid].removed.splice(idx, 1);
+                chip.classList.remove('removed');
+              } else {
+                customizationState[pid].removed.push(ing);
+                chip.classList.add('removed');
+              }
+            });
+          });
+          row.querySelectorAll('.product-extra-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+              const exName = chip.dataset.name;
+              const exPrice = parseInt(chip.dataset.price, 10) || 0;
+              if (!pid || !customizationState[pid]) return;
+              if (!customizationState[pid].added) customizationState[pid].added = [];
+              const idx = customizationState[pid].added.findIndex(a => a.name === exName);
+              if (idx >= 0) {
+                customizationState[pid].added.splice(idx, 1);
+                chip.classList.remove('selected');
+              } else {
+                customizationState[pid].added.push({ name: exName, price: exPrice });
+                chip.classList.add('selected');
+              }
+            });
+          });
+
           plus.addEventListener('click', () => {
-            cart.push({ name, price: getEffectivePrice(row) });
-            updateCart();
-            refreshQty();
+            if (hasCustomize) {
+              const basePrice = parseInt(row.dataset.basePrice, 10) || 0;
+              const state = customizationState[pid] || { removed: [], added: [] };
+              const addTotal = (state.added || []).reduce((s, a) => s + a.price, 0);
+              cart.push({
+                name,
+                price: getEffectivePrice(row) + addTotal,
+                removed: (state.removed && state.removed.length) ? state.removed : undefined,
+                added: (state.added && state.added.length) ? state.added : undefined
+              });
+              updateCart();
+              refreshQty();
+            } else {
+              cart.push({ name, price: getEffectivePrice(row) });
+              updateCart();
+              refreshQty();
+            }
           });
           minus.addEventListener('click', () => {
             const idx = cart.findIndex(i => i.name === name);
@@ -531,6 +687,100 @@
       function getOrderBtnText() {
         return addOrderId ? 'Siparişe Ekle' : 'Sipariş Ver';
       }
+      function cartKey(i) {
+        const r = (i.removed && i.removed.length) ? i.removed.slice().sort().join(',') : '';
+        const a = (i.added && i.added.length) ? i.added.map(x => x.name + '_' + x.price).join(',') : '';
+        return i.name + '_' + i.price + '_' + r + '_' + a;
+      }
+      function cartLineLabel(i) {
+        let s = i.name;
+        if (i.removed && i.removed.length) s += ' (çıkar: ' + i.removed.join(', ') + ')';
+        if (i.added && i.added.length) s += ' (+' + i.added.map(a => a.name + ' ' + a.price + '₺').join(', ') + ')';
+        return s;
+      }
+      let customizeProductRow = null;
+      function openCustomizeModal(row) {
+        const name = row.dataset.name;
+        const basePrice = parseInt(row.dataset.basePrice, 10) || 0;
+        const contentsStr = row.dataset.contents || '';
+        let extras = [];
+        try { extras = JSON.parse(row.dataset.extras || '[]'); } catch (_) {}
+        const ingredients = contentsStr.split(',').map(x => x.trim()).filter(Boolean);
+        customizeProductRow = row;
+        document.getElementById('customize-modal-title').textContent = name + ' – Malzeme seçin';
+        const removeSection = document.getElementById('customize-remove-section');
+        const addSection = document.getElementById('customize-add-section');
+        removeSection.style.display = ingredients.length ? 'block' : 'none';
+        addSection.style.display = extras.length ? 'block' : 'none';
+        const removeList = document.getElementById('customize-remove-list');
+        removeList.innerHTML = ingredients.map(ing => {
+          const id = 'rm-' + ing.replace(/\s/g, '-');
+          return `<button type="button" class="ingredient-toggle" data-ingredient="${(ing+'').replace(/"/g,'&quot;')}" id="${id}"><span class="check">✓</span> ${(ing+'').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</button>`;
+        }).join('');
+        removeList.querySelectorAll('.ingredient-toggle').forEach(btn => {
+          btn.addEventListener('click', () => {
+            btn.classList.toggle('removed');
+            btn.querySelector('.check').textContent = btn.classList.contains('removed') ? '✗' : '✓';
+            updateCustomizeModalTotal();
+          });
+        });
+        const addList = document.getElementById('customize-add-list');
+        addList.innerHTML = extras.map((ex, idx) => {
+          const id = 'add-' + idx;
+          return `<div class="extra-option" data-name="${(ex.name||'').replace(/"/g,'&quot;')}" data-price="${ex.price||0}" id="${id}"><span>${(ex.name+'').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</span><span class="extra-price">+${ex.price||0}₺</span></div>`;
+        }).join('');
+        addList.querySelectorAll('.extra-option').forEach(opt => {
+          opt.addEventListener('click', () => {
+            opt.classList.toggle('selected');
+            updateCustomizeModalTotal();
+          });
+        });
+        function updateCustomizeModalTotal() {
+          const removed = Array.from(removeList.querySelectorAll('.ingredient-toggle.removed')).map(b => b.dataset.ingredient);
+          const selected = Array.from(addList.querySelectorAll('.extra-option.selected')).map(o => ({ name: o.dataset.name, price: parseInt(o.dataset.price, 10) || 0 }));
+          const addTotal = selected.reduce((s, a) => s + a.price, 0);
+          const total = basePrice + addTotal;
+          document.getElementById('customize-modal-total').innerHTML = 'Toplam: <strong>' + total + '₺</strong>';
+        }
+        updateCustomizeModalTotal();
+        document.getElementById('customize-modal').classList.add('show');
+      }
+      function closeCustomizeModal() {
+        document.getElementById('customize-modal').classList.remove('show');
+        customizeProductRow = null;
+      }
+      function updateCustomizeModalTotal() {
+        const removeList = document.getElementById('customize-remove-list');
+        const addList = document.getElementById('customize-add-list');
+        if (!removeList || !addList) return;
+        const basePrice = customizeProductRow ? parseInt(customizeProductRow.dataset.basePrice, 10) || 0 : 0;
+        const selected = Array.from(addList.querySelectorAll('.extra-option.selected')).map(o => ({ name: o.dataset.name, price: parseInt(o.dataset.price, 10) || 0 }));
+        const addTotal = selected.reduce((s, a) => s + a.price, 0);
+        const total = basePrice + addTotal;
+        const el = document.getElementById('customize-modal-total');
+        if (el) el.innerHTML = 'Toplam: <strong>' + total + '₺</strong>';
+      }
+      document.getElementById('customize-modal-close').addEventListener('click', closeCustomizeModal);
+      document.getElementById('customize-modal').addEventListener('click', (e) => { if (e.target.id === 'customize-modal') closeCustomizeModal(); });
+      document.getElementById('customize-modal-add-btn').addEventListener('click', () => {
+        if (!customizeProductRow) return;
+        const name = customizeProductRow.dataset.name;
+        const basePrice = parseInt(customizeProductRow.dataset.basePrice, 10) || 0;
+        const removeList = document.getElementById('customize-remove-list');
+        const addList = document.getElementById('customize-add-list');
+        const removed = Array.from(removeList.querySelectorAll('.ingredient-toggle.removed')).map(b => b.dataset.ingredient);
+        const added = Array.from(addList.querySelectorAll('.extra-option.selected')).map(o => ({ name: o.dataset.name, price: parseInt(o.dataset.price, 10) || 0 }));
+        const addTotal = added.reduce((s, a) => s + a.price, 0);
+        cart.push({ name, price: basePrice + addTotal, removed: removed.length ? removed : undefined, added: added.length ? added : undefined });
+        closeCustomizeModal();
+        updateCart();
+        document.querySelectorAll('.product').forEach(row => {
+          if (row.dataset.name === name) {
+            const qtyEl = row.querySelector('.qty-val');
+            if (qtyEl) qtyEl.textContent = cart.filter(i => i.name === name).length;
+          }
+        });
+      });
       function updateCart() {
         const itemsEl = document.getElementById('cart-items');
         const totalEl = document.getElementById('cart-total');
@@ -547,10 +797,12 @@
           orderBtn.disabled = addOrderId ? (cart.length === 0) : !minOk;
           orderBtn.textContent = getOrderBtnText();
           const groups = {};
-          cart.forEach(i => { const k = i.name + '_' + i.price; groups[k] = (groups[k] || 0) + 1; });
+          cart.forEach(i => { const k = cartKey(i); groups[k] = (groups[k] || 0) + 1; });
           itemsEl.innerHTML = Object.entries(groups).map(([k, q]) => {
-            const [n, p] = k.split('_');
-            return `<div class="cart-line"><span>${q}x ${n}</span><span>${parseInt(p) * q}₺</span></div>`;
+            const first = cart.find(i => cartKey(i) === k);
+            const label = cartLineLabel(first);
+            const price = first.price * q;
+            return `<div class="cart-line"><span>${q}x ${label}</span><span>${price}₺</span></div>`;
           }).join('');
           const discount = appliedCoupon ? appliedCoupon.discount : 0;
           const total = Math.max(0, subtotal - discount);
@@ -593,10 +845,10 @@
       document.getElementById('order-btn').addEventListener('click', () => {
         if (addOrderId) {
           const groups = {};
-          cart.forEach(i => { const k = i.name + '_' + i.price; groups[k] = (groups[k] || 0) + 1; });
+          cart.forEach(i => { const k = cartKey(i); groups[k] = (groups[k] || 0) + 1; });
           const itemsStr = Object.entries(groups).map(([k, q]) => {
-            const [n, p] = k.split('_');
-            return `${q}x ${n} (${parseInt(p) * q}₺)`;
+            const first = cart.find(i => cartKey(i) === k);
+            return `${q}x ${cartLineLabel(first)} (${first.price * q}₺)`;
           }).join(', ');
           const total = cart.reduce((s, i) => s + i.price, 0);
           if (total < 1) return;
@@ -715,10 +967,10 @@
         const notes = document.getElementById('notes').value.trim();
 
         const groups = {};
-        cart.forEach(i => { const k = i.name + '_' + i.price; groups[k] = (groups[k] || 0) + 1; });
+        cart.forEach(i => { const k = cartKey(i); groups[k] = (groups[k] || 0) + 1; });
         const itemsStr = Object.entries(groups).map(([k, q]) => {
-          const [n, p] = k.split('_');
-          return `${q}x ${n} (${parseInt(p) * q}₺)`;
+          const first = cart.find(i => cartKey(i) === k);
+          return `${q}x ${cartLineLabel(first)} (${first.price * q}₺)`;
         }).join(', ');
         const subtotalCart = cart.reduce((s, i) => s + i.price, 0);
 

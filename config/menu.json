@@ -9,11 +9,49 @@
       "name": "Ana Yemekler",
       "icon": "🍽️",
       "products": [
-        { "id": "lahmacun", "name": "Lahmacun", "price": 45, "image": "" },
-        { "id": "pizza-orta", "name": "Pizza (Orta)", "price": 95, "image": "" },
-        { "id": "doner-durum", "name": "Döner Dürüm", "price": 75, "image": "" },
-        { "id": "kebap", "name": "Adana Kebap", "price": 120, "image": "" },
-        { "id": "pide", "name": "Kıymalı Pide", "price": 85, "image": "" }
+        {
+          "id": "lahmacun",
+          "name": "Lahmacun",
+          "price": 45,
+          "image": "",
+          "contents": "domates,kıyma,soğan,yarrak,ot,bok",
+          "description": "",
+          "extras": [
+            {
+              "name": "kıyma 15",
+              "price": 0
+            },
+            {
+              "name": "domates 15",
+              "price": 0
+            }
+          ],
+          "onlyDineIn": false
+        },
+        {
+          "id": "pizza-orta",
+          "name": "Pizza (Orta)",
+          "price": 95,
+          "image": ""
+        },
+        {
+          "id": "doner-durum",
+          "name": "Döner Dürüm",
+          "price": 75,
+          "image": ""
+        },
+        {
+          "id": "kebap",
+          "name": "Adana Kebap",
+          "price": 120,
+          "image": ""
+        },
+        {
+          "id": "pide",
+          "name": "Kıymalı Pide",
+          "price": 85,
+          "image": ""
+        }
       ]
     },
     {
@@ -21,11 +59,37 @@
       "name": "İçecekler",
       "icon": "🥤",
       "products": [
-        { "id": "ayran", "name": "Ayran", "price": 15, "image": "" },
-        { "id": "kola", "name": "Kola", "price": 25, "image": "" },
-        { "id": "fanta", "name": "Fanta", "price": 25, "image": "" },
-        { "id": "su", "name": "Su", "price": 10, "image": "" },
-        { "id": "cay", "name": "Çay", "price": 12, "image": "", "onlyDineIn": true }
+        {
+          "id": "ayran",
+          "name": "Ayran",
+          "price": 15,
+          "image": ""
+        },
+        {
+          "id": "kola",
+          "name": "Kola",
+          "price": 25,
+          "image": ""
+        },
+        {
+          "id": "fanta",
+          "name": "Fanta",
+          "price": 25,
+          "image": ""
+        },
+        {
+          "id": "su",
+          "name": "Su",
+          "price": 10,
+          "image": ""
+        },
+        {
+          "id": "cay",
+          "name": "Çay",
+          "price": 12,
+          "image": "",
+          "onlyDineIn": true
+        }
       ]
     },
     {
@@ -33,8 +97,18 @@
       "name": "Tatlılar",
       "icon": "🍰",
       "products": [
-        { "id": "kunefe", "name": "Künefe", "price": 85, "image": "" },
-        { "id": "baklava", "name": "Baklava (3 dilim)", "price": 75, "image": "" }
+        {
+          "id": "kunefe",
+          "name": "Künefe",
+          "price": 85,
+          "image": ""
+        },
+        {
+          "id": "baklava",
+          "name": "Baklava (3 dilim)",
+          "price": 75,
+          "image": ""
+        }
       ]
     }
   ]

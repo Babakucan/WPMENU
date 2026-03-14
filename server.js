@@ -214,6 +214,8 @@ bot.on('message', (msg) => {
 });
 
 const app = express();
+// ngrok / proxy arkasında çalışırken X-Forwarded-For güvenilir olsun (rate-limit için)
+app.set('trust proxy', 1);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 

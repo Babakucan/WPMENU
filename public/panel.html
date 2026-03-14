@@ -154,20 +154,34 @@
       border: 1px solid var(--border);
     }
     .category-block h3 { font-size: 1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-    .product-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 0;
-      border-bottom: 1px solid var(--border);
+    .product-card { border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; overflow: hidden; background: var(--surface); }
+    .product-card-head {
+      display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; flex-wrap: wrap;
     }
-    .product-row:last-child { border-bottom: none; }
-    .product-row input { flex: 2; }
-    .product-row input[type="number"] { flex: 0.5; min-width: 56px; }
-    .product-row .price-group { display: flex; flex-direction: column; gap: 2px; }
-    .product-row .price-group span { font-size: 0.7rem; color: var(--muted); }
-    .product-row label.dine-in-label { display: flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer; font-size: 0.85rem; color: var(--muted); }
-    .product-row label.dine-in-label input { flex: none; width: auto; }
+    .product-card-head .head-name { flex: 2; min-width: 140px; }
+    .product-card-head .head-price { width: 80px; }
+    .product-card-head .head-desc { flex: 1; min-width: 180px; }
+    .product-card-head input, .product-card-head textarea { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.9rem; }
+    .product-card-head textarea.head-desc-ta { min-height: 44px; resize: vertical; }
+    .product-card-head .price-label { font-size: 0.7rem; color: var(--muted); margin-bottom: 2px; }
+    .product-card-toggle {
+      width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); color: var(--muted); font-size: 1.2rem; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: background 0.2s, color 0.2s;
+    }
+    .product-card-toggle:hover { background: var(--accent-dim); color: var(--accent); }
+    .product-card.expanded .product-card-toggle { transform: none; }
+    .product-card-body { display: none; padding: 14px 16px; border-top: 1px solid var(--border); background: var(--bg); }
+    .product-card.expanded .product-card-body { display: block; }
+    .product-card-body .body-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; margin-bottom: 12px; }
+    .product-card-body .body-row:last-child { margin-bottom: 0; }
+    .product-card-body .field-group { flex: 1; min-width: 160px; }
+    .product-card-body .field-group label { display: block; font-size: 0.7rem; color: var(--muted); margin-bottom: 4px; }
+    .product-card-body .field-group input, .product-card-body .field-group textarea { width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.85rem; }
+    .product-card-body .field-group textarea { min-height: 64px; resize: vertical; }
+    .product-card-body .field-group.contents-group textarea { min-height: 100px; font-size: 0.85rem; }
+    .product-card-body .field-group.extras-group textarea { min-height: 70px; font-size: 0.8rem; }
+    .product-card-body label.dine-in-label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.85rem; color: var(--muted); }
+    .product-card-body .btn-remove { background: #dc2626; color: #fff; padding: 6px 12px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
+    .product-card-body .btn-remove:hover { background: #b91c1c; }
     .coupon-row {
       display: flex;
       gap: 12px;
@@ -472,21 +486,43 @@
           <div class="category-block">
             <h3>${cat.icon || '🍽️'} ${cat.name}</h3>
             ${(cat.products || []).map((p, pi) => `
-              <div class="product-row">
-                <input type="text" value="${(p.name || '').replace(/"/g, '&quot;')}" onchange="setProduct(${ci},${pi},'name',this.value)" placeholder="Ürün adı">
-                <div class="price-group">
-                  <span>Paket ₺</span>
-                  <input type="number" value="${p.price ?? ''}" min="0" onchange="setProduct(${ci},${pi},'price',this.value)" placeholder="0">
+              <div class="product-card">
+                <div class="product-card-head">
+                  <div class="head-name">
+                    <input type="text" value="${(p.name || '').replace(/"/g, '&quot;')}" onchange="setProduct(${ci},${pi},'name',this.value)" placeholder="Ürün adı">
+                  </div>
+                  <div class="head-price">
+                    <div class="price-label">Paket ₺</div>
+                    <input type="number" value="${p.price ?? ''}" min="0" onchange="setProduct(${ci},${pi},'price',this.value)" placeholder="0">
+                  </div>
+                  <div class="head-desc">
+                    <textarea class="head-desc-ta" onchange="setProduct(${ci},${pi},'description',this.value)" placeholder="Kısa açıklama">${(p.description || '').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</textarea>
+                  </div>
+                  <button type="button" class="product-card-toggle" onclick="var card=this.closest('.product-card');card.classList.toggle('expanded');this.textContent=card.classList.contains('expanded')?'−':'+';" title="Detayları aç/kapat">+</button>
                 </div>
-                <div class="price-group">
-                  <span>Restoran ₺</span>
-                  <input type="number" value="${p.priceRestoran ?? ''}" min="0" onchange="setProduct(${ci},${pi},'priceRestoran',this.value)" placeholder="Opsiyonel">
+                <div class="product-card-body">
+                  <div class="body-row">
+                    <div class="field-group">
+                      <label>Restoran ₺ (opsiyonel)</label>
+                      <input type="number" value="${p.priceRestoran ?? ''}" min="0" onchange="setProduct(${ci},${pi},'priceRestoran',this.value)" placeholder="Opsiyonel">
+                    </div>
+                    <label class="dine-in-label">
+                      <input type="checkbox" ${p.onlyDineIn ? 'checked' : ''} onchange="setProduct(${ci},${pi},'onlyDineIn',this.checked)">
+                      Sadece restoran içi
+                    </label>
+                    <button type="button" class="btn-remove" onclick="removeProduct(${ci},${pi})">Sil</button>
+                  </div>
+                  <div class="body-row">
+                    <div class="field-group contents-group">
+                      <label>İçerik (malzemeler) – her satıra bir malzeme</label>
+                      <textarea onchange="setProductContents(${ci},${pi},this.value)" placeholder="domates&#10;soğan&#10;kıyma">${formatContentsForEdit(p.contents)}</textarea>
+                    </div>
+                    <div class="field-group extras-group">
+                      <label>Ekstra malzemeler (her satır: Malzeme, Fiyat)</label>
+                      <textarea onchange="setProductExtras(${ci},${pi},this.value)" placeholder="Extra peynir, 10">${formatExtrasForEdit(p.extras)}</textarea>
+                    </div>
+                  </div>
                 </div>
-                <label class="dine-in-label">
-                  <input type="checkbox" ${p.onlyDineIn ? 'checked' : ''} onchange="setProduct(${ci},${pi},'onlyDineIn',this.checked)">
-                  Sadece restoran içi
-                </label>
-                <button class="btn" style="background:#dc2626;color:#fff;padding:6px 10px" onclick="removeProduct(${ci},${pi})">Sil</button>
               </div>
             `).join('')}
             <button class="btn" style="margin-top:8px;background:var(--accent-dim);color:var(--accent)" onclick="addProduct(${ci})">+ Ürün Ekle</button>
@@ -497,6 +533,33 @@
       }
     }
 
+    function formatContentsForEdit(contents) {
+      if (!contents || typeof contents !== 'string') return '';
+      return contents.split(/[,\n]/).map(x => x.trim()).filter(Boolean).join('\n').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    }
+    function setProductContents(ci, pi, val) {
+      if (!menuData.categories) return;
+      const p = menuData.categories[ci]?.products?.[pi];
+      if (!p) return;
+      const lines = (val || '').split('\n').map(x => x.trim()).filter(Boolean);
+      p.contents = lines.join(',');
+    }
+    function formatExtrasForEdit(extras) {
+      if (!extras || !Array.isArray(extras)) return '';
+      return extras.map(e => (e.name || '') + ', ' + (e.price || 0)).join('\n').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    }
+    function setProductExtras(ci, pi, val) {
+      if (!menuData.categories) return;
+      const p = menuData.categories[ci]?.products?.[pi];
+      if (!p) return;
+      const lines = (val || '').split('\n').filter(l => l.trim());
+      p.extras = lines.map(line => {
+        const parts = line.split(',').map(s => s.trim());
+        const name = parts[0] || '';
+        const price = parseInt(parts[1], 10) || 0;
+        return { name, price };
+      }).filter(e => e.name);
+    }
     function setProduct(ci, pi, field, val) {
       if (!menuData.categories) return;
       const p = menuData.categories[ci]?.products?.[pi];
@@ -510,7 +573,7 @@
       if (!menuData.categories) return;
       const cat = menuData.categories[ci];
       if (!cat.products) cat.products = [];
-      cat.products.push({ id: 'new-' + Date.now(), name: 'Yeni Ürün', price: 0, image: '', onlyDineIn: false });
+      cat.products.push({ id: 'new-' + Date.now(), name: 'Yeni Ürün', price: 0, image: '', onlyDineIn: false, contents: '', description: '', extras: [] });
       loadMenuEditor();
     }
     function removeProduct(ci, pi) {
@@ -862,12 +925,24 @@
           <div class="category-block">
             <h3>${cat.icon || '🍽️'} ${cat.name}</h3>
             ${(cat.products || []).map((p, pi) => `
-              <div class="product-row">
-                <input type="text" value="${(p.name || '').replace(/"/g, '&quot;')}" onchange="setProduct(${ci},${pi},'name',this.value)" placeholder="Ürün adı">
-                <div class="price-group"><span>Paket ₺</span><input type="number" value="${p.price ?? ''}" min="0" onchange="setProduct(${ci},${pi},'price',this.value)" placeholder="0"></div>
-                <div class="price-group"><span>Restoran ₺</span><input type="number" value="${p.priceRestoran ?? ''}" min="0" onchange="setProduct(${ci},${pi},'priceRestoran',this.value)" placeholder="Opsiyonel"></div>
-                <label class="dine-in-label"><input type="checkbox" ${p.onlyDineIn ? 'checked' : ''} onchange="setProduct(${ci},${pi},'onlyDineIn',this.checked)"> Sadece restoran içi</label>
-                <button class="btn" style="background:#dc2626;color:#fff;padding:6px 10px" onclick="removeProduct(${ci},${pi})">Sil</button>
+              <div class="product-card">
+                <div class="product-card-head">
+                  <div class="head-name"><input type="text" value="${(p.name || '').replace(/"/g, '&quot;')}" onchange="setProduct(${ci},${pi},'name',this.value)" placeholder="Ürün adı"></div>
+                  <div class="head-price"><div class="price-label">Paket ₺</div><input type="number" value="${p.price ?? ''}" min="0" onchange="setProduct(${ci},${pi},'price',this.value)" placeholder="0"></div>
+                  <div class="head-desc"><textarea class="head-desc-ta" onchange="setProduct(${ci},${pi},'description',this.value)" placeholder="Kısa açıklama">${(p.description || '').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</textarea></div>
+                  <button type="button" class="product-card-toggle" onclick="var card=this.closest('.product-card');card.classList.toggle('expanded');this.textContent=card.classList.contains('expanded')?'−':'+';" title="Detayları aç/kapat">+</button>
+                </div>
+                <div class="product-card-body">
+                  <div class="body-row">
+                    <div class="field-group"><label>Restoran ₺</label><input type="number" value="${p.priceRestoran ?? ''}" min="0" onchange="setProduct(${ci},${pi},'priceRestoran',this.value)" placeholder="Opsiyonel"></div>
+                    <label class="dine-in-label"><input type="checkbox" ${p.onlyDineIn ? 'checked' : ''} onchange="setProduct(${ci},${pi},'onlyDineIn',this.checked)"> Sadece restoran içi</label>
+                    <button type="button" class="btn-remove" onclick="removeProduct(${ci},${pi})">Sil</button>
+                  </div>
+                  <div class="body-row">
+                    <div class="field-group contents-group"><label>İçerik (her satır bir malzeme)</label><textarea onchange="setProductContents(${ci},${pi},this.value)" placeholder="domates&#10;soğan">${formatContentsForEdit(p.contents)}</textarea></div>
+                    <div class="field-group extras-group"><label>Ekstra malzemeler</label><textarea onchange="setProductExtras(${ci},${pi},this.value)" placeholder="Her satır: Malzeme, Fiyat">${formatExtrasForEdit(p.extras)}</textarea></div>
+                  </div>
+                </div>
               </div>
             `).join('')}
             <button class="btn" style="margin-top:8px;background:var(--accent-dim);color:var(--accent)" onclick="addProduct(${ci})">+ Ürün Ekle</button>
