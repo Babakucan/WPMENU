@@ -56,9 +56,11 @@ async function sendWhatsAppMessage(to, text) {
     });
     if (!res.ok) {
       const err = await res.text();
+      console.error('[WhatsApp] Gönderim hatası:', res.status, err);
       logError('WhatsApp send', new Error(err));
     }
   } catch (e) {
+    console.error('[WhatsApp] Gönderim exception:', e.message);
     logError('WhatsApp send', e);
   }
 }
@@ -203,6 +205,7 @@ if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 const upload = multer({ dest: UPLOADS_DIR, limits: { fileSize: 5 * 1024 * 1024 } });
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -220,7 +223,14 @@ app.get('/webhook/whatsapp', (req, res) => {
 
 app.post('/webhook/whatsapp', (req, res) => {
   res.sendStatus(200);
-  if (!whatsappEnabled || req.body?.object !== 'whatsapp_business_account') return;
+  if (!whatsappEnabled) {
+    console.log('[WhatsApp] Webhook alındı ama WhatsApp kapalı (WA_* .env)');
+    return;
+  }
+  if (req.body?.object !== 'whatsapp_business_account') {
+    console.log('[WhatsApp] Webhook alındı, object:', req.body?.object || 'yok');
+    return;
+  }
   const entries = req.body.entry || [];
   for (const entry of entries) {
     const changes = entry.changes || [];
@@ -228,6 +238,7 @@ app.post('/webhook/whatsapp', (req, res) => {
       if (change.field !== 'messages') continue;
       const value = change.value || {};
       const messages = value.messages || [];
+      if (messages.length) console.log('[WhatsApp] Gelen mesaj sayısı:', messages.length);
       const contacts = value.contacts || [];
       const profileName = (contacts[0]?.profile?.name) || 'Müşteri';
       for (const msg of messages) {
@@ -257,6 +268,7 @@ app.post('/webhook/whatsapp', (req, res) => {
         // Buton yanıtı: interactive.button_reply.id
         const buttonId = (type === 'interactive' && msg.interactive?.button_reply?.id) ? msg.interactive.button_reply.id.trim().toLowerCase() : '';
         const cmd = buttonId || body.toLowerCase();
+        console.log('[WhatsApp] Yanıtlanıyor from:', from, 'cmd:', cmd || '(hoş geldin)');
         const menuLink = `${baseUrl}/menu.html?channel=whatsapp&userId=${from}`;
         const r = getRestaurant();
         const openNow = isOpen(r);
@@ -477,6 +489,10 @@ app.post('/api/order', (req, res) => {
     }
     const id = orderIdCounter++;
     const payMethod = ['kapida_nakit', 'kapida_pos'].includes(paymentMethod) ? paymentMethod : 'kapida_nakit';
+    const isGelAl = (orderType || 'paket') === 'gel_al' || (orderType || '') === 'restoran';
+    const defaultEst = isGelAl
+      ? (rest.estimatedMinutesGelAl ?? rest.estimatedMinutes ?? 25)
+      : (rest.estimatedMinutesPaket ?? rest.estimatedMinutes ?? 25);
     const order = {
       id, items,
       total: finalTotal, subtotal, discountAmount,
@@ -484,7 +500,8 @@ app.post('/api/order', (req, res) => {
       paymentMethod: payMethod,
       location: location && typeof location === 'object' && location.lat && location.lng ? location : null,
       couponCode: discountAmount ? couponCode : null,
-      status: 'Alındı', createdAt: new Date().toISOString()
+      status: 'Alındı', createdAt: new Date().toISOString(),
+      estimatedMinutes: defaultEst
     };
     if (telegramId) order.telegramId = String(telegramId);
     if (whatsappId) order.whatsappId = String(whatsappId);
@@ -548,7 +565,7 @@ app.post('/api/orders/:id/add', (req, res) => {
 
 app.patch('/api/orders/:id', requireAdmin, (req, res) => {
   const id = parseInt(req.params.id);
-  const { status, cancelReason } = req.body;
+  const { status, cancelReason, estimatedMinutes } = req.body;
   const order = orders.find(o => o.id === id);
   if (!order || !status) return res.status(400).json({ ok: false });
   const valid = ['Alındı', 'Hazırlanıyor', 'Hazır', 'Yola Çıktı', 'Teslim Edildi', 'İptal'];
@@ -556,10 +573,17 @@ app.patch('/api/orders/:id', requireAdmin, (req, res) => {
   order.status = status;
   if (status === 'İptal') order.cancelReason = (cancelReason || '').trim();
   else order.cancelReason = undefined;
+  if (estimatedMinutes != null && estimatedMinutes !== '') {
+    const mins = Number(estimatedMinutes);
+    if (!Number.isNaN(mins) && mins > 0) order.estimatedMinutes = mins;
+  }
   saveOrders(orders);
+  const r = getRestaurant();
+  const est = order.estimatedMinutes ?? r.estimatedMinutes ?? 25;
+  const estSuffix = (status === 'Hazırlanıyor' || status === 'Hazır') ? `\n⏱ Tahminen ${est} dakika içinde hazır olacak.` : '';
   const msgs = {
-    'Hazırlanıyor': '👨‍🍳 Siparişin hazırlanıyor.',
-    'Hazır': '✅ Hazır, birazdan yola çıkacak.',
+    'Hazırlanıyor': '👨‍🍳 Siparişin hazırlanıyor.' + estSuffix,
+    'Hazır': '✅ Hazır, birazdan yola çıkacak.' + estSuffix,
     'Yola Çıktı': '🚗 Siparişin yolda!',
     'Teslim Edildi': '🎉 Teslim edildi. Afiyet olsun!',
     'İptal': '❌ Siparişin iptal edildi.'
@@ -643,7 +667,7 @@ function validateCoupon(code, subtotal) {
 
 function formatOrderConfirm(order) {
   const r = getRestaurant();
-  const est = r.estimatedMinutes || 25;
+  const est = order.estimatedMinutes ?? r.estimatedMinutes ?? 25;
   const payLabel = order.paymentMethod === 'kapida_pos' ? 'POS' : 'Nakit';
   const disc = order.discountAmount ? `\n🏷 İndirim: -${order.discountAmount}₺` : '';
   return `✅ <b>Siparişin alındı!</b>

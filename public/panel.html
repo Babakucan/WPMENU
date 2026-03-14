@@ -166,17 +166,89 @@
       box-shadow: 0 2px 12px rgba(0,0,0,0.1);
     }
     .category-block h3 { font-size: 1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-    .product-row {
+    .product-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      margin-bottom: 14px;
+      overflow: hidden;
+      background: var(--surface);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .product-card:hover { border-color: #353545; }
+    .product-card-head {
       display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 0;
-      border-bottom: 1px solid var(--border);
+      align-items: flex-start;
+      gap: 14px;
+      padding: 16px 18px;
       flex-wrap: wrap;
     }
-    .product-row:last-child { border-bottom: none; }
-    .product-row input { flex: 2; }
-    .product-row input[type="number"] { flex: 0.5; }
+    .product-card-head .head-name { flex: 2; min-width: 140px; }
+    .product-card-head .head-price { width: 88px; }
+    .product-card-head .head-desc { flex: 1; min-width: 200px; }
+    .product-card-head input,
+    .product-card-head textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.9rem;
+      font-family: inherit;
+    }
+    .product-card-head textarea.head-desc-ta { min-height: 48px; resize: vertical; }
+    .product-card-head .price-label { font-size: 0.72rem; color: var(--muted); margin-bottom: 4px; font-weight: 500; }
+    .product-card-toggle {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--muted);
+      font-size: 1.25rem;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+    }
+    .product-card-toggle:hover { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+    .product-card.expanded .product-card-body { display: block; }
+    .product-card-body {
+      display: none;
+      padding: 16px 18px;
+      border-top: 1px solid var(--border);
+      background: rgba(10,10,15,0.4);
+    }
+    .product-card-body .body-row {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      margin-bottom: 14px;
+    }
+    .product-card-body .body-row:last-child { margin-bottom: 0; }
+    .product-card-body .field-group { flex: 1; min-width: 160px; }
+    .product-card-body .field-group label { display: block; font-size: 0.72rem; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+    .product-card-body .field-group input,
+    .product-card-body .field-group textarea {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.85rem;
+      font-family: inherit;
+    }
+    .product-card-body .field-group textarea { min-height: 68px; resize: vertical; }
+    .product-card-body .field-group.contents-group textarea { min-height: 100px; font-size: 0.85rem; }
+    .product-card-body .field-group.extras-group textarea { min-height: 72px; font-size: 0.82rem; }
+    .product-card-body label.dine-in-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem; color: var(--muted); }
+    .product-card-body .btn-remove { background: #dc2626; color: #fff; padding: 8px 14px; border: none; border-radius: 10px; cursor: pointer; font-size: 0.85rem; font-weight: 500; }
+    .product-card-body .btn-remove:hover { background: #b91c1c; }
     .coupon-row {
       display: flex;
       gap: 12px;
@@ -293,7 +365,7 @@
     .chart-wrap { position: relative; height: 260px; }
     .products-chart-wrap { height: 320px; }
     @media print {
-      .sidebar, .section-header .btn, .section-header select, #filter-status, #bulk-status-bar, .nav-item, .last-update, .no-print { display: none !important; }
+      .sidebar, .section-header .btn, .section-header select, #filter-status, .nav-item, .last-update, .no-print { display: none !important; }
       body { background: #fff; color: #111; }
       .main { padding: 0; }
       .section { display: block !important; }
@@ -351,18 +423,6 @@
           <div class="stat"><div class="stat-value" id="today-count">0</div><div class="stat-label">Bugün</div></div>
           <div class="stat"><div class="stat-value" id="today-total">0₺</div><div class="stat-label">Bugün Toplam</div></div>
           <div class="stat"><div class="stat-value" id="active-count">0</div><div class="stat-label">Aktif</div></div>
-        </div>
-        <div id="bulk-status-bar" class="bulk-status-bar" style="display:none;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-          <select id="bulk-status-select" style="padding:8px 12px;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--text)">
-            <option value="">Durum seçin</option>
-            <option value="Alındı">Alındı</option>
-            <option value="Hazırlanıyor">Hazırlanıyor</option>
-            <option value="Hazır">Hazır</option>
-            <option value="Yola Çıktı">Yola Çıktı</option>
-            <option value="Teslim Edildi">Teslim Edildi</option>
-            <option value="İptal">İptal</option>
-          </select>
-          <button class="btn btn-primary" onclick="bulkUpdateStatus()">Seçilenleri güncelle</button>
         </div>
         <div id="orders-list"></div>
         <div class="last-update" id="orders-update">Son güncelleme: -</div>
@@ -671,8 +731,6 @@
           el.innerHTML = '<div class="empty">Sipariş yok</div>';
           return;
         }
-        const bulkBar = document.getElementById('bulk-status-bar');
-        if (bulkBar) bulkBar.style.display = filtered.length ? 'flex' : 'none';
         el.innerHTML = filtered.map(o => `
           <div class="order-card">
             <div class="order-row">
@@ -688,9 +746,13 @@
               <span class="stat-value" style="font-size:1rem">${o.total}₺</span>
               <span class="badge">${o.orderType === 'restoran' ? '🏠' : '📦'}</span>
               <span class="badge">${(o.paymentMethod || 'kapida_nakit') === 'kapida_pos' ? '💳' : '💵'}</span>
-              <select onchange="updateStatus(${o.id}, this.value)">
+              <select onchange="var w=this.closest('.order-footer').querySelector('.order-est-wrap'); if(w) w.style.display=(this.value==='Teslim Edildi'||this.value==='İptal')?'none':'flex'; updateStatus(${o.id}, this.value);">
                 ${statuses.map(s => `<option ${o.status === s ? 'selected' : ''}>${s}</option>`).join('')}
               </select>
+              <span class="order-est-wrap" style="display:${(o.status === 'Teslim Edildi' || o.status === 'İptal') ? 'none' : 'flex'};align-items:center;gap:6px">
+                <span style="font-size:0.8rem;color:var(--muted)">Tahmini süre (dk)</span>
+                <input type="number" class="order-est-min" data-order-id="${o.id}" value="${o.estimatedMinutes || ''}" min="1" placeholder="25" style="width:52px;padding:4px 6px;border-radius:6px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:0.9rem">
+              </span>
             </div>
           </div>
         `).join('');
@@ -706,10 +768,19 @@
         cancelReason = (r || '').trim();
       }
       const fn = typeof authFetch === 'function' ? authFetch : fetch;
+      const payload = { status, cancelReason };
+      if (status !== 'Teslim Edildi' && status !== 'İptal') {
+        const card = document.querySelector('.order-select-cb[data-order-id="' + id + '"]')?.closest('.order-card');
+        const estInput = card?.querySelector('.order-est-min');
+        if (estInput && estInput.value.trim() !== '') {
+          const mins = Number(estInput.value);
+          if (!Number.isNaN(mins) && mins > 0) payload.estimatedMinutes = mins;
+        }
+      }
       await fn(`/api/orders/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, cancelReason })
+        body: JSON.stringify(payload)
       });
       loadOrders();
     }
@@ -722,18 +793,83 @@
         <div class="category-block">
           <h3>${cat.icon || '🍽️'} ${cat.name}</h3>
           ${(cat.products || []).map((p, pi) => `
-            <div class="product-row">
-              <input type="text" value="${(p.name || '').replace(/"/g, '&quot;')}" onchange="setProduct(${ci},${pi},'name',this.value)" placeholder="Ürün adı">
-              <input type="number" value="${p.price || 0}" min="0" onchange="setProduct(${ci},${pi},'price',this.value)" placeholder="₺">
-              <input type="file" id="prod-img-${ci}-${pi}" accept="image/*" style="display:none" onchange="uploadProductImage(${ci},${pi},this)">
-              <button type="button" class="btn" style="background:var(--accent);color:#000;padding:6px 10px;font-size:0.85rem" onclick="document.getElementById('prod-img-${ci}-${pi}').click()">📤 Yükle</button>
-              <input type="url" value="${(p.image || '').replace(/"/g,'&quot;')}" onchange="setProduct(${ci},${pi},'image',this.value)" placeholder="URL" style="flex:1;min-width:80px;font-size:0.85rem">
-              <button class="btn" style="background:#dc2626;color:#fff;padding:6px 10px" onclick="removeProduct(${ci},${pi})">Sil</button>
+            <div class="product-card">
+              <div class="product-card-head">
+                <div class="head-name">
+                  <input type="text" value="${(p.name || '').replace(/"/g, '&quot;')}" onchange="setProduct(${ci},${pi},'name',this.value)" placeholder="Ürün adı">
+                </div>
+                <div class="head-price">
+                  <div class="price-label">Paket ₺</div>
+                  <input type="number" value="${p.price ?? ''}" min="0" onchange="setProduct(${ci},${pi},'price',this.value)" placeholder="0">
+                </div>
+                <div class="head-desc">
+                  <textarea class="head-desc-ta" onchange="setProduct(${ci},${pi},'description',this.value)" placeholder="Kısa açıklama">${(p.description || '').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</textarea>
+                </div>
+                <button type="button" class="product-card-toggle" onclick="var c=this.closest('.product-card');c.classList.toggle('expanded');this.textContent=c.classList.contains('expanded')?'−':'+';" title="Detayları aç/kapat">+</button>
+              </div>
+              <div class="product-card-body">
+                <div class="body-row">
+                  <div class="field-group">
+                    <label>Restoran ₺ (opsiyonel)</label>
+                    <input type="number" value="${p.priceRestoran ?? ''}" min="0" onchange="setProduct(${ci},${pi},'priceRestoran',this.value)" placeholder="Opsiyonel">
+                  </div>
+                  <label class="dine-in-label">
+                    <input type="checkbox" ${p.onlyDineIn ? 'checked' : ''} onchange="setProduct(${ci},${pi},'onlyDineIn',this.checked)">
+                    Sadece restoran içi
+                  </label>
+                  <div class="field-group" style="flex:1;min-width:180px">
+                    <label>Görsel (URL veya yükle)</label>
+                    <div style="display:flex;gap:8px;align-items:center">
+                      <input type="file" id="prod-img-${ci}-${pi}" accept="image/*" style="display:none" onchange="uploadProductImage(${ci},${pi},this)">
+                      <button type="button" class="btn" style="background:var(--accent);color:#fff;padding:6px 10px;font-size:0.8rem" onclick="document.getElementById('prod-img-${ci}-${pi}').click()">📤 Yükle</button>
+                      <input type="url" value="${(p.image || '').replace(/"/g,'&quot;')}" onchange="setProduct(${ci},${pi},'image',this.value)" placeholder="URL" style="flex:1;min-width:0;font-size:0.85rem">
+                    </div>
+                  </div>
+                  <button type="button" class="btn-remove" onclick="removeProduct(${ci},${pi})">Sil</button>
+                </div>
+                <div class="body-row">
+                  <div class="field-group contents-group">
+                    <label>İçerik (malzemeler) – her satıra bir malzeme</label>
+                    <textarea onchange="setProductContents(${ci},${pi},this.value)" placeholder="domates&#10;soğan&#10;kıyma">${formatContentsForEdit(p.contents)}</textarea>
+                  </div>
+                  <div class="field-group extras-group">
+                    <label>Ekstra malzemeler (her satır: Malzeme, Fiyat)</label>
+                    <textarea onchange="setProductExtras(${ci},${pi},this.value)" placeholder="Extra peynir, 10">${formatExtrasForEdit(p.extras)}</textarea>
+                  </div>
+                </div>
+              </div>
             </div>
           `).join('')}
-          <button class="btn" style="margin-top:8px;background:var(--accent-dim);color:var(--accent)" onclick="addProduct(${ci})">+ Ürün Ekle</button>
+          <button class="btn" style="margin-top:10px;background:var(--accent-dim);color:var(--accent);padding:10px 16px" onclick="addProduct(${ci})">+ Ürün Ekle</button>
         </div>
       `).join('');
+    }
+    function formatContentsForEdit(contents) {
+      if (!contents || typeof contents !== 'string') return '';
+      return contents.split(/[,\n]/).map(x => x.trim()).filter(Boolean).join('\n').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    }
+    function setProductContents(ci, pi, val) {
+      if (!menuData.categories) return;
+      const p = menuData.categories[ci]?.products?.[pi];
+      if (!p) return;
+      const lines = (val || '').split('\n').map(x => x.trim()).filter(Boolean);
+      p.contents = lines.join(',');
+    }
+    function formatExtrasForEdit(extras) {
+      if (!extras || !Array.isArray(extras)) return '';
+      return extras.map(e => (e.name || '') + ', ' + (e.price || 0)).join('\n').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    }
+    function setProductExtras(ci, pi, val) {
+      if (!menuData.categories) return;
+      const p = menuData.categories[ci]?.products?.[pi];
+      if (!p) return;
+      const lines = (val || '').split('\n').filter(l => l.trim());
+      p.extras = lines.map(line => {
+        const parts = line.split(',').map(s => s.trim());
+        const name = parts[0] || '';
+        const price = parseInt(parts[1], 10) || 0;
+        return { name, price };
+      }).filter(e => e.name);
     }
     async function loadMenuEditor() {
       try {
@@ -748,13 +884,18 @@
     function setProduct(ci, pi, field, val) {
       if (!menuData.categories) return;
       const p = menuData.categories[ci]?.products?.[pi];
-      if (p) p[field] = field === 'price' ? Number(val) || 0 : (field === 'image' ? String(val || '').trim() : val);
+      if (!p) return;
+      if (field === 'price') p.price = Number(val) || 0;
+      else if (field === 'priceRestoran') { const n = Number(val); p.priceRestoran = (val === '' || isNaN(n)) ? undefined : n; }
+      else if (field === 'onlyDineIn') p.onlyDineIn = !!val;
+      else if (field === 'image') p.image = String(val || '').trim();
+      else p[field] = val;
     }
     function addProduct(ci) {
       if (!menuData.categories) return;
       const cat = menuData.categories[ci];
       if (!cat.products) cat.products = [];
-      cat.products.push({ id: 'new-' + Date.now(), name: 'Yeni Ürün', price: 0, image: '' });
+      cat.products.push({ id: 'new-' + Date.now(), name: 'Yeni Ürün', price: 0, image: '', onlyDineIn: false, contents: '', description: '', extras: [] });
       renderMenuEditor();
     }
     function removeProduct(ci, pi) {
@@ -1108,25 +1249,6 @@
       }).join('') : '<p style="color:var(--muted)">Henüz veri yok</p>';
     }
 
-    async function bulkUpdateStatus() {
-      const status = document.getElementById('bulk-status-select')?.value;
-      if (!status) { alert('Lütfen bir durum seçin'); return; }
-      const cbs = document.querySelectorAll('.order-select-cb:checked');
-      const ids = [...cbs].map(cb => cb.getAttribute('data-order-id')).filter(Boolean);
-      if (!ids.length) { alert('Lütfen en az bir sipariş seçin'); return; }
-      let cancelReason = '';
-      if (status === 'İptal') cancelReason = (prompt('İptal sebebi (seçili tüm siparişler için, isteğe bağlı):') || '').trim();
-      const fn = typeof authFetch === 'function' ? authFetch : fetch;
-      for (const id of ids) {
-        await fn(`/api/orders/${id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status, cancelReason })
-        });
-      }
-      loadOrders();
-    }
-
     function startPanel() {
       requestNotificationPermission();
       loadOrders();
@@ -1206,8 +1328,6 @@
         document.getElementById('orders-update').textContent = 'Son güncelleme: ' + new Date().toLocaleTimeString('tr-TR');
         const statuses = ['Alındı', 'Hazırlanıyor', 'Hazır', 'Yola Çıktı', 'Teslim Edildi', 'İptal'];
         const el = document.getElementById('orders-list');
-        const bulkBar = document.getElementById('bulk-status-bar');
-        if (bulkBar) bulkBar.style.display = filtered.length ? 'flex' : 'none';
         if (!filtered.length) { el.innerHTML = '<div class="empty">Sipariş yok</div>'; return; }
         el.innerHTML = filtered.map(o => `
           <div class="order-card">
@@ -1224,9 +1344,13 @@
               <span class="stat-value" style="font-size:1rem">${o.total}₺</span>
               <span class="badge">${o.orderType === 'restoran' ? '🏠' : '📦'}</span>
               <span class="badge">${(o.paymentMethod || 'kapida_nakit') === 'kapida_pos' ? '💳' : '💵'}</span>
-              <select onchange="updateStatus(${o.id}, this.value)">
+              <select onchange="var w=this.closest('.order-footer').querySelector('.order-est-wrap'); if(w) w.style.display=(this.value==='Teslim Edildi'||this.value==='İptal')?'none':'flex'; updateStatus(${o.id}, this.value);">
                 ${statuses.map(s => `<option ${o.status === s ? 'selected' : ''}>${s}</option>`).join('')}
               </select>
+              <span class="order-est-wrap" style="display:${(o.status === 'Teslim Edildi' || o.status === 'İptal') ? 'none' : 'flex'};align-items:center;gap:6px">
+                <span style="font-size:0.8rem;color:var(--muted)">Tahmini süre (dk)</span>
+                <input type="number" class="order-est-min" data-order-id="${o.id}" value="${o.estimatedMinutes || ''}" min="1" placeholder="25" style="width:52px;padding:4px 6px;border-radius:6px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:0.9rem">
+              </span>
             </div>
           </div>
         `).join('');
@@ -1237,7 +1361,16 @@
     updateStatus = async function(id, status) {
       let cancelReason = '';
       if (status === 'İptal') cancelReason = (prompt('İptal sebebi (isteğe bağlı):') || '').trim();
-      await authFetch(`/api/orders/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status, cancelReason }) });
+      const payload = { status, cancelReason };
+      if (status !== 'Teslim Edildi' && status !== 'İptal') {
+        const card = document.querySelector('.order-select-cb[data-order-id="' + id + '"]')?.closest('.order-card');
+        const estInput = card?.querySelector('.order-est-min');
+        if (estInput && estInput.value.trim() !== '') {
+          const mins = Number(estInput.value);
+          if (!Number.isNaN(mins) && mins > 0) payload.estimatedMinutes = mins;
+        }
+      }
+      await authFetch(`/api/orders/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       loadOrders();
     };
 

@@ -13,31 +13,51 @@
           "id": "lahmacun",
           "name": "Lahmacun",
           "price": 45,
-          "image": "/uploads/78b5fefb7b984a3d2ec8d2df3b661c12.png"
+          "image": "/uploads/f18ea5e28f04c952c9cffabc9721d8ad.jpeg",
+          "contents": "domates,kıyma,soğan,biber salçası,maydanoz",
+          "description": "İnce açılmış hamur üzerine kıymalı harç. Taş fırında pişirilir.",
+          "extras": [
+            {
+              "name": "Extra peynir",
+              "price": 10
+            }
+          ]
         },
         {
           "id": "pizza-orta",
           "name": "Pizza (Orta)",
           "price": 95,
-          "image": "/uploads/5398be08b3c6cb26abd0abee51e0475d.png"
+          "image": "/uploads/e08fbf60c6b0491f35f9ed59d008816a.jpeg",
+          "contents": "domates sosu,mozzarella,sucuk,sosis",
+          "description": "Orta boy, 6 dilim. İnce hamur.",
+          "extras": [
+            {
+              "name": "Extra peynir",
+              "price": 15
+            },
+            {
+              "name": "Mantar",
+              "price": 8
+            }
+          ]
         },
         {
           "id": "doner-durum",
           "name": "Döner Dürüm",
           "price": 75,
-          "image": "/uploads/76823c6d3a188d86e9c20c3bf9d30972.png"
+          "image": "/uploads/9f9b6be8e274e741c8b9479f4660d56c.jpeg"
         },
         {
           "id": "kebap",
           "name": "Adana Kebap",
           "price": 120,
-          "image": "/uploads/0c6f6961fb1cafd06e6a7b8648eccf51.png"
+          "image": "/uploads/e1e5ac535e0303bed01611784d8ea4aa.jpeg"
         },
         {
           "id": "pide",
           "name": "Kıymalı Pide",
           "price": 85,
-          "image": "/uploads/3776c523d69642fa171770e9a74aa6a0.png"
+          "image": "/uploads/68cf0632e828821ef403140ef779025a.jpeg"
         }
       ]
     },

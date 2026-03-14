@@ -178,7 +178,27 @@
     .product-img img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
     .product-info { flex: 1; min-width: 0; }
     .product-name { font-weight: 600; margin-bottom: 2px; }
-    .product-price { color: var(--accent); font-size: 1rem; font-weight: 700; }
+    .product-detail-box {
+      margin-top: 10px; padding: 12px 14px; background: rgba(41, 37, 36, 0.6); border-radius: 12px; border: 1px solid var(--border);
+    }
+    .product-contents-wrap { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 0; }
+    .product-contents-wrap .label { font-size: 0.7rem; color: var(--muted); font-weight: 600; letter-spacing: 0.04em; margin-bottom: 6px; width: 100%; }
+    .product-contents-chip {
+      display: inline-flex; align-items: center; padding: 6px 12px; background: var(--surface-2); color: var(--text); border-radius: 999px; font-size: 0.8rem; border: 1px solid transparent; cursor: pointer; transition: all 0.2s; user-select: none;
+    }
+    .product-contents-chip:hover { border-color: var(--accent); background: var(--accent-dim); }
+    .product-contents-chip.removed { text-decoration: line-through; opacity: 0.6; border-color: rgba(239,68,68,0.5); background: rgba(239,68,68,0.1); }
+    .product-extras-wrap { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+    .product-extras-wrap .label { font-size: 0.7rem; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+    .product-extra-chip {
+      display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; margin: 4px 6px 4px 0; background: var(--surface-2); color: var(--muted); border-radius: 999px; font-size: 0.78rem; border: 1px solid var(--border); cursor: pointer; transition: all 0.2s; user-select: none;
+    }
+    .product-extra-chip:hover { color: var(--text); }
+    .product-extra-chip.selected { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+    .product-extra-chip .extra-price { color: var(--accent); font-size: 0.75rem; margin-left: 2px; }
+    .product-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.45; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+    .product-price { color: var(--accent); font-size: 1rem; font-weight: 700; margin-top: 4px; }
+    .customize-hint { font-size: 0.72rem; color: var(--accent); margin-top: 8px; }
     .product-actions { display: flex; align-items: center; gap: 8px; }
     .qty-btn {
       width: 36px;
@@ -459,6 +479,23 @@
     } else {
       let cart = [];
       let orderType = 'paket';
+      const customizationState = {};
+      function getEffectivePrice(row) {
+        const base = parseInt(row.dataset.basePrice || row.dataset.price, 10) || 0;
+        const restoran = row.dataset.priceRestoran !== '' && row.dataset.priceRestoran != null ? parseInt(row.dataset.priceRestoran, 10) : null;
+        return (orderType === 'gel_al' && restoran != null && !isNaN(restoran)) ? restoran : base;
+      }
+      function cartKey(i) {
+        const r = (i.removed && i.removed.length) ? i.removed.slice().sort().join(',') : '';
+        const a = (i.added && i.added.length) ? i.added.map(x => x.name + '_' + x.price).join(',') : '';
+        return i.name + '_' + i.price + '_' + r + '_' + a;
+      }
+      function cartLineLabel(i) {
+        let s = i.name;
+        if (i.removed && i.removed.length) s += ' (çıkar: ' + i.removed.join(', ') + ')';
+        if (i.added && i.added.length) s += ' (+' + i.added.map(a => a.name + ' ' + a.price + '₺').join(', ') + ')';
+        return s;
+      }
       let restaurantInfo = { isOpen: true, minOrderAmount: 0 };
       let appliedCoupon = null;
       let allProducts = [];
@@ -540,12 +577,25 @@
         el.innerHTML = navHtml + menu.categories.map((cat, ci) => `
           <div class="category" id="cat-${ci}">
             <h2>${cat.icon || icons[cat.id] || '🍽️'} ${cat.name}</h2>
-            ${cat.products.map(p => `
-              <div class="product" data-id="${p.id}" data-name="${p.name}" data-price="${p.price}" data-image="${(p.image || '').replace(/"/g,'&quot;')}">
-                <div class="product-img" ${p.image ? 'role="button" tabindex="0"' : ''}>${p.image ? `<img src="${p.image}" alt="${(p.name || '').replace(/"/g,'&quot;')}">` : '🍽️'}</div>
+            ${cat.products.map(p => {
+              const hasContents = (p.contents || '').trim();
+              const hasExtras = (p.extras && p.extras.length);
+              const hasCustomize = !!hasContents || !!hasExtras;
+              const esc = s => (s+'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+              const chips = hasContents ? (p.contents+'').split(',').map(x => x.trim()).filter(Boolean) : [];
+              const extras = p.extras || [];
+              return `
+              <div class="product" data-id="${p.id}" data-name="${p.name}" data-price="${p.price ?? 0}" data-price-restoran="${p.priceRestoran ?? ''}" data-base-price="${p.price ?? 0}" data-contents="${esc(p.contents || '')}" data-extras="${esc(JSON.stringify(extras))}" data-has-customize="${hasCustomize ? '1' : '0'}" data-image="${esc(p.image || '')}" ${p.onlyDineIn ? 'data-only-dine-in="true"' : ''}>
+                <div class="product-img" ${p.image ? 'role="button" tabindex="0"' : ''}>${p.image ? `<img src="${p.image}" alt="">` : '🍽️'}</div>
                 <div class="product-info">
                   <div class="product-name">${p.name}</div>
-                  <div class="product-price">${p.price}₺</div>
+                  ${(chips.length || extras.length || p.description) ? `<div class="product-detail-box">
+                    ${chips.length ? `<div class="product-contents-wrap"><span class="label">İçindekiler</span>${chips.map(c => `<button type="button" class="product-contents-chip" data-ingredient="${esc(c)}">${esc(c)}</button>`).join('')}</div>` : ''}
+                    ${extras.length ? `<div class="product-extras-wrap"><span class="label">Ekstra</span>${extras.map(ex => `<button type="button" class="product-extra-chip" data-name="${esc(ex.name||'')}" data-price="${ex.price||0}"><span>${esc(ex.name||'')}</span><span class="extra-price">+${ex.price||0}₺</span></button>`).join('')}</div>` : ''}
+                    ${p.description ? `<div class="product-desc">${esc(p.description)}</div>` : ''}
+                  </div>` : ''}
+                  ${hasCustomize ? '<div class="customize-hint">Çıkarmak için malzemeye tıklayın; ekstra eklemek için tıklayın.</div>' : ''}
+                  <div class="product-price" data-base-price="${p.price ?? 0}" data-restoran-price="${p.priceRestoran ?? ''}">${(p.price ?? 0)}₺</div>
                 </div>
                 <div class="product-actions">
                   <button class="qty-btn minus">−</button>
@@ -553,7 +603,7 @@
                   <button class="qty-btn plus">+</button>
                 </div>
               </div>
-            `).join('')}
+            `}).join('')}
           </div>
         `).join('');
 
@@ -564,27 +614,57 @@
         if (cart.length) updateCart();
         if (sectionParam === 'favorites') showSection('favorites');
         el.querySelectorAll('.product').forEach(row => {
+          const pid = row.dataset.id;
           const name = row.dataset.name;
-          const price = parseInt(row.dataset.price);
+          const hasCustomize = row.dataset.hasCustomize === '1';
+          if (hasCustomize && pid) customizationState[pid] = { removed: [], added: [] };
           const plus = row.querySelector('.plus');
           const minus = row.querySelector('.minus');
           const qtyEl = row.querySelector('.qty-val');
-          qtyEl.textContent = cart.filter(i => i.name === name && i.price === price).length;
+          const priceEl = row.querySelector('.product-price');
+          function refreshQty() { qtyEl.textContent = cart.filter(i => i.name === name).length; }
+          refreshQty();
+          if (priceEl) priceEl.textContent = getEffectivePrice(row) + '₺';
+
+          row.querySelectorAll('.product-contents-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+              const ing = chip.dataset.ingredient;
+              if (!pid || !customizationState[pid]) return;
+              const idx = (customizationState[pid].removed || []).indexOf(ing);
+              if (idx >= 0) { customizationState[pid].removed.splice(idx, 1); chip.classList.remove('removed'); }
+              else { customizationState[pid].removed.push(ing); chip.classList.add('removed'); }
+            });
+          });
+          row.querySelectorAll('.product-extra-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+              const exName = chip.dataset.name;
+              const exPrice = parseInt(chip.dataset.price, 10) || 0;
+              if (!pid || !customizationState[pid]) return;
+              if (!customizationState[pid].added) customizationState[pid].added = [];
+              const idx = customizationState[pid].added.findIndex(a => a.name === exName);
+              if (idx >= 0) { customizationState[pid].added.splice(idx, 1); chip.classList.remove('selected'); }
+              else { customizationState[pid].added.push({ name: exName, price: exPrice }); chip.classList.add('selected'); }
+            });
+          });
 
           plus.addEventListener('click', () => {
-            cart.push({ name, price });
+            if (hasCustomize) {
+              const basePrice = parseInt(row.dataset.basePrice || row.dataset.price, 10) || 0;
+              const state = customizationState[pid] || { removed: [], added: [] };
+              const addTotal = (state.added || []).reduce((s, a) => s + a.price, 0);
+              cart.push({ name, price: getEffectivePrice(row) + addTotal, removed: (state.removed && state.removed.length) ? state.removed : undefined, added: (state.added && state.added.length) ? state.added : undefined });
+            } else {
+              cart.push({ name, price: getEffectivePrice(row) });
+            }
             updateCart();
-            qtyEl.textContent = cart.filter(i => i.name === name && i.price === price).length;
+            refreshQty();
           });
           minus.addEventListener('click', () => {
-            const idx = cart.findIndex(i => i.name === name && i.price === price);
-            if (idx >= 0) {
-              cart.splice(idx, 1);
-              updateCart();
-              qtyEl.textContent = cart.filter(i => i.name === name && i.price === price).length;
-            }
+            const idx = cart.findIndex(i => i.name === name);
+            if (idx >= 0) { cart.splice(idx, 1); updateCart(); refreshQty(); }
           });
         });
+        applyDineInVisibility();
         const pills = el.querySelectorAll('.category-pill');
         if (pills.length) pills[0].classList.add('active');
         pills.forEach(pill => {
@@ -629,9 +709,13 @@
           const q = telegramId ? 'telegramId=' + telegramId : 'whatsappId=' + whatsappId;
           const r = await fetch('/api/user/prefs?' + q);
           const p = await r.json();
-          const addrs = p.addresses || [];
+          const raw = p.addresses || [];
+          const addrs = raw.filter(a => {
+            const t = (a || '').trim();
+            return t && t !== 'Gel Al' && !/^Masa\s/i.test(t);
+          });
           const sel = document.getElementById('saved-addresses');
-          sel.innerHTML = '<option value="">Yeni adres</option>' + addrs.map(a => '<option value="' + a.replace(/"/g, '&quot;') + '">' + (a.length > 45 ? a.slice(0, 42) + '...' : a) + '</option>').join('');
+          sel.innerHTML = '<option value="">Yeni adres yazın veya seçin</option>' + addrs.map(a => '<option value="' + String(a).replace(/"/g, '&quot;') + '">' + (a.length > 45 ? a.slice(0, 42) + '...' : a) + '</option>').join('');
           sel.style.display = addrs.length ? 'block' : 'none';
           sel.addEventListener('change', () => { if (sel.value) document.getElementById('address').value = sel.value; });
         } catch (_) {}
@@ -656,10 +740,12 @@
           orderBtn.disabled = addOrderId ? (cart.length === 0) : !minOk;
           orderBtn.textContent = getOrderBtnText();
           const groups = {};
-          cart.forEach(i => { const k = i.name + '_' + i.price; groups[k] = (groups[k] || 0) + 1; });
+          cart.forEach(i => { const k = cartKey(i); groups[k] = (groups[k] || 0) + 1; });
           itemsEl.innerHTML = Object.entries(groups).map(([k, q]) => {
-            const [n, p] = k.split('_');
-            return `<div class="cart-line"><span>${q}x ${n}</span><span>${parseInt(p) * q}₺</span></div>`;
+            const first = cart.find(i => cartKey(i) === k);
+            const label = cartLineLabel(first);
+            const price = first.price * q;
+            return `<div class="cart-line"><span>${q}x ${label}</span><span>${price}₺</span></div>`;
           }).join('');
           const discount = appliedCoupon ? appliedCoupon.discount : 0;
           const total = Math.max(0, subtotal - discount);
@@ -672,23 +758,38 @@
         }
       }
 
+      function updateProductPrices() {
+        document.querySelectorAll('.product').forEach(row => {
+          const priceEl = row.querySelector('.product-price');
+          if (priceEl) priceEl.textContent = getEffectivePrice(row) + '₺';
+        });
+      }
+      function applyDineInVisibility() {
+        const isGelAlOrRestoran = orderType === 'gel_al' || orderType === 'restoran';
+        document.querySelectorAll('.product[data-only-dine-in="true"]').forEach(el => {
+          el.style.display = isGelAlOrRestoran ? '' : 'none';
+        });
+      }
       document.querySelectorAll('.order-type-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           document.querySelectorAll('.order-type-btn').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
           orderType = btn.dataset.type;
           document.getElementById('address-group').style.display = orderType === 'paket' ? 'block' : 'none';
-          document.getElementById('table-group').style.display = orderType === 'restoran' ? 'block' : 'none';
+          const tableGroup = document.getElementById('table-group');
+          if (tableGroup) tableGroup.style.display = orderType === 'restoran' ? 'block' : 'none';
+          updateProductPrices();
+          applyDineInVisibility();
         });
       });
 
       document.getElementById('order-btn').addEventListener('click', () => {
         if (addOrderId) {
           const groups = {};
-          cart.forEach(i => { const k = i.name + '_' + i.price; groups[k] = (groups[k] || 0) + 1; });
+          cart.forEach(i => { const k = cartKey(i); groups[k] = (groups[k] || 0) + 1; });
           const itemsStr = Object.entries(groups).map(([k, q]) => {
-            const [n, p] = k.split('_');
-            return `${q}x ${n} (${parseInt(p) * q}₺)`;
+            const first = cart.find(i => cartKey(i) === k);
+            return `${q}x ${cartLineLabel(first)} (${first.price * q}₺)`;
           }).join(', ');
           const total = cart.reduce((s, i) => s + i.price, 0);
           if (total < 1) return;
@@ -807,10 +908,10 @@
         const notes = document.getElementById('notes').value.trim();
 
         const groups = {};
-        cart.forEach(i => { const k = i.name + '_' + i.price; groups[k] = (groups[k] || 0) + 1; });
+        cart.forEach(i => { const k = cartKey(i); groups[k] = (groups[k] || 0) + 1; });
         const itemsStr = Object.entries(groups).map(([k, q]) => {
-          const [n, p] = k.split('_');
-          return `${q}x ${n} (${parseInt(p) * q}₺)`;
+          const first = cart.find(i => cartKey(i) === k);
+          return `${q}x ${cartLineLabel(first)} (${first.price * q}₺)`;
         }).join(', ');
         const subtotalCart = cart.reduce((s, i) => s + i.price, 0);
 
