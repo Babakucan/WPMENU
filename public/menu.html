@@ -229,7 +229,7 @@
 
     <div id="success" class="success">
       <h2>✅ Siparişiniz alındı!</h2>
-      <p>Telegram'dan onay mesajını kontrol edin.</p>
+      <p id="success-channel-msg">Onay mesajınızı kontrol edin.</p>
     </div>
   </div>
 
@@ -242,13 +242,16 @@
         if (userStr) { const u = JSON.parse(decodeURIComponent(userStr)); telegramId = u?.id ? String(u.id) : null; }
       } catch (_) {}
     }
+    const isWhatsApp = params.get('channel') === 'whatsapp' && params.get('userId');
+    let whatsappId = isWhatsApp ? params.get('userId') : null;
+    const userChannel = whatsappId ? 'whatsapp' : (telegramId ? 'telegram' : null);
     const lat = params.get('lat');
     const lng = params.get('lng');
     const reorderId = params.get('reorder');
     const favId = params.get('fav');
     const addOrderId = params.get('add');
-    if (!telegramId) {
-      document.body.innerHTML = '<div class="header"><h1 style="color:#ef4444">Link Telegram üzerinden açılmalı.</h1></div>';
+    if (!userChannel) {
+      document.body.innerHTML = '<div class="header"><h1 style="color:#ef4444">Link Telegram veya WhatsApp üzerinden açılmalı.</h1><p style="color:#71717a;margin-top:8px">Menü linkini bot sohbetinden alın.</p></div>';
     } else {
       let cart = [];
       let orderType = 'paket';
@@ -351,7 +354,8 @@
       });
       async function loadSavedAddresses() {
         try {
-          const r = await fetch('/api/user/prefs?telegramId=' + telegramId);
+          const q = telegramId ? 'telegramId=' + telegramId : 'whatsappId=' + whatsappId;
+          const r = await fetch('/api/user/prefs?' + q);
           const p = await r.json();
           const addrs = p.addresses || [];
           const sel = document.getElementById('saved-addresses');
@@ -528,7 +532,8 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              telegramId, items: itemsStr, total: subtotalCart, address, notes, orderType, paymentMethod, location: orderLocation,
+              ...(telegramId ? { telegramId } : { whatsappId }),
+              items: itemsStr, total: subtotalCart, address, notes, orderType, paymentMethod, location: orderLocation,
               couponCode: appliedCoupon ? appliedCoupon.code : null
             })
           });
@@ -536,8 +541,10 @@
           if (data.ok) {
             document.getElementById('form-section').classList.remove('show');
             document.getElementById('success').classList.add('show');
-            if (Notification.permission === 'granted') new Notification('Siparişiniz alındı!', { body: 'Telegram\'dan onay mesajını kontrol edin.' });
-            if (typeof window.closeTelegramWebApp === 'function') window.closeTelegramWebApp();
+            const channelMsg = userChannel === 'whatsapp' ? 'WhatsApp\'tan onay mesajını kontrol edin.' : 'Telegram\'dan onay mesajını kontrol edin.';
+            document.getElementById('success-channel-msg').textContent = channelMsg;
+            if (Notification.permission === 'granted') new Notification('Siparişiniz alındı!', { body: channelMsg });
+            if (userChannel === 'telegram' && typeof window.closeTelegramWebApp === 'function') window.closeTelegramWebApp();
           } else {
             document.getElementById('form-error').textContent = data.error || 'Hata oluştu';
           }
@@ -569,22 +576,25 @@
         return out;
       }
       async function loadReorderOrFav() {
+        const q = telegramId ? 'telegramId=' + telegramId : 'whatsappId=' + whatsappId;
         if (addOrderId) {
           document.querySelector('.header p').textContent = 'Siparişe eklemek için ürün seçin';
         } else if (reorderId) {
           try {
-            const res = await fetch(`/api/orders/${reorderId}?telegramId=${telegramId}`);
+            const res = await fetch(`/api/orders/${reorderId}?${q}`);
             if (res.ok) {
               const o = await res.json();
-              if (o.telegramId === telegramId) cart.push(...parseItemsStr(o.items));
+              const mine = telegramId ? o.telegramId === telegramId : o.whatsappId === whatsappId;
+              if (mine) cart.push(...parseItemsStr(o.items));
             }
           } catch (_) {}
         } else if (favId) {
           try {
-            const res = await fetch(`/api/favorites/${favId}?telegramId=${telegramId}`);
+            const res = await fetch(`/api/favorites/${favId}?${q}`);
             if (res.ok) {
               const f = await res.json();
-              if (f.telegramId === telegramId) cart.push(...parseItemsStr(f.items));
+              const mine = telegramId ? f.telegramId === telegramId : f.whatsappId === whatsappId;
+              if (mine) cart.push(...parseItemsStr(f.items));
             }
           } catch (_) {}
         }

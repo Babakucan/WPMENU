@@ -24,6 +24,129 @@ if (!TOKEN) {
   process.exit(1);
 }
 
+// WhatsApp Business Cloud API (opsiyonel)
+const WA_PHONE_NUMBER_ID = process.env.WA_PHONE_NUMBER_ID;
+const WA_ACCESS_TOKEN = process.env.WA_ACCESS_TOKEN;
+const WA_VERIFY_TOKEN = process.env.WA_VERIFY_TOKEN || 'wpmenu-verify';
+const WA_API_VERSION = process.env.WA_API_VERSION || 'v21.0';
+const whatsappEnabled = !!(WA_PHONE_NUMBER_ID && WA_ACCESS_TOKEN);
+
+const waPhone = () => String(WA_PHONE_NUMBER_ID).trim();
+const waTo = (to) => String(to).replace(/\D/g, '');
+
+async function sendWhatsAppMessage(to, text) {
+  if (!whatsappEnabled) return;
+  const url = `https://graph.facebook.com/${WA_API_VERSION}/${waPhone()}/messages`;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + WA_ACCESS_TOKEN,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: waTo(to),
+        type: 'text',
+        text: { body: text }
+      })
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      logError('WhatsApp send', new Error(err));
+    }
+  } catch (e) {
+    logError('WhatsApp send', e);
+  }
+}
+
+// WhatsApp interaktif: en fazla 3 yanıt butonu (id + title, title max 20 karakter)
+async function sendWhatsAppReplyButtons(to, bodyText, buttons) {
+  if (!whatsappEnabled || !buttons.length) return;
+  const list = buttons.slice(0, 3).map(b => ({
+    type: 'reply',
+    reply: { id: String(b.id).slice(0, 256), title: String(b.title).slice(0, 20) }
+  }));
+  const url = `https://graph.facebook.com/${WA_API_VERSION}/${waPhone()}/messages`;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + WA_ACCESS_TOKEN,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: waTo(to),
+        type: 'interactive',
+        interactive: {
+          type: 'button',
+          body: { text: bodyText },
+          action: { buttons: list }
+        }
+      })
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      logError('WhatsApp buttons', new Error(err));
+    }
+  } catch (e) {
+    logError('WhatsApp buttons', e);
+  }
+}
+
+// WhatsApp: tek butonla URL açan mesaj (Menü linki için)
+async function sendWhatsAppUrlButton(to, bodyText, buttonText, url) {
+  if (!whatsappEnabled) return;
+  const apiUrl = `https://graph.facebook.com/${WA_API_VERSION}/${waPhone()}/messages`;
+  try {
+    const res = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + WA_ACCESS_TOKEN,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: waTo(to),
+        type: 'interactive',
+        interactive: {
+          type: 'cta_url',
+          body: { text: bodyText },
+          action: {
+            name: 'cta_url',
+            parameters: {
+              display_text: String(buttonText).slice(0, 20),
+              url: String(url)
+            }
+          }
+        }
+      })
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      logError('WhatsApp url button', new Error(err));
+    }
+  } catch (e) {
+    logError('WhatsApp url button', e);
+  }
+}
+
+// Kullanıcı eşleştirme: sipariş/favori telegram veya whatsapp ile
+function orderUserMatch(order, telegramId, whatsappId) {
+  if (telegramId && order.telegramId === String(telegramId)) return true;
+  if (whatsappId && order.whatsappId === String(whatsappId)) return true;
+  return false;
+}
+function prefsKey(telegramId, whatsappId) {
+  if (whatsappId) return 'wa_' + String(whatsappId);
+  if (telegramId) return String(telegramId);
+  return null;
+}
+
 function loadOrders() {
   try {
     return JSON.parse(fs.readFileSync(ORDERS_PATH, 'utf8'));
@@ -56,7 +179,18 @@ let orderIdCounter = Math.max(1, ...orders.map(o => o.id), 0) + 1;
 
 const bot = new TelegramBot(TOKEN, { polling: true });
 
+// 409 = aynı bot başka yerde de polling yapıyor; log spam önle
+let last409Log = 0;
 bot.on('polling_error', (err) => {
+  const is409 = (err.message || '').includes('409') || (err.response && err.response.statusCode === 409);
+  if (is409) {
+    if (Date.now() - last409Log > 60000) {
+      last409Log = Date.now();
+      console.error('❌ Telegram: Aynı bot zaten başka bir yerde çalışıyor (409). Sadece tek bir "npm start" çalıştırın ve diğer terminalleri kapatın.');
+    }
+    logError('Telegram polling', err);
+    return;
+  }
   logError('Telegram polling', err);
   console.error('❌ Telegram polling:', err.message);
 });
@@ -67,6 +201,89 @@ bot.on('message', (msg) => {
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// ——— WhatsApp Webhook (rate limit uygulanmaz) ———
+app.get('/webhook/whatsapp', (req, res) => {
+  const mode = (req.query['hub.mode'] || '').trim();
+  const token = (req.query['hub.verify_token'] || '').trim();
+  const challenge = req.query['hub.challenge'] || '';
+  if (mode === 'subscribe' && token && token === WA_VERIFY_TOKEN.trim()) {
+    res.status(200).send(String(challenge));
+  } else {
+    res.sendStatus(403);
+  }
+});
+
+app.post('/webhook/whatsapp', (req, res) => {
+  res.sendStatus(200);
+  if (!whatsappEnabled || req.body?.object !== 'whatsapp_business_account') return;
+  const entries = req.body.entry || [];
+  for (const entry of entries) {
+    const changes = entry.changes || [];
+    for (const change of changes) {
+      if (change.field !== 'messages') continue;
+      const value = change.value || {};
+      const messages = value.messages || [];
+      const contacts = value.contacts || [];
+      const profileName = (contacts[0]?.profile?.name) || 'Müşteri';
+      for (const msg of messages) {
+        const from = msg.from;
+        const type = msg.type;
+        if (type === 'location' && msg.location) {
+          const locKey = 'wa_' + from;
+          const orderId = pendingLocationForOrder.get(locKey);
+          if (orderId) {
+            pendingLocationForOrder.delete(locKey);
+            const order = orders.find(o => o.id === orderId && o.whatsappId === String(from));
+            if (order) {
+              order.location = { lat: msg.location.latitude, lng: msg.location.longitude };
+              saveOrders(orders);
+              sendWhatsAppMessage(from, '✅ Konumunuz siparişe eklendi. Teşekkürler!');
+            }
+          }
+          continue;
+        }
+        let body = '';
+        if (type === 'text' && msg.text) body = (msg.text.body || '').trim();
+        if (type === 'button' && msg.button) body = (msg.button.text || '').trim();
+        if (type === 'interactive' && msg.interactive) {
+          const btn = msg.interactive.button_reply || msg.interactive.list_reply;
+          body = (btn && (btn.title || btn.id)) || '';
+        }
+        // Buton yanıtı: interactive.button_reply.id
+        const buttonId = (type === 'interactive' && msg.interactive?.button_reply?.id) ? msg.interactive.button_reply.id.trim().toLowerCase() : '';
+        const cmd = buttonId || body.toLowerCase();
+        const menuLink = `${baseUrl}/menu.html?channel=whatsapp&userId=${from}`;
+        const r = getRestaurant();
+        const openNow = isOpen(r);
+        const status = openNow ? '🟢 Açık' : '🔴 Kapalı';
+
+        if (cmd === 'menu' || cmd === 'menü' || cmd === 'sipariş' || cmd === 'siparis' || cmd === '1') {
+          sendWhatsAppUrlButton(from, `${r.name || 'MeraPaket'} — ${status}\n\nSipariş vermek için aşağıdaki butona tıklayın.`, 'Menüyü Aç', menuLink);
+        } else if (cmd === 'siparişlerim' || cmd === 'siparislerim' || cmd === '2' || cmd === 'orders') {
+          const userOrders = orders.filter(o => o.whatsappId === String(from)).slice(-5).reverse();
+          if (userOrders.length === 0) {
+            sendWhatsAppReplyButtons(from, 'Henüz siparişiniz yok. Menüden sipariş verebilirsiniz.', [
+              { id: 'menu', title: '🛒 Menü Aç' }
+            ]);
+          } else {
+            const lines = userOrders.map(o => `#${o.id} — ${o.status} — ${o.total}₺`);
+            sendWhatsAppMessage(from, '📋 Son siparişleriniz:\n\n' + lines.join('\n'));
+            sendWhatsAppUrlButton(from, 'Yeni sipariş veya detay için menüyü açın.', 'Menüyü Aç', menuLink);
+          }
+        } else if (cmd === 'yardim' || cmd === 'yardım' || cmd === 'iletişim' || cmd === '3' || cmd === 'help') {
+          sendWhatsAppMessage(from, `${r.name || 'MeraPaket'}\n\n📍 ${r.address || '-'}\n📞 ${r.phone || '-'}\n🕐 ${r.hours || '-'}`);
+        } else {
+          sendWhatsAppReplyButtons(from, `Merhaba ${profileName}!\n\n${r.name || 'MeraPaket'} — ${status}\n\nAşağıdaki butonlardan seçin:`, [
+            { id: 'menu', title: '🛒 Menü Aç' },
+            { id: 'orders', title: '📋 Siparişlerim' },
+            { id: 'help', title: 'ℹ️ Yardım' }
+          ]);
+        }
+      }
+    }
+  }
+});
 
 // Rate limiting: 60 istek/dakika
 const apiLimiter = rateLimit({
@@ -89,7 +306,10 @@ app.get('/api/menu', (req, res) => {
   }
 });
 app.get('/api/favorites', (req, res) => {
-  const favs = loadFavorites().filter(f => f.telegramId === req.query.telegramId);
+  const { telegramId, whatsappId } = req.query;
+  const favs = loadFavorites().filter(f =>
+    (telegramId && f.telegramId === telegramId) || (whatsappId && f.whatsappId === whatsappId)
+  );
   res.json({ favorites: favs });
 });
 app.get('/api/admin/stats', (req, res) => {
@@ -109,21 +329,29 @@ app.get('/api/analytics', (req, res) => {
   res.json({ byStatus, total: orders.length });
 });
 app.get('/api/favorites/:id', (req, res) => {
-  const fav = loadFavorites().find(f => f.id === parseInt(req.params.id) && f.telegramId === req.query.telegramId);
+  const { telegramId, whatsappId } = req.query;
+  const fav = loadFavorites().find(f => {
+    if (f.id !== parseInt(req.params.id)) return false;
+    return (telegramId && f.telegramId === telegramId) || (whatsappId && f.whatsappId === whatsappId);
+  });
   if (!fav) return res.status(404).json({ error: 'Favori bulunamadı' });
   res.json(fav);
 });
 app.post('/api/favorites', (req, res) => {
-  const { telegramId, orderId, items, total, name } = req.body;
-  if (!telegramId || !orderId || !items || total == null) {
+  const { telegramId, whatsappId, orderId, items, total, name } = req.body;
+  const userId = telegramId || whatsappId;
+  if (!userId || !orderId || !items || total == null) {
     return res.status(400).json({ ok: false, error: 'Eksik bilgi' });
   }
   const favs = loadFavorites();
   const id = favs.length ? Math.max(...favs.map(f => f.id)) + 1 : 1;
-  favs.push({
-    id, telegramId: String(telegramId), orderId: parseInt(orderId), items, total: Number(total),
+  const fav = {
+    id, orderId: parseInt(orderId), items, total: Number(total),
     name: name || `Sipariş ${orderId}`
-  });
+  };
+  if (telegramId) fav.telegramId = String(telegramId);
+  if (whatsappId) fav.whatsappId = String(whatsappId);
+  favs.push(fav);
   saveFavorites(favs);
   res.json({ ok: true, favoriteId: id });
 });
@@ -138,19 +366,22 @@ app.get('/api/restaurant', (req, res) => {
   }
 });
 app.get('/api/user/prefs', (req, res) => {
-  const p = loadPrefs()[req.query.telegramId] || { notify: true, addresses: [] };
+  const key = prefsKey(req.query.telegramId, req.query.whatsappId);
+  if (!key) return res.status(400).json({ error: 'telegramId veya whatsappId gerekli' });
+  const p = loadPrefs()[key] || { notify: true, addresses: [] };
   res.json(p);
 });
 app.post('/api/user/prefs', (req, res) => {
-  const { telegramId, notify, address } = req.body;
-  if (!telegramId) return res.status(400).json({ ok: false });
+  const { telegramId, whatsappId, notify, address } = req.body;
+  const key = prefsKey(telegramId, whatsappId);
+  if (!key) return res.status(400).json({ ok: false });
   const prefs = loadPrefs();
-  if (!prefs[telegramId]) prefs[telegramId] = { notify: true, addresses: [] };
-  if (typeof notify === 'boolean') prefs[telegramId].notify = notify;
+  if (!prefs[key]) prefs[key] = { notify: true, addresses: [] };
+  if (typeof notify === 'boolean') prefs[key].notify = notify;
   if (address) {
-    const addrs = prefs[telegramId].addresses || [];
+    const addrs = prefs[key].addresses || [];
     if (!addrs.includes(address)) addrs.push(address);
-    prefs[telegramId].addresses = addrs.slice(-5);
+    prefs[key].addresses = addrs.slice(-5);
   }
   savePrefs(prefs);
   res.json({ ok: true });
@@ -183,9 +414,10 @@ app.put('/api/menu', (req, res) => {
 // ——— Sipariş API ———
 app.post('/api/order', (req, res) => {
   try {
-    const { telegramId, items, total, address, notes, orderType, paymentMethod, location, couponCode } = req.body;
-    if (!telegramId || !items || total == null) {
-      return res.status(400).json({ ok: false, error: 'Eksik bilgi' });
+    const { telegramId, whatsappId, items, total, address, notes, orderType, paymentMethod, location, couponCode } = req.body;
+    const userId = telegramId || whatsappId;
+    if (!userId || !items || total == null) {
+      return res.status(400).json({ ok: false, error: 'Eksik bilgi (telegramId veya whatsappId gerekli)' });
     }
     const rest = getRestaurant();
     if (!isOpen(rest)) {
@@ -208,7 +440,7 @@ app.post('/api/order', (req, res) => {
     const id = orderIdCounter++;
     const payMethod = ['kapida_nakit', 'kapida_pos'].includes(paymentMethod) ? paymentMethod : 'kapida_nakit';
     const order = {
-      id, telegramId: String(telegramId), items,
+      id, items,
       total: finalTotal, subtotal, discountAmount,
       address: address || 'Belirtilmedi', notes: notes || '', orderType: orderType || 'paket',
       paymentMethod: payMethod,
@@ -216,20 +448,30 @@ app.post('/api/order', (req, res) => {
       couponCode: discountAmount ? couponCode : null,
       status: 'Alındı', createdAt: new Date().toISOString()
     };
+    if (telegramId) order.telegramId = String(telegramId);
+    if (whatsappId) order.whatsappId = String(whatsappId);
     orders.push(order);
     saveOrders(orders);
+    const prefsKeyUser = prefsKey(telegramId, whatsappId);
     const addr = order.address && order.address !== 'Belirtilmedi' ? order.address : null;
-    if (addr) {
+    if (addr && prefsKeyUser) {
       const prefs = loadPrefs();
-      if (!prefs[telegramId]) prefs[telegramId] = { notify: true, addresses: [] };
-      const addrs = prefs[telegramId].addresses || [];
+      if (!prefs[prefsKeyUser]) prefs[prefsKeyUser] = { notify: true, addresses: [] };
+      const addrs = prefs[prefsKeyUser].addresses || [];
       if (!addrs.includes(addr)) addrs.push(addr);
-      prefs[telegramId].addresses = addrs.slice(-5);
+      prefs[prefsKeyUser].addresses = addrs.slice(-5);
       savePrefs(prefs);
     }
-    bot.sendMessage(telegramId, formatOrderConfirm(order), { parse_mode: 'HTML' }).catch(e => logError('Bot mesaj', e));
-    pendingLocationForOrder.set(String(telegramId), id);
-    bot.sendMessage(telegramId, '📍 Teslimat adresi için konumunuzu paylaşır mısınız?\n\n<b>Atamaya tıklayın → Konum</b>', { parse_mode: 'HTML' }).catch(() => {});
+    const confirmText = formatOrderConfirm(order);
+    if (telegramId) {
+      bot.sendMessage(telegramId, confirmText, { parse_mode: 'HTML' }).catch(e => logError('Bot mesaj', e));
+      pendingLocationForOrder.set(String(telegramId), id);
+      bot.sendMessage(telegramId, '📍 Teslimat adresi için konumunuzu paylaşır mısınız?\n\n<b>Atamaya tıklayın → Konum</b>', { parse_mode: 'HTML' }).catch(() => {});
+    } else if (whatsappId) {
+      sendWhatsAppMessage(whatsappId, confirmText.replace(/<[^>]+>/g, '').trim());
+      pendingLocationForOrder.set('wa_' + String(whatsappId), id);
+      sendWhatsAppMessage(whatsappId, '📍 Teslimat adresi için konumunuzu paylaşabilirsiniz (konum gönderin).');
+    }
     console.log('📥 Sipariş ' + id);
     res.json({ ok: true, orderId: id });
   } catch (e) {
@@ -242,16 +484,17 @@ app.get('/api/orders', (req, res) => {
   res.json({ orders: [...orders].reverse() });
 });
 app.get('/api/orders/:id', (req, res) => {
-  const order = orders.find(o => o.id === parseInt(req.params.id) && o.telegramId === req.query.telegramId);
+  const { telegramId, whatsappId } = req.query;
+  const order = orders.find(o => o.id === parseInt(req.params.id) && orderUserMatch(o, req.query.telegramId, req.query.whatsappId));
   if (!order) return res.status(404).json({ error: 'Sipariş bulunamadı' });
   res.json(order);
 });
 
 app.post('/api/orders/:id/add', (req, res) => {
   const id = parseInt(req.params.id);
-  const { telegramId, items, total } = req.body;
-  const order = orders.find(o => o.id === id);
-  if (!order || order.telegramId !== String(telegramId)) return res.status(404).json({ ok: false, error: 'Sipariş bulunamadı' });
+  const { telegramId, whatsappId, items, total } = req.body;
+  const order = orders.find(o => o.id === id && orderUserMatch(o, telegramId, whatsappId));
+  if (!order) return res.status(404).json({ ok: false, error: 'Sipariş bulunamadı' });
   const canAdd = ['Alındı', 'Hazırlanıyor', 'Hazır'].includes(order.status);
   if (!canAdd) return res.status(400).json({ ok: false, error: 'Sipariş yola çıktı, ekleme yapılamaz' });
   if (!items || total == null) return res.status(400).json({ ok: false, error: 'Eksik bilgi' });
@@ -260,7 +503,9 @@ app.post('/api/orders/:id/add', (req, res) => {
   order.total = (order.total || 0) + Number(total);
   if (order.subtotal != null) order.subtotal += Number(total);
   saveOrders(orders);
-  bot.sendMessage(telegramId, `➕ Eklemeler sipariş #${id} eklendi.\n\nYeni toplam: ${order.total}₺`, { parse_mode: 'HTML' }).catch(() => {});
+  const addMsg = `➕ Eklemeler sipariş #${id} eklendi.\n\nYeni toplam: ${order.total}₺`;
+  if (order.telegramId) bot.sendMessage(order.telegramId, addMsg, { parse_mode: 'HTML' }).catch(() => {});
+  else if (order.whatsappId) sendWhatsAppMessage(order.whatsappId, addMsg);
   res.json({ ok: true, order });
 });
 
@@ -281,20 +526,31 @@ app.patch('/api/orders/:id', (req, res) => {
     'İptal': '❌ İptal edildi'
   };
   if (msgs[status]) {
+    const prefsKeyUser = prefsKey(order.telegramId, order.whatsappId);
     const prefs = loadPrefs();
-    const notify = (prefs[order.telegramId] || {}).notify !== false;
+    const notify = (prefsKeyUser && (prefs[prefsKeyUser] || {}).notify) !== false;
     if (notify) {
-      let opts = {};
-      if (status === 'Teslim Edildi') {
-        const favs = loadFavorites();
-        const isFav = favs.some(f => f.telegramId === order.telegramId && f.orderId === id);
-        if (!isFav) opts.reply_markup = { inline_keyboard: [[{ text: '⭐ Favorilere Ekle', callback_data: `fav_add_${id}` }]] };
-      }
-      bot.sendMessage(order.telegramId, `📦 <b>Sipariş #${id}</b>\n\n${msgs[status]}`, { parse_mode: 'HTML', ...opts }).catch(() => {});
-      if (status === 'Teslim Edildi') {
-        setTimeout(() => {
-          bot.sendMessage(order.telegramId, 'Siparişiniz nasıldı? Yorumlarınız bizim için önemli 💚').catch(() => {});
-        }, 60 * 1000);
+      const statusText = `📦 Sipariş #${id}\n\n${msgs[status]}`;
+      if (order.telegramId) {
+        let opts = {};
+        if (status === 'Teslim Edildi') {
+          const favs = loadFavorites();
+          const isFav = favs.some(f => f.telegramId === order.telegramId && f.orderId === id);
+          if (!isFav) opts.reply_markup = { inline_keyboard: [[{ text: '⭐ Favorilere Ekle', callback_data: `fav_add_${id}` }]] };
+        }
+        bot.sendMessage(order.telegramId, `📦 <b>Sipariş #${id}</b>\n\n${msgs[status]}`, { parse_mode: 'HTML', ...opts }).catch(() => {});
+        if (status === 'Teslim Edildi') {
+          setTimeout(() => {
+            bot.sendMessage(order.telegramId, 'Siparişiniz nasıldı? Yorumlarınız bizim için önemli 💚').catch(() => {});
+          }, 60 * 1000);
+        }
+      } else if (order.whatsappId) {
+        sendWhatsAppMessage(order.whatsappId, statusText);
+        if (status === 'Teslim Edildi') {
+          setTimeout(() => {
+            sendWhatsAppMessage(order.whatsappId, 'Siparişiniz nasıldı? Yorumlarınız bizim için önemli 💚');
+          }, 60 * 1000);
+        }
       }
     }
   }
@@ -705,6 +961,11 @@ function startServer(port) {
     console.log(`\n🚀 MeraPaket Menü`);
     console.log(`   Yerel:  http://localhost:${port}`);
     console.log(`   Panel:  http://localhost:${port}/panel.html`);
+    if (whatsappEnabled) {
+      console.log(`   WhatsApp webhook: ${baseUrl}/webhook/whatsapp`);
+    } else {
+      console.log(`   WhatsApp: .env'de WA_PHONE_NUMBER_ID ve WA_ACCESS_TOKEN tanımlayın`);
+    }
 
     if (USE_NGROK) {
       try {
