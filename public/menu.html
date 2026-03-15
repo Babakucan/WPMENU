@@ -353,6 +353,15 @@
     .favorite-card .fav-add-btn { width: 100%; padding: 10px; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.9rem; font-family: inherit; transition: filter 0.2s; }
     .favorite-card .fav-add-btn:hover { filter: brightness(1.1); }
     .favorite-card .fav-add-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    .favorite-card .fav-add-btn.secondary { background: transparent; border: 2px solid var(--accent); color: var(--accent); margin-top: 6px; }
+    .favorite-card .fav-add-btn.secondary:hover { filter: brightness(1.1); }
+    .favorite-card .fav-add-btn.added { background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); cursor: default; }
+    .fav-remove-btn { padding: 6px 10px; font-size: 0.8rem; background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 8px; cursor: pointer; font-family: inherit; margin-top: 6px; }
+    .fav-remove-btn:hover { border-color: #f87171; color: #f87171; }
+    .past-orders-back { display: inline-block; margin-bottom: 14px; color: var(--accent); cursor: pointer; font-size: 0.9rem; }
+    .past-orders-back:hover { text-decoration: underline; }
+    .past-orders-link { color: var(--accent); cursor: pointer; font-size: 0.88rem; margin-top: 8px; display: inline-block; }
+    .past-orders-link:hover { text-decoration: underline; }
     .product-img { cursor: pointer; }
     .product-img:has(img) { cursor: pointer; }
     .product-img:not(:has(img)) { cursor: default; }
@@ -979,16 +988,74 @@
         }
         return out;
       }
+      const favQuery = () => telegramId ? 'telegramId=' + encodeURIComponent(telegramId) : 'whatsappId=' + encodeURIComponent(whatsappId);
+      async function loadPastOrdersForFavorites() {
+        const el = document.getElementById('favorites-section');
+        if (!el) return;
+        const q = favQuery();
+        try {
+          const [ordersRes, favRes] = await Promise.all([fetch('/api/my-orders?' + q), fetch('/api/favorites?' + q)]);
+          if (!ordersRes.ok || !favRes.ok) { el.innerHTML = '<div class="loading" style="color:#f87171">Yüklenemedi.</div>'; return; }
+          const orders = (await ordersRes.json()).orders || [];
+          const favs = (await favRes.json()).favorites || [];
+          const favoritedOrderIds = new Set((favs || []).map(f => f.orderId));
+          el.innerHTML = '<a class="past-orders-back" id="past-orders-back">← Favorilerim</a>' + (orders.length === 0
+            ? '<div class="loading" style="color:#71717a">Henüz siparişiniz yok.</div>'
+            : orders.map(o => {
+                const itemsPreview = (o.items || '-').replace(/</g, '&lt;').slice(0, 60) + ((o.items || '').length > 60 ? '…' : '');
+                const isFav = favoritedOrderIds.has(o.id);
+                return `<div class="favorite-card" data-order-id="${o.id}">
+                  <h3>#${o.id} — ${String(o.status).replace(/</g, '&lt;')}</h3>
+                  <div class="fav-items">${itemsPreview}</div>
+                  <div class="fav-total">${o.total || 0}₺</div>
+                  <button type="button" class="fav-add-btn secondary order-fav-btn ${isFav ? 'added' : ''}" data-order-id="${o.id}" ${isFav ? 'disabled' : ''}>${isFav ? '✓ Favoride' : '⭐ Favorilere ekle'}</button>
+                </div>`;
+              }).join(''));
+          document.getElementById('past-orders-back')?.addEventListener('click', () => loadFavoritesSection());
+          el.querySelectorAll('.order-fav-btn:not(.added)').forEach(btn => {
+            btn.addEventListener('click', async () => {
+              const oid = btn.getAttribute('data-order-id');
+              const card = btn.closest('.favorite-card');
+              const items = card?.querySelector('.fav-items')?.textContent || '';
+              const totalEl = card?.querySelector('.fav-total');
+              const total = totalEl ? parseInt((totalEl.textContent || '0').replace(/[^\d]/g, ''), 10) : 0;
+              if (!oid || !card) return;
+              btn.disabled = true;
+              try {
+                const body = { orderId: oid, items: (card.getAttribute('data-items') || ''), total };
+                if (telegramId) body.telegramId = telegramId;
+                if (whatsappId) body.whatsappId = whatsappId;
+                body.name = 'Sipariş #' + oid;
+                const rawOrder = orders.find(x => x.id === parseInt(oid, 10));
+                if (rawOrder && rawOrder.items) body.items = rawOrder.items;
+                const res = await fetch('/api/favorites', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                const data = await res.json();
+                if (data.ok) loadFavoritesSection();
+                else { btn.disabled = false; }
+              } catch (_) { btn.disabled = false; }
+            });
+          });
+          el.querySelectorAll('.favorite-card').forEach(card => {
+            const oid = card.getAttribute('data-order-id');
+            const o = orders.find(x => x.id === parseInt(oid, 10));
+            if (o && o.items) card.setAttribute('data-items', o.items);
+          });
+        } catch (_) {
+          el.innerHTML = '<div class="loading" style="color:#f87171">Yüklenemedi.</div>';
+        }
+      }
       async function loadFavoritesSection() {
         const el = document.getElementById('favorites-section');
         const tabs = document.getElementById('section-tabs');
         if (!el || !tabs) return;
         try {
-          const r = await fetch('/api/favorites?telegramId=' + telegramId);
+          const q = favQuery();
+          const r = await fetch('/api/favorites?' + q);
           const d = await r.json();
           const favs = d.favorites || [];
           if (favs.length === 0) {
-            el.innerHTML = '<div class="loading" style="color:#71717a">Henüz favori siparişin yok.<br><small>Geçmiş siparişlerden favorilere ekleyebilirsin.</small></div>';
+            el.innerHTML = '<div class="loading" style="color:#71717a">Henüz favori siparişin yok.<br><small>Geçmiş siparişlerden favorilere <a class="past-orders-link" id="link-past-orders-fav">ekleyebilirsin</a>.</small></div>';
+            document.getElementById('link-past-orders-fav')?.addEventListener('click', loadPastOrdersForFavorites);
           } else {
             el.innerHTML = favs.map(f => {
               const name = (f.name || 'Sipariş').replace(/</g, '&lt;').replace(/"/g, '&quot;');
@@ -998,15 +1065,17 @@
                 <div class="fav-items">${itemsPreview}</div>
                 <div class="fav-total">${f.total || 0}₺</div>
                 <button type="button" class="fav-add-btn">🛒 Sepete ekle</button>
+                <button type="button" class="fav-remove-btn">Favoriden çıkar</button>
               </div>`;
-            }).join('');
-            el.querySelectorAll('.fav-add-btn').forEach(btn => {
+            }).join('') + '<div style="margin-top:12px"><a class="past-orders-link" id="link-past-orders-fav">Geçmiş siparişlerden ekle</a></div>';
+            document.getElementById('link-past-orders-fav')?.addEventListener('click', loadPastOrdersForFavorites);
+            el.querySelectorAll('.favorite-card .fav-add-btn').forEach(btn => {
               btn.addEventListener('click', async () => {
                 const card = btn.closest('.favorite-card');
                 const fid = card?.getAttribute('data-fav-id');
                 if (!fid) return;
                 try {
-                  const r = await fetch(`/api/favorites/${fid}?telegramId=${telegramId}`);
+                  const r = await fetch(`/api/favorites/${fid}?${q}`);
                   if (!r.ok) return;
                   const f = await r.json();
                   const items = parseItemsStr(f.items || '');
@@ -1014,6 +1083,20 @@
                   updateCart();
                   document.querySelector('.section-tab[data-section="menu"]')?.click();
                 } catch (_) {}
+              });
+            });
+            el.querySelectorAll('.fav-remove-btn').forEach(btn => {
+              btn.addEventListener('click', async () => {
+                const card = btn.closest('.favorite-card');
+                const fid = card?.getAttribute('data-fav-id');
+                if (!fid) return;
+                btn.disabled = true;
+                try {
+                  const res = await fetch(`/api/favorites/${fid}?${q}`, { method: 'DELETE' });
+                  const data = await res.json();
+                  if (data.ok) loadFavoritesSection();
+                  else btn.disabled = false;
+                } catch (_) { btn.disabled = false; }
               });
             });
           }
@@ -1047,21 +1130,27 @@
         const el = document.getElementById('orders-section');
         const q = telegramId ? 'telegramId=' + encodeURIComponent(telegramId) : 'whatsappId=' + encodeURIComponent(whatsappId);
         try {
-          const r = await fetch('/api/my-orders?' + q);
-          if (!r.ok) { el.innerHTML = '<div class="loading" style="color:#f87171">Siparişler yüklenemedi.</div>'; return; }
-          const d = await r.json();
+          const [ordersRes, favRes] = await Promise.all([fetch('/api/my-orders?' + q), fetch('/api/favorites?' + q)]);
+          if (!ordersRes.ok) { el.innerHTML = '<div class="loading" style="color:#f87171">Siparişler yüklenemedi.</div>'; return; }
+          const d = await ordersRes.json();
           const list = d.orders || [];
+          const favs = favRes.ok ? (await favRes.json()).favorites || [] : [];
+          const favoritedOrderIds = new Set(favs.map(f => f.orderId));
           if (list.length === 0) {
             el.innerHTML = '<div class="loading" style="color:#71717a">Henüz siparişiniz yok.</div>';
           } else {
             el.innerHTML = list.map(o => {
               const itemsPreview = (o.items || '-').replace(/</g, '&lt;').slice(0, 60) + ((o.items || '').length > 60 ? '…' : '');
               const cancelable = canCancelOrder(o);
+              const isFav = favoritedOrderIds.has(o.id);
               return `<div class="favorite-card" data-order-id="${o.id}">
                 <h3>#${o.id} — ${String(o.status).replace(/</g, '&lt;')}</h3>
                 <div class="fav-items">${itemsPreview}</div>
                 <div class="fav-total">${o.total || 0}₺</div>
-                ${cancelable ? '<button type="button" class="fav-add-btn order-cancel-btn">❌ İptal et</button>' : ''}
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                  ${!isFav ? '<button type="button" class="fav-add-btn secondary order-fav-add-btn">⭐ Favorilere ekle</button>' : '<span class="fav-add-btn added" style="padding:10px;border-radius:10px;font-size:0.9rem">✓ Favoride</span>'}
+                  ${cancelable ? '<button type="button" class="fav-add-btn order-cancel-btn">❌ İptal et</button>' : ''}
+                </div>
               </div>`;
             }).join('');
             el.querySelectorAll('.order-cancel-btn').forEach(btn => {
@@ -1079,6 +1168,24 @@
                   if (data.ok) loadMyOrders();
                   else { btn.disabled = false; alert(data.error || 'İptal edilemedi'); }
                 } catch (_) { btn.disabled = false; alert('Bağlantı hatası'); }
+              });
+            });
+            el.querySelectorAll('.order-fav-add-btn').forEach(btn => {
+              btn.addEventListener('click', async () => {
+                const card = btn.closest('.favorite-card');
+                const oid = card?.getAttribute('data-order-id');
+                const o = list.find(x => x.id === parseInt(oid, 10));
+                if (!oid || !o) return;
+                btn.disabled = true;
+                try {
+                  const body = { orderId: oid, items: o.items || '', total: o.total ?? 0, name: 'Sipariş #' + oid };
+                  if (telegramId) body.telegramId = telegramId;
+                  if (whatsappId) body.whatsappId = whatsappId;
+                  const res = await fetch('/api/favorites', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                  const data = await res.json();
+                  if (data.ok) loadMyOrders();
+                  else btn.disabled = false;
+                } catch (_) { btn.disabled = false; }
               });
             });
           }

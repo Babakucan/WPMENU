@@ -6,5 +6,13 @@
     "items": "1x Lahmacun (45₺), 1x Pizza (Orta) (95₺), 1x Döner Dürüm (75₺), 2x Ayran (30₺), 2x Kola (50₺)",
     "total": 295,
     "name": "Sipariş 8"
+  },
+  {
+    "id": 2,
+    "orderId": 22,
+    "items": "2x Ayran (30₺)",
+    "total": 30,
+    "name": "Sipariş #22",
+    "whatsappId": "905330686788"
   }
 ]

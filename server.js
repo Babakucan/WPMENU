@@ -304,14 +304,55 @@ app.use('/api/', apiLimiter);
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const ADMIN_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 saat
+const ADMIN_TOKENS_PATH = path.join(__dirname, 'data', 'admin-tokens.json');
 const adminTokens = new Map(); // token -> expiry time
+
+function loadAdminTokens() {
+  try {
+    const raw = fs.readFileSync(ADMIN_TOKENS_PATH, 'utf8');
+    const obj = JSON.parse(raw);
+    const now = Date.now();
+    Object.entries(obj).forEach(([t, expiry]) => {
+      const token = String(t).trim();
+      if (token && typeof expiry === 'number' && expiry > now) adminTokens.set(token, expiry);
+    });
+  } catch {
+    // dosya yok veya geçersiz
+  }
+}
+
+function saveAdminTokens() {
+  try {
+    const dataDir = path.dirname(ADMIN_TOKENS_PATH);
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    const now = Date.now();
+    const obj = {};
+    adminTokens.forEach((expiry, token) => {
+      if (expiry > now) obj[token] = expiry;
+    });
+    fs.writeFileSync(ADMIN_TOKENS_PATH, JSON.stringify(obj, null, 2), 'utf8');
+  } catch (err) {
+    console.error('[admin-tokens] Kayıt hatası:', err.message);
+  }
+}
+
+loadAdminTokens();
+if (ADMIN_PASSWORD && adminTokens.size > 0) {
+  try {
+    const fp = path.relative(process.cwd(), ADMIN_TOKENS_PATH);
+    console.log(`   Admin token'ları yüklendi: ${adminTokens.size} oturum (${fp})`);
+  } catch (_) {}
+}
 
 function requireAdmin(req, res, next) {
   if (!ADMIN_PASSWORD) return next();
-  const token = req.headers['x-admin-token'] || (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  const token = getAdminTokenFromRequest(req);
   const expiry = adminTokens.get(token);
   if (expiry && Date.now() < expiry) return next();
-  if (expiry) adminTokens.delete(token);
+  if (expiry) {
+    adminTokens.delete(token);
+    saveAdminTokens();
+  }
   res.status(401).json({ ok: false, error: 'Yetkisiz. Giriş yapın.' });
 }
 
@@ -321,13 +362,19 @@ app.post('/api/auth/login', (req, res) => {
   if (password !== ADMIN_PASSWORD) return res.status(401).json({ ok: false, error: 'Geçersiz şifre' });
   const token = crypto.randomBytes(32).toString('hex');
   adminTokens.set(token, Date.now() + ADMIN_TOKEN_TTL_MS);
+  saveAdminTokens();
   res.json({ ok: true, token });
 });
 
 app.post('/api/auth/logout', (req, res) => {
-  const token = req.headers['x-admin-token'] || (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  const token = getAdminTokenFromRequest(req);
   adminTokens.delete(token);
+  saveAdminTokens();
   res.json({ ok: true });
+});
+
+app.get('/api/auth/me', requireAdmin, (req, res) => {
+  res.json({ ok: true, role: 'admin' });
 });
 
 function isLocalhost() {
@@ -389,6 +436,19 @@ app.post('/api/favorites', (req, res) => {
   favs.push(fav);
   saveFavorites(favs);
   res.json({ ok: true, favoriteId: id });
+});
+app.delete('/api/favorites/:id', (req, res) => {
+  const { telegramId, whatsappId } = req.query;
+  const id = parseInt(req.params.id);
+  const favs = loadFavorites();
+  const idx = favs.findIndex(f => {
+    if (f.id !== id) return false;
+    return (telegramId && f.telegramId === String(telegramId)) || (whatsappId && f.whatsappId === String(whatsappId));
+  });
+  if (idx === -1) return res.status(404).json({ ok: false, error: 'Favori bulunamadı' });
+  favs.splice(idx, 1);
+  saveFavorites(favs);
+  res.json({ ok: true });
 });
 app.get('/api/restaurant', (req, res) => {
   const rest = getCachedRestaurant();
@@ -581,16 +641,23 @@ function canCustomerCancel(order) {
   return order.status === 'Alındı' && (Date.now() - new Date(order.createdAt).getTime()) < CANCEL_MINUTES * 60 * 1000;
 }
 
+function getAdminTokenFromRequest(req) {
+  return (req.headers['x-admin-token'] || (req.headers.authorization || '').replace(/^Bearer\s+/i, '')).trim();
+}
+
+function isAdminRequest(req) {
+  if (!ADMIN_PASSWORD) return true;
+  const token = getAdminTokenFromRequest(req);
+  const expiry = adminTokens.get(token);
+  return !!(expiry && Date.now() < expiry);
+}
+
 app.patch('/api/orders/:id', (req, res, next) => {
   const id = parseInt(req.params.id);
   const { status, cancelReason, estimatedMinutes, telegramId, whatsappId } = req.body || {};
   const order = orders.find(o => o.id === id);
   if (!order || !status) return res.status(400).json({ ok: false });
-  const isAdmin = ADMIN_PASSWORD && (() => {
-    const token = req.headers['x-admin-token'] || (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
-    const expiry = adminTokens.get(token);
-    return expiry && Date.now() < expiry;
-  })();
+  const isAdmin = isAdminRequest(req);
   if (status === 'İptal' && !isAdmin) {
     const userId = telegramId || whatsappId;
     if (!userId || !orderUserMatch(order, telegramId, whatsappId)) return res.status(403).json({ ok: false, error: 'Bu siparişe ait değilsiniz.' });

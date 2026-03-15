@@ -216,7 +216,7 @@
     "paymentMethod": "gelal_pos",
     "location": null,
     "couponCode": null,
-    "status": "Hazırlanıyor",
+    "status": "Teslim Edildi",
     "createdAt": "2026-03-14T14:22:13.524Z",
     "whatsappId": "905330686788",
     "estimatedMinutes": 35
@@ -233,7 +233,7 @@
     "paymentMethod": "kapida_nakit",
     "location": null,
     "couponCode": null,
-    "status": "Hazırlanıyor",
+    "status": "Teslim Edildi",
     "createdAt": "2026-03-14T14:36:28.446Z",
     "whatsappId": "905330686788",
     "estimatedMinutes": 55
@@ -250,7 +250,7 @@
     "paymentMethod": "kapida_nakit",
     "location": null,
     "couponCode": null,
-    "status": "Hazırlanıyor",
+    "status": "Teslim Edildi",
     "createdAt": "2026-03-14T14:43:01.189Z",
     "whatsappId": "905330686788",
     "estimatedMinutes": 33
@@ -284,7 +284,7 @@
     "paymentMethod": "kapida_nakit",
     "location": null,
     "couponCode": null,
-    "status": "Hazırlanıyor",
+    "status": "Teslim Edildi",
     "createdAt": "2026-03-14T14:47:53.217Z",
     "whatsappId": "905330686788",
     "estimatedMinutes": 5
@@ -301,7 +301,7 @@
     "paymentMethod": "kapida_nakit",
     "location": null,
     "couponCode": null,
-    "status": "Alındı",
+    "status": "Teslim Edildi",
     "createdAt": "2026-03-14T15:04:27.439Z",
     "whatsappId": "905330686788"
   },
@@ -317,7 +317,7 @@
     "paymentMethod": "kapida_nakit",
     "location": null,
     "couponCode": null,
-    "status": "Alındı",
+    "status": "Teslim Edildi",
     "createdAt": "2026-03-14T15:07:11.274Z",
     "whatsappId": "905330686788"
   },
@@ -333,9 +333,26 @@
     "paymentMethod": "kapida_nakit",
     "location": null,
     "couponCode": null,
-    "status": "Hazırlanıyor",
+    "status": "Teslim Edildi",
     "createdAt": "2026-03-14T15:10:47.950Z",
     "whatsappId": "905330686788",
     "estimatedMinutes": 22
+  },
+  {
+    "id": 23,
+    "items": "2x Lahmacun (90₺), 1x Lahmacun (+Extra peynir 10₺) (55₺)",
+    "total": 145,
+    "subtotal": 145,
+    "discountAmount": 0,
+    "address": "aydın efeler",
+    "notes": "",
+    "orderType": "paket",
+    "paymentMethod": "kapida_nakit",
+    "location": null,
+    "couponCode": null,
+    "status": "Teslim Edildi",
+    "createdAt": "2026-03-14T16:29:25.908Z",
+    "whatsappId": "905330686788",
+    "estimatedMinutes": 25
   }
 ]

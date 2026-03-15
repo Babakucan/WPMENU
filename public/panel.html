@@ -1671,12 +1671,12 @@
     const TOKEN_KEY = 'admin_token';
     const ROLE_KEY = 'admin_role';
 
-    function getToken() { return sessionStorage.getItem(TOKEN_KEY); }
-    function setToken(t) { if (t && t !== 'no-auth') sessionStorage.setItem(TOKEN_KEY, t); else sessionStorage.removeItem(TOKEN_KEY); }
-    function clearToken() { sessionStorage.removeItem(TOKEN_KEY); }
-    function getRole() { return sessionStorage.getItem(ROLE_KEY) || 'admin'; }
-    function setRole(role) { sessionStorage.setItem(ROLE_KEY, role || 'admin'); }
-    function clearRole() { sessionStorage.removeItem(ROLE_KEY); }
+    function getToken() { return localStorage.getItem(TOKEN_KEY); }
+    function setToken(t) { if (t && t !== 'no-auth') localStorage.setItem(TOKEN_KEY, t); else localStorage.removeItem(TOKEN_KEY); }
+    function clearToken() { localStorage.removeItem(TOKEN_KEY); }
+    function getRole() { return localStorage.getItem(ROLE_KEY) || 'admin'; }
+    function setRole(role) { localStorage.setItem(ROLE_KEY, role || 'admin'); }
+    function clearRole() { localStorage.removeItem(ROLE_KEY); }
     function canAccessTab(tab) {
       const role = getRole();
       if (role === 'admin') return true;
@@ -1709,12 +1709,20 @@
 
     function authFetch(url, opts = {}) {
       const token = getToken();
-      opts.headers = { ...opts.headers, 'X-Admin-Token': token || '' };
+      opts.headers = {
+        ...opts.headers,
+        'X-Admin-Token': token || '',
+        'Authorization': token ? ('Bearer ' + token) : ''
+      };
       return fetch(url, opts).then(r => {
         if (r.status === 401) {
           clearToken();
           clearRole();
           showLogin();
+          try {
+            const errEl = document.getElementById('login-error');
+            if (errEl) errEl.textContent = 'Oturum sona erdi veya sunucu yeniden başladı. Lütfen tekrar giriş yapın.';
+          } catch (_) {}
           return Promise.reject(new Error('Yetkisiz'));
         }
         return r;
