@@ -1,7 +1,7 @@
 # WPMENU — Ürün Gereksinimleri Belgesi (PRD)
 
-**Versiyon:** 1.1  
-**Tarih:** Mart 2025  
+**Versiyon:** 1.3  
+**Tarih:** Mart 2026  
 **Hedef Platform:** WhatsApp (üretim), Telegram (test)
 
 ---
@@ -24,7 +24,8 @@ WPMENU, restoranların **WhatsApp** ve **Telegram** üzerinden müşterilere dij
 | Rol | Açıklama |
 |-----|----------|
 | **Müşteri** | Bot üzerinden menüyü açan, ürün özelleştirip sipariş veren kişi |
-| **Restoran Yöneticisi** | Siparişleri takip eden, durum ve tahmini süre güncelleyen, menü ve ayarları düzenleyen kişi |
+| **Restoran Yöneticisi (Admin)** | Tüm panel yetkilerine sahip kullanıcı (menü/ayarlar/backup dahil) |
+| **Restoran Personeli (Staff)** | Sipariş ve istatistik odaklı sınırlı panel erişimi |
 
 ---
 
@@ -58,6 +59,11 @@ WPMENU, restoranların **WhatsApp** ve **Telegram** üzerinden müşterilere dij
 ### 3.2 Restoran (Admin) Akışı
 
 - **Siparişler:** Tüm siparişleri listeleme, duruma göre filtreleme; durum güncelleme (Alındı → Hazırlanıyor → Hazır → Yola Çıktı → Teslim Edildi / İptal); tahmini süre (dakika) girme; müşteriye durum ve tahmin bildirimi; yazdırma
+- **Canlı güncelleme:** Sipariş paneli SSE ile anlık güncellenir, bağlantı sorunu halinde polling fallback kullanır
+- **Toplu işlem:** Seçili siparişlere tek seferde durum uygulama
+- **Geri al (Undo):** Durum değişikliği sonrası kısa süre içinde geri alma
+- **Performans:** Sipariş listesini sayfalı render ederek yüksek sipariş sayısında akıcılık
+- **Operasyon uyarısı:** Tahmini süreyi aşan aktif siparişler gecikme rozeti ile vurgulanır
 - **Menü yönetimi:**
   - Her ürün bir **kart** olarak gösterilir
   - **Ana alan (her zaman görünür):** Ürün adı, Paket fiyatı, Kısa açıklama
@@ -67,7 +73,9 @@ WPMENU, restoranların **WhatsApp** ve **Telegram** üzerinden müşterilere dij
 - **Restoran ayarları:** Ad, adres, telefon, çalışma saatleri, min. sipariş, kuponlar, tahmini süreler (genel / Gel Al / Paket)
 - **Kampanyalar:** Sipariş sayısı veya kupon kampanyaları
 - **İstatistik:** Günlük sipariş sayısı, toplam ciro, durum dağılımı
-- **Panel giriş:** Şifre ile koruma (`.env` `ADMIN_PASSWORD`)
+- **Panel giriş:** Rol bazlı şifre ile koruma (`ADMIN_PASSWORD`, opsiyonel `STAFF_PASSWORD`)
+- **Yedekleme/Geri yükleme (Admin):** Panelden JSON yedek alma ve geri dönme
+- **Audit log:** Kritik panel işlemlerinin dosyaya kaydı
 
 ---
 
@@ -84,6 +92,8 @@ WPMENU, restoranların **WhatsApp** ve **Telegram** üzerinden müşterilere dij
 - **Siparişler:** `data/orders.json` (items metni özelleştirme bilgisi içerebilir: çıkar: …, +Ekstra …)
 - **Favoriler:** `data/favorites.json`
 - **Kullanıcı tercihleri:** `data/userPrefs.json` (adresler)
+- **Yedekler:** `data/backups/*.json`
+- **Audit kayıtları:** `data/logs/audit.log` (JSON satır formatı)
 - **Menü:** `config/menu.json` — Ürün alanları: `id`, `name`, `price`, `priceRestoran`, `image`, `contents` (virgülle ayrılmış), `description`, `extras` (array of `{ name, price }`), `onlyDineIn`
 - **Restoran:** `config/restaurant.json`
 
@@ -91,16 +101,24 @@ WPMENU, restoranların **WhatsApp** ve **Telegram** üzerinden müşterilere dij
 
 | Endpoint | Metod | Açıklama |
 |----------|-------|----------|
+| `/api/auth/login` | POST | Panel girişi (admin/staff) |
+| `/api/auth/logout` | POST | Panel çıkışı |
+| `/api/auth/me` | GET | Aktif panel rolü |
 | `/api/menu` | GET, PUT | Menü verisi / güncelleme |
 | `/api/restaurant` | GET, PUT | Restoran ayarları |
 | `/api/order` | POST | Sipariş oluşturma |
-| `/api/orders` | GET | Tüm siparişler (admin) |
+| `/api/orders` | GET | Tüm siparişler (panel) |
 | `/api/orders/:id` | GET, PATCH | Sipariş detayı / durum ve tahmini süre güncelleme |
 | `/api/orders/:id/add` | POST | Siparişe ekleme |
+| `/api/orders/stream` | GET (SSE) | Sipariş canlı akışı |
 | `/api/user/prefs` | GET, POST | Kullanıcı tercihleri |
 | `/api/favorites` | GET, POST | Favori işlemleri |
 | `/api/coupon/validate` | POST | Kupon doğrulama |
-| `/api/admin/stats` | GET | Admin istatistikleri |
+| `/api/admin/stats` | GET | Panel istatistikleri |
+| `/api/analytics` | GET | Sipariş durum analizi |
+| `/api/admin/backups` | GET | Yedek listesi (admin) |
+| `/api/admin/backup` | POST | Yedek oluştur (admin) |
+| `/api/admin/restore` | POST | Yedekten geri yükle (admin) |
 
 ---
 
@@ -122,8 +140,11 @@ Tüm geliştirmelerde Telegram’a özel davranışlar `window.Telegram?.WebApp`
 
 - Rate limiting: 60 istek/dakika (proxy güvenilir)
 - Hassas bilgiler `.env` içinde, commit edilmez
-- Panel erişimi şifre ile (`ADMIN_PASSWORD`)
+- Panel erişimi rol bazlı şifre ile (`ADMIN_PASSWORD`, `STAFF_PASSWORD`)
 - Express `trust proxy` ngrok/proxy için etkin
+- Kritik işlemler `audit.log` içinde izlenebilir
+- Sipariş panelinde canlı akış + fallback polling
+- Sayfalı sipariş render ile büyük listelerde performans korunur
 
 ---
 
@@ -141,15 +162,20 @@ Tüm geliştirmelerde Telegram’a özel davranışlar `window.Telegram?.WebApp`
 - [x] Menü yönetiminde kart görünümü, + ile detay, içerik satır satır
 - [x] WhatsApp webhook entegrasyonu
 
-### Faz 2 (İsteğe Bağlı / İleride)
-- [ ] sendData ile sohbet içi onay akışı
-- [ ] Bölge / mesafe kontrolü
-- [ ] Ürün notu (serbest metin, malzeme dışı)
+### Faz 2 (Tamamlandı)
+- [x] Toplu sipariş durum güncelleme
+- [x] Sipariş listesi sayfalama ve performans iyileştirmeleri
+- [x] Operasyonel görsel uyarılar (gecikme rozeti)
 
-### Faz 3 (İleride)
-- [ ] Veritabanı (SQLite/PostgreSQL)
-- [ ] Çoklu dil desteği
-- [ ] Ürün fotoğrafı yükleme ve büyütme
+### Faz 3 (Tamamlandı)
+- [x] Rol bazlı panel giriş modeli (admin/staff)
+- [x] Audit log altyapısı
+- [x] Admin backup/restore akışı
+
+### Sonraki Faz (Öneri)
+- [ ] Denetim kayıtları için panelde "Son işlemler" görünümü
+- [ ] Planlı otomatik yedek alma (scheduler)
+- [ ] Veritabanı geçişi (SQLite/PostgreSQL)
 
 ---
 
@@ -157,6 +183,9 @@ Tüm geliştirmelerde Telegram’a özel davranışlar `window.Telegram?.WebApp`
 
 - Müşteri, bot üzerinden menüyü açıp ürünleri özelleştirerek (malzeme çıkar/ekle) sipariş verebilmeli
 - Restoran, panelden siparişleri görebilmeli, durumu ve tahmini süreyi güncelleyebilmeli
+- Restoran personeli yalnızca izinli sekmeleri (sipariş/istatistik) görebilmeli
+- Admin paneli yedek oluşturup seçili yedekten geri yükleyebilmeli
+- Kritik panel işlemleri audit log'a yazılmalı
 - Restoran, menüde kart görünümünde sadece isim/fiyat/açıklama görmeli; + ile detay alanını açabilmeli
 - İçerik malzemeleri panelde satır satır düzenlenebilmeli
 - Telegram’da menü web_app ile sohbet içinde açılmalı

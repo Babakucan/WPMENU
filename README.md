@@ -28,13 +28,20 @@ WhatsApp ve Telegram üzerinden restoran menüsü ve sipariş yönetimi. Müşte
 
 ### Restoran Tarafı (Admin Panel)
 - **Siparişler** – Liste, filtre (durum), durum güncelleme, tahmini süre, yazdırma
+- **Canlı sipariş akışı** – SSE ile anlık güncelleme, bağlantı koparsa otomatik polling fallback
+- **Toplu işlem** – Aynı sayfadaki siparişleri seçip toplu durum güncelleme
+- **Geri al (Undo)** – Durum değişikliği sonrası kısa süreli geri alma
+- **Gecikme rozeti** – Tahmini süreyi aşan aktif siparişleri vurgulama
+- **Sayfalama** – Uzun sipariş listelerinde sayfa bazlı render (performans)
 - **Menü yönetimi** – Kart görünümü: ana alanda sadece ürün adı, fiyat ve açıklama; **+** ile detay (Restoran fiyatı, sadece restoran içi, içerik malzemeleri satır satır, ekstra malzemeler, sil)
 - **İçerik (malzemeler)** – Her satıra bir malzeme; kayıt virgülle ayrılmış string
 - **Ekstra malzemeler** – Her satır: Malzeme adı, Fiyat (müşteri sepette ekleyebilir)
 - **Restoran ayarları** – Adres, saatler, min. tutar, kuponlar, tahmini süreler
 - **Kampanyalar** – Sipariş sayısı / kupon kampanyaları
 - **İstatistik** – Günlük özet, durum dağılımı
-- **Panel giriş** – Şifre ile koruma (`.env` `ADMIN_PASSWORD`)
+- **Rol bazlı panel erişimi** – `ADMIN_PASSWORD` ve opsiyonel `STAFF_PASSWORD`
+- **Audit log** – Kritik panel işlemleri `data/logs/audit.log` dosyasına yazılır
+- **Yedekleme / geri yükleme** – Panelden backup oluşturma ve geri yükleme
 
 ---
 
@@ -63,8 +70,11 @@ WhatsApp ve Telegram üzerinden restoran menüsü ve sipariş yönetimi. Müşte
    USE_NGROK=true
    NGROK_AUTHTOKEN=ngrok_dashboard_token
    ADMIN_PASSWORD=panel_sifreniz
+   STAFF_PASSWORD=personel_sifreniz_opsiyonel
    ```
-   `ADMIN_PASSWORD` boş bırakılırsa panel şifresiz açılır.
+   - `ADMIN_PASSWORD`: Tam yetkili panel girişi (admin)
+   - `STAFF_PASSWORD`: Sipariş/istatistik odaklı kısıtlı panel girişi (opsiyonel)
+   - İkisi de boşsa panel şifresiz admin modunda açılır.
 
 3. **Uygulamayı başlat**
    ```bash
@@ -88,7 +98,11 @@ WhatsApp ve Telegram üzerinden restoran menüsü ve sipariş yönetimi. Müşte
 ├── data/
 │   ├── orders.json     # Siparişler
 │   ├── favorites.json  # Favori siparişler
-│   └── userPrefs.json  # Kullanıcı tercihleri (adresler)
+│   ├── userPrefs.json  # Kullanıcı tercihleri (adresler)
+│   ├── backups/        # JSON yedek dosyaları
+│   └── logs/
+│       ├── app.log     # Uygulama hata logları
+│       └── audit.log   # Panel işlem kayıtları
 ├── lib/
 │   └── logger.js       # Hata loglama
 ├── public/
@@ -147,16 +161,24 @@ WhatsApp ve Telegram üzerinden restoran menüsü ve sipariş yönetimi. Müşte
 
 | Endpoint | Metod | Açıklama |
 |----------|-------|----------|
+| `/api/auth/login` | POST | Panel giriş (admin/staff) |
+| `/api/auth/logout` | POST | Panel çıkış |
+| `/api/auth/me` | GET | Aktif panel rolünü döner |
 | `/api/menu` | GET, PUT | Menü verisi / güncelleme |
 | `/api/restaurant` | GET, PUT | Restoran ayarları |
 | `/api/order` | POST | Sipariş oluştur |
-| `/api/orders` | GET | Tüm siparişler (admin) |
+| `/api/orders` | GET | Tüm siparişler (panel) |
 | `/api/orders/:id` | GET, PATCH | Sipariş detayı / durum ve tahmini süre |
 | `/api/orders/:id/add` | POST | Siparişe ekleme |
+| `/api/orders/stream` | GET (SSE) | Canlı sipariş akışı |
 | `/api/user/prefs` | GET, POST | Kullanıcı tercihleri |
 | `/api/favorites` | GET, POST | Favoriler |
 | `/api/coupon/validate` | POST | Kupon doğrulama |
-| `/api/admin/stats` | GET | İstatistikler |
+| `/api/admin/stats` | GET | İstatistikler (panel) |
+| `/api/analytics` | GET | Durum kırılımı (panel) |
+| `/api/admin/backups` | GET | Yedek listesi (admin) |
+| `/api/admin/backup` | POST | Yedek oluştur (admin) |
+| `/api/admin/restore` | POST | Yedekten geri yükle (admin) |
 
 ---
 
@@ -169,6 +191,14 @@ WhatsApp ve Telegram üzerinden restoran menüsü ve sipariş yönetimi. Müşte
 | `/panel.html` | Admin paneli |
 | `/help.html` | İletişim bilgileri |
 | `/qr` | QR menü linki |
+
+---
+
+## Operasyon Notları
+
+- **Canlı panel:** Panel sipariş güncellemelerini SSE ile anlık alır; ağ kesintisinde polling'e döner.
+- **Toplu güncelleme:** Sipariş sekmesinde seçili siparişlere tek işlemle durum atanabilir.
+- **Yedekleme:** Restoran sekmesindeki “Yedekleme ve Geri Yükleme” kartı yalnızca admin kullanıcıya görünür.
 
 ---
 

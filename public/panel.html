@@ -14,8 +14,12 @@
       --border: #2a2a36;
       --accent: #10b981;
       --accent-dim: rgba(16, 185, 129, 0.12);
-      --muted: #6b7280;
+      --muted: #8b93a1;
       --text: #f8fafc;
+      --radius-card: 16px;
+      --radius-control: 10px;
+      --shadow-card: 0 4px 20px rgba(0,0,0,0.16);
+      --shadow-card-hover: 0 10px 28px rgba(0,0,0,0.22);
     }
     body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
     .layout {
@@ -72,14 +76,14 @@
     .section-title { font-size: 1.5rem; font-weight: 700; }
     .card {
       background: var(--surface);
-      border-radius: 16px;
+      border-radius: var(--radius-card);
       border: 1px solid var(--border);
-      padding: 28px;
+      padding: 24px;
       margin-bottom: 24px;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.15);
-      transition: box-shadow 0.2s, border-color 0.2s;
+      box-shadow: var(--shadow-card);
+      transition: box-shadow 0.2s, border-color 0.2s, transform 0.2s;
     }
-    .card:hover { border-color: #353545; }
+    .card:hover { border-color: #3a3a48; box-shadow: var(--shadow-card-hover); transform: translateY(-1px); }
     .media-card { background: linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%); }
     .media-preview-wrap {
       width: 120px; height: 120px; border-radius: 14px; overflow: hidden; background: var(--bg);
@@ -106,13 +110,14 @@
     .stat-label { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
     .order-card {
       background: var(--surface);
-      border-radius: 14px;
+      border-radius: var(--radius-card);
       padding: 20px;
       border: 1px solid var(--border);
       margin-bottom: 14px;
-      transition: border-color 0.2s, box-shadow 0.2s;
+      box-shadow: var(--shadow-card);
+      transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
     }
-    .order-card:hover { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(16,185,129,0.15); }
+    .order-card:hover { border-color: #3a3a48; box-shadow: var(--shadow-card-hover); transform: translateY(-1px); }
     .order-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
     .order-id { font-weight: 700; color: var(--accent); }
     .order-time { font-size: 0.8rem; color: var(--muted); }
@@ -120,6 +125,86 @@
     .order-meta { font-size: 0.8rem; color: var(--muted); margin-bottom: 10px; }
     .order-footer { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .badge { font-size: 0.7rem; padding: 4px 8px; background: var(--border); border-radius: 6px; color: #a1a1aa; }
+    .badge.overdue { background: rgba(239, 68, 68, 0.18); color: #fca5a5; border: 1px solid rgba(239,68,68,0.45); }
+    .toast-stack {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 9999;
+      pointer-events: none;
+    }
+    .toast {
+      min-width: 260px;
+      max-width: 360px;
+      background: #181821;
+      border: 1px solid #2c2c3a;
+      border-radius: 12px;
+      box-shadow: 0 14px 30px rgba(0,0,0,0.35);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      pointer-events: auto;
+    }
+    .toast.success { border-color: rgba(16,185,129,0.45); }
+    .toast.warn { border-color: rgba(245,158,11,0.45); }
+    .toast-msg { flex: 1; font-size: 0.84rem; color: var(--text); line-height: 1.35; }
+    .toast-action {
+      border: 1px solid var(--accent);
+      background: var(--accent-dim);
+      color: var(--accent);
+      font-size: 0.78rem;
+      padding: 5px 9px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .toast-action:hover { filter: brightness(1.1); }
+    .orders-tools {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 12px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 12px;
+    }
+    .orders-tools .hint { color: var(--muted); font-size: 0.8rem; }
+    .orders-tools .small-btn {
+      padding: 7px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+    .orders-tools .small-btn:hover { border-color: #3a3a48; }
+    .orders-tools select { margin-left: 0; }
+    .orders-pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .orders-pagination .page-btn {
+      padding: 7px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.82rem;
+    }
+    .orders-pagination .page-btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+    .orders-pagination .meta { color: var(--muted); font-size: 0.82rem; }
     select {
       padding: 6px 10px;
       background: var(--surface);
@@ -140,7 +225,7 @@
       padding: 12px;
       background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: var(--radius-control);
       color: var(--text);
       font-size: 0.95rem;
       font-family: inherit;
@@ -301,26 +386,28 @@
     .btn-period { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
     .btn-period:hover { border-color: var(--accent); color: var(--text); }
     .btn-period.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); font-weight: 600; }
-    .stats-hero { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 28px; }
+    .stats-hero { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 28px; align-items: stretch; }
     @media (max-width: 1200px) { .stats-hero { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 600px) { .stats-hero { grid-template-columns: 1fr; } }
     .stat-card {
       position: relative; overflow: hidden;
-      border-radius: 20px; padding: 28px 24px;
+      display: flex; flex-direction: column; justify-content: flex-start;
+      min-height: 190px;
+      border-radius: var(--radius-card); padding: 24px;
       border: 1px solid rgba(255,255,255,0.06);
       background: linear-gradient(160deg, rgba(30,30,38,0.95) 0%, rgba(20,20,28,0.98) 100%);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.35), 0 1px 0 rgba(255,255,255,0.04) inset;
+      box-shadow: var(--shadow-card), 0 1px 0 rgba(255,255,255,0.04) inset;
       transition: transform 0.25s ease, box-shadow 0.3s ease, border-color 0.25s;
     }
-    .stat-card:hover { transform: translateY(-6px); box-shadow: 0 20px 50px rgba(0,0,0,0.4); }
-    .stat-card::before { content: ''; position: absolute; top: -60px; right: -60px; width: 140px; height: 140px; border-radius: 50%; opacity: 0.15; }
-    .stat-card.green { border-left: 4px solid #10b981; }
+    .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-card-hover); }
+    .stat-card::before { content: ''; position: absolute; top: -60px; right: -60px; width: 140px; height: 140px; border-radius: 50%; opacity: 0.1; }
+    .stat-card.green { border-left: 3px solid #10b981; }
     .stat-card.green::before { background: radial-gradient(circle, #10b981 0%, transparent 70%); }
-    .stat-card.blue { border-left: 4px solid #3b82f6; }
+    .stat-card.blue { border-left: 3px solid #3b82f6; }
     .stat-card.blue::before { background: radial-gradient(circle, #3b82f6 0%, transparent 70%); }
-    .stat-card.amber { border-left: 4px solid #f59e0b; }
+    .stat-card.amber { border-left: 3px solid #f59e0b; }
     .stat-card.amber::before { background: radial-gradient(circle, #f59e0b 0%, transparent 70%); }
-    .stat-card.rose { border-left: 4px solid #ef4444; }
+    .stat-card.rose { border-left: 3px solid #ef4444; }
     .stat-card.rose::before { background: radial-gradient(circle, #ef4444 0%, transparent 70%); }
     .stat-card-icon {
       width: 56px; height: 56px; border-radius: 16px;
@@ -331,20 +418,20 @@
     .stat-card.blue .stat-card-icon { background: linear-gradient(145deg, #3b82f6 0%, #2563eb 100%); }
     .stat-card.amber .stat-card-icon { background: linear-gradient(145deg, #f59e0b 0%, #d97706 100%); }
     .stat-card.rose .stat-card-icon { background: linear-gradient(145deg, #ef4444 0%, #dc2626 100%); }
-    .stat-card-value { font-size: 2.25rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1.15; margin-bottom: 6px; }
-    .stat-card.green .stat-card-value { color: #34d399; text-shadow: 0 0 40px rgba(16,185,129,0.3); }
-    .stat-card.blue .stat-card-value { color: #60a5fa; text-shadow: 0 0 40px rgba(59,130,246,0.3); }
-    .stat-card.amber .stat-card-value { color: #fbbf24; text-shadow: 0 0 40px rgba(245,158,11,0.3); }
-    .stat-card.rose .stat-card-value { color: #f87171; text-shadow: 0 0 40px rgba(239,68,68,0.3); }
+    .stat-card-value { font-size: 2.1rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 6px; }
+    .stat-card.green .stat-card-value { color: #34d399; }
+    .stat-card.blue .stat-card-value { color: #60a5fa; }
+    .stat-card.amber .stat-card-value { color: #fbbf24; }
+    .stat-card.rose .stat-card-value { color: #f87171; }
     .stat-card-label { font-size: 0.875rem; color: rgba(156,163,175,0.9); font-weight: 500; letter-spacing: 0.02em; }
     .stats-hero-secondary { grid-template-columns: repeat(3, 1fr); }
     @media (max-width: 900px) { .stats-hero-secondary { grid-template-columns: 1fr; } }
-    .stat-card-sm { padding: 20px; }
+    .stat-card-sm { min-height: 150px; padding: 20px; }
     .stat-card-sm .stat-card-icon { display: none; }
     .stat-card-sm .stat-card-value { font-size: 1.75rem; }
     .stat-card-sub { font-size: 0.9rem; color: var(--muted); margin-top: 4px; }
-    .stat-card-purple { border-left: 4px solid #8b5cf6; }
-    .stat-card-purple .stat-card-value { color: #a78bfa; text-shadow: 0 0 40px rgba(139,92,246,0.3); }
+    .stat-card-purple { border-left: 3px solid #8b5cf6; }
+    .stat-card-purple .stat-card-value { color: #a78bfa; }
     .stats-filter-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .stats-date-input { padding: 8px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.9rem; font-family: inherit; }
     .stats-period-btns { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -360,7 +447,8 @@
     .bar-val { min-width: 70px; text-align: right; font-weight: 600; color: var(--accent); }
     .stats-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px; }
     @media (max-width: 1000px) { .stats-charts { grid-template-columns: 1fr; } }
-    .chart-card { background: var(--surface); border-radius: 18px; border: 1px solid var(--border); padding: 24px; box-shadow: 0 4px 24px rgba(0,0,0,0.12); }
+    .chart-card { background: var(--surface); border-radius: var(--radius-card); border: 1px solid var(--border); padding: 24px; box-shadow: var(--shadow-card); transition: box-shadow 0.2s, border-color 0.2s, transform 0.2s; }
+    .chart-card:hover { border-color: #3a3a48; box-shadow: var(--shadow-card-hover); transform: translateY(-1px); }
     .chart-card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
     .chart-wrap { position: relative; height: 260px; }
     .products-chart-wrap { height: 320px; }
@@ -424,7 +512,33 @@
           <div class="stat"><div class="stat-value" id="today-total">0₺</div><div class="stat-label">Bugün Toplam</div></div>
           <div class="stat"><div class="stat-value" id="active-count">0</div><div class="stat-label">Aktif</div></div>
         </div>
+        <div class="orders-tools no-print">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="orders-select-all-visible" onchange="toggleSelectAllVisible(this.checked)">
+            <span class="hint">Bu sayfadakileri seç</span>
+          </label>
+          <span class="hint">Seçili: <b id="orders-selected-count">0</b></span>
+          <select id="bulk-status" style="padding:7px 10px;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--text)">
+            <option value="">Toplu durum seç</option>
+            <option value="Alındı">Alındı</option>
+            <option value="Hazırlanıyor">Hazırlanıyor</option>
+            <option value="Hazır">Hazır</option>
+            <option value="Yola Çıktı">Yola Çıktı</option>
+            <option value="Teslim Edildi">Teslim Edildi</option>
+            <option value="İptal">İptal</option>
+          </select>
+          <button class="small-btn" type="button" onclick="applyBulkStatus()">Toplu uygula</button>
+          <span style="flex:1"></span>
+          <label class="hint" for="orders-page-size">Sayfa boyutu:</label>
+          <select id="orders-page-size" onchange="changeOrdersPageSize(this.value)" style="padding:7px 10px;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--text)">
+            <option value="15">15</option>
+            <option value="25" selected>25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </div>
         <div id="orders-list"></div>
+        <div id="orders-pagination" class="orders-pagination no-print"></div>
         <div class="last-update" id="orders-update">Son güncelleme: -</div>
       </section>
 
@@ -490,6 +604,17 @@
             <div id="coupons-list"></div>
             <button class="btn" style="margin-top:12px;background:var(--surface-2);color:var(--text)" onclick="addCoupon()">+ Kupon Ekle</button>
           </div>
+        </div>
+        <div class="card no-print" id="backup-card">
+          <h3 style="margin-bottom:12px">🗄️ Yedekleme ve Geri Yükleme</h3>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+            <button class="btn btn-primary" type="button" onclick="createBackup()">Yedek Oluştur</button>
+            <button class="btn" type="button" style="background:var(--surface-2);color:var(--text)" onclick="loadBackups()">Listeyi Yenile</button>
+          </div>
+          <div id="backup-list" style="display:flex;flex-direction:column;gap:8px"></div>
+          <p style="font-size:0.8rem;color:var(--muted);margin-top:10px">
+            Not: Geri yükleme işlemi menü, restoran ayarları, siparişler ve kullanıcı tercihlerini seçilen yedekten geri getirir.
+          </p>
         </div>
       </section>
 
@@ -587,6 +712,19 @@
 
   <script>
     let orders = [], menuData = {}, restaurantData = {}, favorites = [];
+    let ordersPollTimer = null;
+    let orderSse = null;
+    let orderSseReconnectTimer = null;
+    let isOrdersSseConnected = false;
+    let pendingUndo = null;
+    let panelRealtimeStarted = false;
+    let selectedOrderIds = new Set();
+    let currentOrdersPage = 1;
+    let ordersPageSize = 25;
+    let currentFilteredOrders = [];
+    let ordersLoadInFlight = false;
+    let ordersLoadQueued = false;
+    let lastOrdersStatusFilter = '';
 
     async function doUpload(file) {
       const fd = new FormData(); fd.append('file', file);
@@ -622,6 +760,7 @@
 
     document.querySelectorAll('.nav-item').forEach(n => {
       n.addEventListener('click', () => {
+        if (typeof canAccessTab === 'function' && !canAccessTab(n.dataset.tab)) return;
         document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
         document.querySelectorAll('.section').forEach(x => x.classList.remove('active'));
         n.classList.add('active');
@@ -629,6 +768,7 @@
         if (n.dataset.tab === 'stats') { setTimeout(() => loadStats(), 50); }
         if (n.dataset.tab === 'menu') loadMenuEditor();
         if (n.dataset.tab === 'restaurant') loadRestaurantForm();
+        if (n.dataset.tab === 'restaurant' && typeof loadBackups === 'function' && typeof getRole === 'function' && getRole() === 'admin') loadBackups();
         if (n.dataset.tab === 'campaigns') loadCampaignsForm();
       });
     });
@@ -704,6 +844,271 @@
       });
     }
 
+    function getToastStack() {
+      let stack = document.getElementById('toast-stack');
+      if (stack) return stack;
+      stack = document.createElement('div');
+      stack.id = 'toast-stack';
+      stack.className = 'toast-stack';
+      document.body.appendChild(stack);
+      return stack;
+    }
+    function showToast(message, opts = {}) {
+      const stack = getToastStack();
+      const toast = document.createElement('div');
+      toast.className = 'toast' + (opts.type ? (' ' + opts.type) : '');
+      toast.innerHTML = `<div class="toast-msg">${String(message || '').replace(/</g, '&lt;')}</div>`;
+      if (opts.actionText && typeof opts.onAction === 'function') {
+        const btn = document.createElement('button');
+        btn.className = 'toast-action';
+        btn.type = 'button';
+        btn.textContent = opts.actionText;
+        btn.onclick = () => opts.onAction();
+        toast.appendChild(btn);
+      }
+      stack.appendChild(toast);
+      setTimeout(() => { if (toast.parentElement) toast.remove(); }, opts.duration || 5000);
+    }
+    function clearPendingUndo() {
+      if (pendingUndo && pendingUndo.timer) clearTimeout(pendingUndo.timer);
+      pendingUndo = null;
+    }
+    function showStatusUndo(orderId, previousStatus, newStatus) {
+      clearPendingUndo();
+      const timer = setTimeout(() => { pendingUndo = null; }, 5000);
+      pendingUndo = { orderId, previousStatus, timer };
+      showToast(`Sipariş #${orderId} durumu "${newStatus}" olarak güncellendi.`, {
+        type: 'warn',
+        actionText: 'Geri Al',
+        duration: 5500,
+        onAction: async () => {
+          if (!pendingUndo || pendingUndo.orderId !== orderId) return;
+          clearPendingUndo();
+          try {
+            await updateStatus(orderId, previousStatus, null, { skipUndo: true, skipPrompt: true });
+            showToast(`Sipariş #${orderId} durumu geri alındı.`, { type: 'success', duration: 3200 });
+          } catch (_) {
+            showToast('Geri alma işlemi başarısız.', { type: 'warn', duration: 3200 });
+          }
+        }
+      });
+    }
+    function isFinalStatus(status) {
+      return status === 'Teslim Edildi' || status === 'İptal';
+    }
+    function getEstimatedMinutesForOrder(order) {
+      const orderMins = Number(order && order.estimatedMinutes);
+      if (!Number.isNaN(orderMins) && orderMins > 0) return orderMins;
+      const restMins = Number(restaurantData && restaurantData.estimatedMinutes);
+      if (!Number.isNaN(restMins) && restMins > 0) return restMins;
+      return 25;
+    }
+    function getOrderDelayMinutes(order) {
+      if (!order || isFinalStatus(order.status)) return 0;
+      const created = new Date(order.createdAt).getTime();
+      if (!created) return 0;
+      const limitMs = getEstimatedMinutesForOrder(order) * 60 * 1000;
+      const lateMs = Date.now() - created - limitMs;
+      return lateMs > 0 ? Math.floor(lateMs / 60000) + 1 : 0;
+    }
+    function startOrdersPolling(intervalMs = 8000) {
+      if (ordersPollTimer) return;
+      ordersPollTimer = setInterval(() => loadOrders(), intervalMs);
+    }
+    function stopOrdersPolling() {
+      if (!ordersPollTimer) return;
+      clearInterval(ordersPollTimer);
+      ordersPollTimer = null;
+    }
+    function disconnectOrdersStream() {
+      isOrdersSseConnected = false;
+      if (orderSseReconnectTimer) {
+        clearTimeout(orderSseReconnectTimer);
+        orderSseReconnectTimer = null;
+      }
+      if (orderSse) {
+        try { orderSse.close(); } catch (_) {}
+        orderSse = null;
+      }
+    }
+    function connectOrdersStream() {
+      disconnectOrdersStream();
+      const token = typeof getToken === 'function' ? (getToken() || '') : '';
+      const qs = token ? ('?token=' + encodeURIComponent(token)) : '';
+      orderSse = new EventSource('/api/orders/stream' + qs);
+      orderSse.onopen = () => {
+        isOrdersSseConnected = true;
+        stopOrdersPolling();
+      };
+      orderSse.onerror = () => {
+        if (isOrdersSseConnected) {
+          isOrdersSseConnected = false;
+          startOrdersPolling();
+        }
+        disconnectOrdersStream();
+        orderSseReconnectTimer = setTimeout(connectOrdersStream, 2500);
+      };
+      orderSse.addEventListener('new_order', () => loadOrders());
+      orderSse.addEventListener('order_updated', () => loadOrders());
+      orderSse.addEventListener('snapshot', () => loadOrders());
+    }
+
+    function escapeHtml(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+    function updateSelectedCount() {
+      const el = document.getElementById('orders-selected-count');
+      if (el) el.textContent = String(selectedOrderIds.size);
+    }
+    function getCurrentPageOrders() {
+      const start = (currentOrdersPage - 1) * ordersPageSize;
+      return currentFilteredOrders.slice(start, start + ordersPageSize);
+    }
+    function syncSelectAllVisibleCheckbox() {
+      const cb = document.getElementById('orders-select-all-visible');
+      if (!cb) return;
+      const pageOrders = getCurrentPageOrders();
+      if (!pageOrders.length) {
+        cb.checked = false;
+        return;
+      }
+      cb.checked = pageOrders.every(o => selectedOrderIds.has(o.id));
+    }
+    function renderOrdersPagination(totalCount) {
+      const paginationEl = document.getElementById('orders-pagination');
+      if (!paginationEl) return;
+      const totalPages = Math.max(1, Math.ceil(totalCount / ordersPageSize));
+      if (currentOrdersPage > totalPages) currentOrdersPage = totalPages;
+      const start = totalCount ? ((currentOrdersPage - 1) * ordersPageSize + 1) : 0;
+      const end = Math.min(currentOrdersPage * ordersPageSize, totalCount);
+      paginationEl.innerHTML = `
+        <div class="meta">${start}-${end} / ${totalCount} sipariş</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="page-btn" type="button" onclick="goOrdersPage(1)" ${currentOrdersPage <= 1 ? 'disabled' : ''}>İlk</button>
+          <button class="page-btn" type="button" onclick="goOrdersPage(${currentOrdersPage - 1})" ${currentOrdersPage <= 1 ? 'disabled' : ''}>Önceki</button>
+          <span class="meta">Sayfa ${currentOrdersPage}/${totalPages}</span>
+          <button class="page-btn" type="button" onclick="goOrdersPage(${currentOrdersPage + 1})" ${currentOrdersPage >= totalPages ? 'disabled' : ''}>Sonraki</button>
+          <button class="page-btn" type="button" onclick="goOrdersPage(${totalPages})" ${currentOrdersPage >= totalPages ? 'disabled' : ''}>Son</button>
+        </div>
+      `;
+    }
+    function renderOrdersList(filtered, statuses) {
+      currentFilteredOrders = filtered;
+      const totalPages = Math.max(1, Math.ceil(filtered.length / ordersPageSize));
+      if (currentOrdersPage > totalPages) currentOrdersPage = totalPages;
+      const start = (currentOrdersPage - 1) * ordersPageSize;
+      const pageOrders = filtered.slice(start, start + ordersPageSize);
+      const el = document.getElementById('orders-list');
+      if (!filtered.length) {
+        el.innerHTML = '<div class="empty">Sipariş yok</div>';
+        renderOrdersPagination(0);
+        selectedOrderIds.clear();
+        updateSelectedCount();
+        syncSelectAllVisibleCheckbox();
+        return;
+      }
+      el.innerHTML = pageOrders.map(o => `
+        <div class="order-card">
+          <div class="order-row">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex-shrink:0">
+              <input type="checkbox" class="order-select-cb" data-order-id="${o.id}" ${selectedOrderIds.has(o.id) ? 'checked' : ''} onchange="toggleSingleOrderSelection(${o.id}, this.checked)">
+            </label>
+            <span class="order-id">#${o.id}</span>
+            <span class="order-time">${formatDate(o.createdAt)}</span>
+          </div>
+          <div class="order-items">${o.items}</div>
+          <div class="order-meta">📍 ${o.address}${o.notes ? ' · 📝 ' + o.notes : ''}</div>
+          <div class="order-footer">
+            <span class="stat-value" style="font-size:1rem">${o.total}₺</span>
+            <span class="badge">${o.orderType === 'restoran' ? '🏠' : '📦'}</span>
+            <span class="badge">${(o.paymentMethod || 'kapida_nakit') === 'kapida_pos' ? '💳' : '💵'}</span>
+            ${(() => {
+              const delay = getOrderDelayMinutes(o);
+              return delay > 0 ? `<span class="badge overdue">⏰ ${delay} dk gecikme</span>` : '';
+            })()}
+            <select onchange="var w=this.closest('.order-footer').querySelector('.order-est-wrap'); if(w) w.style.display=(this.value==='Teslim Edildi'||this.value==='İptal')?'none':'flex'; updateStatus(${o.id}, this.value, '${escapeHtml(o.status)}');">
+              ${statuses.map(s => `<option ${o.status === s ? 'selected' : ''}>${s}</option>`).join('')}
+            </select>
+            <span class="order-est-wrap" style="display:${(o.status === 'Teslim Edildi' || o.status === 'İptal') ? 'none' : 'flex'};align-items:center;gap:6px">
+              <span style="font-size:0.8rem;color:var(--muted)">Tahmini süre (dk)</span>
+              <input type="number" class="order-est-min" data-order-id="${o.id}" value="${o.estimatedMinutes || ''}" min="1" placeholder="25" style="width:52px;padding:4px 6px;border-radius:6px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:0.9rem">
+            </span>
+          </div>
+        </div>
+      `).join('');
+      renderOrdersPagination(filtered.length);
+      updateSelectedCount();
+      syncSelectAllVisibleCheckbox();
+    }
+    function goOrdersPage(page) {
+      const totalPages = Math.max(1, Math.ceil(currentFilteredOrders.length / ordersPageSize));
+      const next = Math.min(Math.max(1, Number(page) || 1), totalPages);
+      if (next === currentOrdersPage) return;
+      currentOrdersPage = next;
+      const statuses = ['Alındı', 'Hazırlanıyor', 'Hazır', 'Yola Çıktı', 'Teslim Edildi', 'İptal'];
+      renderOrdersList(currentFilteredOrders, statuses);
+    }
+    function changeOrdersPageSize(size) {
+      const n = Number(size);
+      ordersPageSize = (!Number.isNaN(n) && n > 0) ? n : 25;
+      currentOrdersPage = 1;
+      const statuses = ['Alındı', 'Hazırlanıyor', 'Hazır', 'Yola Çıktı', 'Teslim Edildi', 'İptal'];
+      renderOrdersList(currentFilteredOrders, statuses);
+    }
+    function toggleSingleOrderSelection(id, checked) {
+      if (checked) selectedOrderIds.add(id);
+      else selectedOrderIds.delete(id);
+      updateSelectedCount();
+      syncSelectAllVisibleCheckbox();
+    }
+    function toggleSelectAllVisible(checked) {
+      const pageOrders = getCurrentPageOrders();
+      pageOrders.forEach(o => {
+        if (checked) selectedOrderIds.add(o.id);
+        else selectedOrderIds.delete(o.id);
+      });
+      document.querySelectorAll('.order-select-cb').forEach(cb => { cb.checked = checked; });
+      updateSelectedCount();
+      syncSelectAllVisibleCheckbox();
+    }
+    async function applyBulkStatus() {
+      const status = (document.getElementById('bulk-status')?.value || '').trim();
+      const ids = [...selectedOrderIds];
+      if (!ids.length) {
+        showToast('Toplu işlem için en az 1 sipariş seçin.', { type: 'warn', duration: 2800 });
+        return;
+      }
+      if (!status) {
+        showToast('Lütfen toplu durum seçin.', { type: 'warn', duration: 2800 });
+        return;
+      }
+      const fn = typeof authFetch === 'function' ? authFetch : fetch;
+      let cancelReason = '';
+      if (status === 'İptal') cancelReason = (prompt('Toplu iptal sebebi (isteğe bağlı):') || '').trim();
+      try {
+        for (const id of ids) {
+          await fn(`/api/orders/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status, cancelReason })
+          });
+        }
+        showToast(`${ids.length} sipariş için "${status}" uygulandı.`, { type: 'success', duration: 3200 });
+        selectedOrderIds.clear();
+        updateSelectedCount();
+        const sel = document.getElementById('orders-select-all-visible');
+        if (sel) sel.checked = false;
+        loadOrders();
+      } catch (_) {
+        showToast('Toplu güncelleme sırasında hata oluştu.', { type: 'warn', duration: 3200 });
+      }
+    }
+
     async function loadOrders() {
       try {
         const r = await fetch('/api/orders');
@@ -746,7 +1151,11 @@
               <span class="stat-value" style="font-size:1rem">${o.total}₺</span>
               <span class="badge">${o.orderType === 'restoran' ? '🏠' : '📦'}</span>
               <span class="badge">${(o.paymentMethod || 'kapida_nakit') === 'kapida_pos' ? '💳' : '💵'}</span>
-              <select onchange="var w=this.closest('.order-footer').querySelector('.order-est-wrap'); if(w) w.style.display=(this.value==='Teslim Edildi'||this.value==='İptal')?'none':'flex'; updateStatus(${o.id}, this.value);">
+              ${(() => {
+                const delay = getOrderDelayMinutes(o);
+                return delay > 0 ? `<span class="badge overdue">⏰ ${delay} dk gecikme</span>` : '';
+              })()}
+              <select onchange="var w=this.closest('.order-footer').querySelector('.order-est-wrap'); if(w) w.style.display=(this.value==='Teslim Edildi'||this.value==='İptal')?'none':'flex'; updateStatus(${o.id}, this.value, '${String(o.status).replace(/'/g, '&#39;')}');">
                 ${statuses.map(s => `<option ${o.status === s ? 'selected' : ''}>${s}</option>`).join('')}
               </select>
               <span class="order-est-wrap" style="display:${(o.status === 'Teslim Edildi' || o.status === 'İptal') ? 'none' : 'flex'};align-items:center;gap:6px">
@@ -1250,34 +1659,82 @@
     }
 
     function startPanel() {
+      if (panelRealtimeStarted) return;
+      panelRealtimeStarted = true;
       requestNotificationPermission();
       loadOrders();
-      setInterval(loadOrders, 4000);
+      startOrdersPolling();
+      connectOrdersStream();
     }
   </script>
   <script>
     const TOKEN_KEY = 'admin_token';
+    const ROLE_KEY = 'admin_role';
 
     function getToken() { return sessionStorage.getItem(TOKEN_KEY); }
     function setToken(t) { if (t && t !== 'no-auth') sessionStorage.setItem(TOKEN_KEY, t); else sessionStorage.removeItem(TOKEN_KEY); }
     function clearToken() { sessionStorage.removeItem(TOKEN_KEY); }
+    function getRole() { return sessionStorage.getItem(ROLE_KEY) || 'admin'; }
+    function setRole(role) { sessionStorage.setItem(ROLE_KEY, role || 'admin'); }
+    function clearRole() { sessionStorage.removeItem(ROLE_KEY); }
+    function canAccessTab(tab) {
+      const role = getRole();
+      if (role === 'admin') return true;
+      return ['orders', 'stats'].includes(tab);
+    }
+    function applyRolePermissions() {
+      const role = getRole();
+      document.querySelectorAll('.nav-item[data-tab]').forEach(nav => {
+        const tab = nav.dataset.tab;
+        nav.style.display = canAccessTab(tab) ? '' : 'none';
+      });
+      const saveMenuBtn = document.querySelector('#section-menu .section-header .btn.btn-primary');
+      if (saveMenuBtn) saveMenuBtn.style.display = role === 'admin' ? '' : 'none';
+      const saveCampaignBtn = document.querySelector('#section-campaigns .section-header .btn.btn-primary');
+      if (saveCampaignBtn) saveCampaignBtn.style.display = role === 'admin' ? '' : 'none';
+      const saveRestaurantBtn = document.querySelector('#section-restaurant .section-header .btn.btn-primary');
+      if (saveRestaurantBtn) saveRestaurantBtn.style.display = role === 'admin' ? '' : 'none';
+      const backupCard = document.getElementById('backup-card');
+      if (backupCard) backupCard.style.display = role === 'admin' ? '' : 'none';
+      const activeNav = document.querySelector('.nav-item.active[data-tab]');
+      if (activeNav && !canAccessTab(activeNav.dataset.tab)) {
+        document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('.section').forEach(x => x.classList.remove('active'));
+        const ordersNav = document.querySelector('.nav-item[data-tab="orders"]');
+        if (ordersNav) ordersNav.classList.add('active');
+        const sec = document.getElementById('section-orders');
+        if (sec) sec.classList.add('active');
+      }
+    }
 
     function authFetch(url, opts = {}) {
       const token = getToken();
       opts.headers = { ...opts.headers, 'X-Admin-Token': token || '' };
       return fetch(url, opts).then(r => {
-        if (r.status === 401) { clearToken(); showLogin(); return Promise.reject(new Error('Yetkisiz')); }
+        if (r.status === 401) {
+          clearToken();
+          clearRole();
+          showLogin();
+          return Promise.reject(new Error('Yetkisiz'));
+        }
         return r;
       });
     }
 
     function showLogin() {
+      panelRealtimeStarted = false;
+      disconnectOrdersStream();
+      stopOrdersPolling();
+      selectedOrderIds.clear();
+      currentOrdersPage = 1;
+      clearRole();
       document.getElementById('login-screen').style.display = 'flex';
       document.getElementById('panel-layout').style.display = 'none';
     }
     function showPanel() {
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('panel-layout').style.display = 'flex';
+      applyRolePermissions();
     }
 
     async function doLogin(e) {
@@ -1291,76 +1748,99 @@
           body: JSON.stringify({ password: pw })
         });
         const d = await r.json();
-        if (d.ok && d.token) { setToken(d.token); showPanel(); startPanel(); }
+        if (d.ok && d.token) {
+          setToken(d.token);
+          setRole(d.role || 'admin');
+          showPanel();
+          if (getRole() === 'admin') loadBackups();
+          startPanel();
+        }
         else document.getElementById('login-error').textContent = d.error || 'Giriş başarısız';
       } catch (err) { document.getElementById('login-error').textContent = 'Bağlantı hatası'; }
     }
 
     async function doLogout() {
       try { await authFetch('/api/auth/logout', { method: 'POST' }); } catch (_) {}
-      clearToken(); showLogin();
+      disconnectOrdersStream();
+      stopOrdersPolling();
+      clearToken();
+      clearRole();
+      showLogin();
     }
 
     (function initAuth() {
-      authFetch('/api/orders').then(r => {
-        if (r.ok) { showPanel(); startPanel(); }
-        else { clearToken(); showLogin(); }
-      }).catch(() => showLogin());
+      authFetch('/api/auth/me')
+        .then(r => r.json())
+        .then(d => {
+          if (d.ok) {
+            setRole(d.role || 'admin');
+            showPanel();
+            if (getRole() === 'admin') loadBackups();
+            startPanel();
+          } else {
+            clearToken();
+            clearRole();
+            showLogin();
+          }
+        })
+        .catch(() => showLogin());
     })();
 
     const _loadOrders = loadOrders;
     loadOrders = function() {
-      authFetch('/api/orders').then(r => r.json()).then(d => {
-        const prevIds = new Set((orders || []).map(o => o.id));
-        const prevCount = orders.length;
-        orders = d.orders || [];
-        const newOrders = orders.filter(o => !prevIds.has(o.id));
-        if (newOrders.length > 0 && prevCount > 0) {
-          playNewOrderSound();
-          showNewOrderNotifications(newOrders);
-        }
-        const statusFilter = document.getElementById('filter-status')?.value || '';
-        let filtered = statusFilter ? orders.filter(o => o.status === statusFilter) : orders;
-        const today = orders.filter(o => isToday(o.createdAt));
-        document.getElementById('today-count').textContent = today.length;
-        document.getElementById('today-total').textContent = today.reduce((s, o) => s + o.total, 0) + '₺';
-        document.getElementById('active-count').textContent = orders.filter(o => o.status !== 'Teslim Edildi' && o.status !== 'İptal').length;
-        document.getElementById('orders-update').textContent = 'Son güncelleme: ' + new Date().toLocaleTimeString('tr-TR');
-        const statuses = ['Alındı', 'Hazırlanıyor', 'Hazır', 'Yola Çıktı', 'Teslim Edildi', 'İptal'];
-        const el = document.getElementById('orders-list');
-        if (!filtered.length) { el.innerHTML = '<div class="empty">Sipariş yok</div>'; return; }
-        el.innerHTML = filtered.map(o => `
-          <div class="order-card">
-            <div class="order-row">
-              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex-shrink:0">
-                <input type="checkbox" class="order-select-cb" data-order-id="${o.id}">
-              </label>
-              <span class="order-id">#${o.id}</span>
-              <span class="order-time">${formatDate(o.createdAt)}</span>
-            </div>
-            <div class="order-items">${o.items}</div>
-            <div class="order-meta">📍 ${o.address}${o.notes ? ' · 📝 ' + o.notes : ''}</div>
-            <div class="order-footer">
-              <span class="stat-value" style="font-size:1rem">${o.total}₺</span>
-              <span class="badge">${o.orderType === 'restoran' ? '🏠' : '📦'}</span>
-              <span class="badge">${(o.paymentMethod || 'kapida_nakit') === 'kapida_pos' ? '💳' : '💵'}</span>
-              <select onchange="var w=this.closest('.order-footer').querySelector('.order-est-wrap'); if(w) w.style.display=(this.value==='Teslim Edildi'||this.value==='İptal')?'none':'flex'; updateStatus(${o.id}, this.value);">
-                ${statuses.map(s => `<option ${o.status === s ? 'selected' : ''}>${s}</option>`).join('')}
-              </select>
-              <span class="order-est-wrap" style="display:${(o.status === 'Teslim Edildi' || o.status === 'İptal') ? 'none' : 'flex'};align-items:center;gap:6px">
-                <span style="font-size:0.8rem;color:var(--muted)">Tahmini süre (dk)</span>
-                <input type="number" class="order-est-min" data-order-id="${o.id}" value="${o.estimatedMinutes || ''}" min="1" placeholder="25" style="width:52px;padding:4px 6px;border-radius:6px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:0.9rem">
-              </span>
-            </div>
-          </div>
-        `).join('');
-      }).catch(() => { document.getElementById('orders-list').innerHTML = '<div class="empty">Bağlantı hatası</div>'; });
+      if (ordersLoadInFlight) {
+        ordersLoadQueued = true;
+        return Promise.resolve();
+      }
+      ordersLoadInFlight = true;
+      return authFetch('/api/orders')
+        .then(r => r.json())
+        .then(d => {
+          const prevIds = new Set((orders || []).map(o => o.id));
+          const prevCount = orders.length;
+          orders = d.orders || [];
+          const liveIds = new Set(orders.map(o => o.id));
+          selectedOrderIds.forEach(id => { if (!liveIds.has(id)) selectedOrderIds.delete(id); });
+          const newOrders = orders.filter(o => !prevIds.has(o.id));
+          if (newOrders.length > 0 && prevCount > 0) {
+            playNewOrderSound();
+            showNewOrderNotifications(newOrders);
+          }
+          const statusFilter = document.getElementById('filter-status')?.value || '';
+          if (statusFilter !== lastOrdersStatusFilter) {
+            currentOrdersPage = 1;
+            lastOrdersStatusFilter = statusFilter;
+            selectedOrderIds.clear();
+          }
+          const filtered = statusFilter ? orders.filter(o => o.status === statusFilter) : orders;
+          const today = orders.filter(o => isToday(o.createdAt));
+          document.getElementById('today-count').textContent = today.length;
+          document.getElementById('today-total').textContent = today.reduce((s, o) => s + o.total, 0) + '₺';
+          document.getElementById('active-count').textContent = orders.filter(o => o.status !== 'Teslim Edildi' && o.status !== 'İptal').length;
+          document.getElementById('orders-update').textContent = 'Son güncelleme: ' + new Date().toLocaleTimeString('tr-TR');
+          const statuses = ['Alındı', 'Hazırlanıyor', 'Hazır', 'Yola Çıktı', 'Teslim Edildi', 'İptal'];
+          renderOrdersList(filtered, statuses);
+        })
+        .catch(() => {
+          document.getElementById('orders-list').innerHTML = '<div class="empty">Bağlantı hatası</div>';
+          const paginationEl = document.getElementById('orders-pagination');
+          if (paginationEl) paginationEl.innerHTML = '';
+        })
+        .finally(() => {
+          ordersLoadInFlight = false;
+          if (ordersLoadQueued) {
+            ordersLoadQueued = false;
+            loadOrders();
+          }
+        });
     };
 
     const _updateStatus = updateStatus;
-    updateStatus = async function(id, status) {
+    updateStatus = async function(id, status, previousStatus, opts = {}) {
+      const order = (orders || []).find(x => x.id === id);
+      const prevStatus = previousStatus || (order ? order.status : '');
       let cancelReason = '';
-      if (status === 'İptal') cancelReason = (prompt('İptal sebebi (isteğe bağlı):') || '').trim();
+      if (status === 'İptal' && !opts.skipPrompt) cancelReason = (prompt('İptal sebebi (isteğe bağlı):') || '').trim();
       const payload = { status, cancelReason };
       if (status !== 'Teslim Edildi' && status !== 'İptal') {
         const card = document.querySelector('.order-select-cb[data-order-id="' + id + '"]')?.closest('.order-card');
@@ -1372,6 +1852,7 @@
       }
       await authFetch(`/api/orders/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       loadOrders();
+      if (!opts.skipUndo && prevStatus && prevStatus !== status) showStatusUndo(id, prevStatus, status);
     };
 
     const _loadMenuEditor = loadMenuEditor;
@@ -1385,6 +1866,10 @@
 
     const _saveMenu = saveMenu;
     saveMenu = async function() {
+      if (getRole() !== 'admin') {
+        alert('Bu işlem için admin yetkisi gerekli.');
+        return;
+      }
       try {
         const r = await authFetch('/api/menu', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(menuData) });
         const d = await r.json();
@@ -1427,6 +1912,10 @@
 
     const _saveRestaurant = saveRestaurant;
     saveRestaurant = async function() {
+      if (getRole() !== 'admin') {
+        alert('Bu işlem için admin yetkisi gerekli.');
+        return;
+      }
       restaurantData.name = document.getElementById('r-name').value;
       const rLogo = document.getElementById('r-logo');
       const rBanner = document.getElementById('r-banner');
@@ -1445,6 +1934,68 @@
         alert(d.ok ? 'Ayarlar kaydedildi.' : (d.error || 'Hata'));
       } catch (e) { alert('Kayıt başarısız'); }
     };
+
+    async function loadBackups() {
+      if (getRole() !== 'admin') return;
+      const el = document.getElementById('backup-list');
+      if (!el) return;
+      el.innerHTML = '<div class="empty" style="padding:16px">Yedekler yükleniyor...</div>';
+      try {
+        const r = await authFetch('/api/admin/backups');
+        const d = await r.json();
+        if (!d.ok) throw new Error(d.error || 'Yedek listesi alınamadı');
+        const backups = d.backups || [];
+        if (!backups.length) {
+          el.innerHTML = '<div class="empty" style="padding:16px">Henüz yedek yok.</div>';
+          return;
+        }
+        el.innerHTML = backups.map(b => `
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)">
+            <div style="flex:1;min-width:220px">
+              <div style="font-size:0.86rem">${b.name}</div>
+              <div style="font-size:0.75rem;color:var(--muted)">${new Date(b.mtime).toLocaleString('tr-TR')} · ${(b.size / 1024).toFixed(1)} KB</div>
+            </div>
+            <button class="btn" type="button" style="background:#374151;color:#fff;padding:8px 12px" onclick="restoreBackup('${String(b.name).replace(/'/g, '&#39;')}')">Geri Yükle</button>
+          </div>
+        `).join('');
+      } catch (e) {
+        el.innerHTML = '<div class="empty" style="padding:16px">Yedek listesi alınamadı.</div>';
+      }
+    }
+
+    async function createBackup() {
+      if (getRole() !== 'admin') return;
+      try {
+        const r = await authFetch('/api/admin/backup', { method: 'POST' });
+        const d = await r.json();
+        if (!d.ok) throw new Error(d.error || 'Yedek oluşturulamadı');
+        showToast('Yedek oluşturuldu: ' + d.file, { type: 'success', duration: 3200 });
+        loadBackups();
+      } catch (e) {
+        showToast(e.message || 'Yedek oluşturulamadı.', { type: 'warn', duration: 3200 });
+      }
+    }
+
+    async function restoreBackup(file) {
+      if (getRole() !== 'admin') return;
+      if (!confirm(`"${file}" yedeği geri yüklensin mi? Mevcut veriler değişecek.`)) return;
+      try {
+        const r = await authFetch('/api/admin/restore', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ file })
+        });
+        const d = await r.json();
+        if (!d.ok) throw new Error(d.error || 'Geri yükleme başarısız');
+        showToast('Yedek geri yüklendi.', { type: 'success', duration: 3200 });
+        await loadOrders();
+        await loadRestaurantForm();
+        await loadMenuEditor();
+        loadBackups();
+      } catch (e) {
+        showToast(e.message || 'Geri yükleme başarısız.', { type: 'warn', duration: 3200 });
+      }
+    }
 
     loadStats = (function(orig) {
       return async function() {
