@@ -25,6 +25,7 @@
     .layout {
       display: flex;
       min-height: 100vh;
+      position: relative;
     }
     .sidebar {
       width: 240px;
@@ -33,7 +34,41 @@
       padding: 24px 0;
       flex-shrink: 0;
       box-shadow: 4px 0 24px rgba(0,0,0,0.3);
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
     }
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 999;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+    .sidebar-overlay.show {
+      opacity: 1;
+    }
+    .mobile-menu-btn {
+      display: none;
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 100;
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 1.25rem;
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .mobile-menu-btn:hover { background: var(--surface-2); border-color: #3a3a48; }
+    .mobile-menu-btn:active { transform: scale(0.98); }
     .sidebar-logo {
       padding: 0 24px 24px;
       font-size: 1.3rem;
@@ -62,6 +97,54 @@
       padding: 32px;
       overflow-y: auto;
       background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(16,185,129,0.06) 0%, transparent 50%);
+      min-width: 0;
+    }
+    @media (max-width: 768px) {
+      .mobile-menu-btn { display: flex; }
+      .sidebar-overlay { display: block; pointer-events: none; }
+      .sidebar-overlay.show { pointer-events: auto; }
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        z-index: 1000;
+        transform: translateX(-100%);
+        box-shadow: none;
+      }
+      .layout.mobile-sidebar-open .sidebar {
+        transform: translateX(0);
+        box-shadow: 8px 0 32px rgba(0,0,0,0.5);
+      }
+      .main {
+        padding: 60px 16px 24px;
+        width: 100%;
+      }
+      .section-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+      }
+      .section-header > div { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-start; }
+      .section-title { font-size: 1.25rem; }
+      .card { padding: 16px; margin-bottom: 16px; }
+      .order-card { padding: 14px; }
+      .order-row { flex-wrap: wrap; gap: 6px; }
+      .order-footer { gap: 8px; }
+      .order-footer select { min-width: 0; flex: 1; min-height: 44px; }
+      .order-footer .order-est-wrap input { min-width: 60px; min-height: 40px; }
+      .orders-tools {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+      }
+      .orders-tools label { min-height: 44px; align-items: center; }
+      .orders-tools select, .orders-tools .small-btn { min-height: 44px; }
+      .stats-grid { grid-template-columns: 1fr; gap: 12px; }
+      .stat { padding: 16px; }
+      .btn, .btn-primary { min-height: 44px; padding: 12px 16px; }
+      .nav-item { min-height: 48px; padding: 14px 24px; }
+      .logout-btn { min-height: 48px; }
     }
     .section { display: none; }
     .section.active { display: block; }
@@ -453,7 +536,7 @@
     .chart-wrap { position: relative; height: 260px; }
     .products-chart-wrap { height: 320px; }
     @media print {
-      .sidebar, .section-header .btn, .section-header select, #filter-status, .nav-item, .last-update, .no-print { display: none !important; }
+      .sidebar, .sidebar-overlay, .mobile-menu-btn, .section-header .btn, .section-header select, #filter-status, .nav-item, .last-update, .no-print { display: none !important; }
       body { background: #fff; color: #111; }
       .main { padding: 0; }
       .section { display: block !important; }
@@ -479,6 +562,8 @@
     </div>
   </div>
   <div id="panel-layout" class="layout" style="display:none">
+    <button type="button" class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Menüyü aç">☰</button>
+    <div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
     <aside class="sidebar">
       <div class="sidebar-logo">🍽️ MeraPaket</div>
       <nav>
@@ -758,8 +843,23 @@
       fileInput.value = '';
     }
 
+    function closeMobileSidebar() {
+      document.getElementById('panel-layout').classList.remove('mobile-sidebar-open');
+      document.getElementById('sidebar-overlay').classList.remove('show');
+      document.body.style.overflow = '';
+    }
+    function toggleMobileSidebar() {
+      const layout = document.getElementById('panel-layout');
+      const overlay = document.getElementById('sidebar-overlay');
+      const open = layout.classList.toggle('mobile-sidebar-open');
+      overlay.classList.toggle('show', open);
+      document.body.style.overflow = open ? 'hidden' : '';
+    }
+    document.getElementById('mobile-menu-btn').addEventListener('click', toggleMobileSidebar);
+    document.getElementById('sidebar-overlay').addEventListener('click', closeMobileSidebar);
     document.querySelectorAll('.nav-item').forEach(n => {
       n.addEventListener('click', () => {
+        closeMobileSidebar();
         if (typeof canAccessTab === 'function' && !canAccessTab(n.dataset.tab)) return;
         document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
         document.querySelectorAll('.section').forEach(x => x.classList.remove('active'));

@@ -369,6 +369,78 @@
     .lightbox img { max-width: 100%; max-height: 90vh; border-radius: 12px; }
     .lightbox-close { position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.2); color: #fff; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 1.5rem; cursor: pointer; }
     #offline-banner { display: none; position: fixed; top: 0; left: 0; right: 0; background: #dc2626; color: #fff; padding: 10px 20px; text-align: center; z-index: 9998; font-size: 0.9rem; }
+
+    @media (max-width: 600px) {
+      .header-top { padding: 10px 14px; gap: 8px; }
+      .header-inner { padding: 0 14px 16px; }
+      .header-brand-block { padding: 16px 14px 12px; gap: 12px; }
+      .header h1 { font-size: 1.25rem; }
+      .header-sub { font-size: 0.82rem; }
+      .header-logo { width: 44px; height: 44px; font-size: 1.3rem; }
+      .categories { padding: 16px 14px; }
+      .category { margin-bottom: 24px; }
+      .category h2 { font-size: 0.88rem; margin-bottom: 10px; }
+      .product {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        padding: 14px;
+        margin-bottom: 10px;
+      }
+      .product-img {
+        width: 100%;
+        max-width: 120px;
+        height: 100px;
+        margin: 0 auto;
+        align-self: center;
+      }
+      .product-img img { border-radius: 10px; }
+      .product-info { min-width: 0; }
+      .product-name { word-break: break-word; overflow-wrap: break-word; font-size: 0.95rem; }
+      .product-detail-box {
+        margin-top: 8px;
+        padding: 10px 12px;
+      }
+      .product-contents-wrap { gap: 6px; }
+      .product-contents-chip { padding: 5px 10px; font-size: 0.75rem; }
+      .product-extras-wrap { margin-top: 8px; padding-top: 8px; }
+      .product-extra-chip { padding: 4px 8px; font-size: 0.72rem; margin: 2px 4px 2px 0; }
+      .product-desc { font-size: 0.78rem; margin-top: 6px; padding-top: 6px; }
+      .product-price { font-size: 0.95rem; margin-top: 6px; }
+      .product-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 4px;
+        padding-top: 10px;
+        border-top: 1px solid var(--border);
+      }
+      .qty-btn { width: 40px; height: 40px; font-size: 1.1rem; }
+      .qty-val { min-width: 28px; }
+      .category-nav { margin: 0 -14px 12px -14px; padding: 10px 0; }
+      .category-nav-inner { padding: 0 14px; gap: 6px; }
+      .category-pill { padding: 8px 14px; font-size: 0.82rem; }
+      .section-tabs {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 0 14px 12px;
+        justify-content: center;
+      }
+      .section-tab { padding: 10px 18px; font-size: 0.88rem; }
+      .favorites-section { padding: 0 14px 120px; }
+      .favorite-card { padding: 12px; margin-bottom: 8px; }
+      .cart { padding: 16px 14px; }
+      .cart-items { max-height: 80px; font-size: 0.85rem; }
+      .cart-total { font-size: 1.2rem; margin-bottom: 10px; }
+      .order-btn { padding: 12px; font-size: 0.95rem; min-height: 48px; }
+      .form-section { padding: 16px 14px; }
+      .form-section h2 { font-size: 1.1rem; margin-bottom: 12px; }
+      .order-type-btn { padding: 10px; font-size: 0.9rem; }
+      body { padding-bottom: 200px; }
+    }
+
     @media print { .cart, .theme-btn, .search-box, .section-tabs, .category-nav { display: none !important; } body { padding-bottom: 0; } }
   </style>
 </head>
