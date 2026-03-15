@@ -16,6 +16,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   if (event.request.url.includes('/api/')) return;
+  if (event.request.url.includes('panel.html')) return event.respondWith(fetch(event.request));
   event.respondWith(
     caches.match(event.request).then((cached) => cached || fetch(event.request).then((res) => {
       const clone = res.clone();

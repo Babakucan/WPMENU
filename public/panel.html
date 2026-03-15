@@ -22,6 +22,13 @@
       --shadow-card-hover: 0 10px 28px rgba(0,0,0,0.22);
     }
     body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    /* Modern scrollbars - proje geneli */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--surface-2); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3a3a48; }
+    textarea::-webkit-scrollbar { width: 6px; }
+    textarea::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 3px; }
     .layout {
       display: flex;
       min-height: 100vh;
@@ -322,6 +329,7 @@
       cursor: pointer;
       border: none;
       font-family: inherit;
+      transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
     }
     .btn-primary { background: linear-gradient(135deg, var(--accent) 0%, #0d9488 100%); color: #fff; box-shadow: 0 4px 14px rgba(16,185,129,0.35); }
     .btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(16,185,129,0.4); }
@@ -345,78 +353,83 @@
     }
     .product-card:hover { border-color: #353545; }
     .product-card-head {
-      display: flex;
-      align-items: flex-start;
-      gap: 14px;
-      padding: 16px 18px;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: 200px 100px 1fr 120px;
+      gap: 16px;
+      align-items: center;
+      padding: 14px 18px;
+      background: var(--surface);
     }
-    .product-card-head .head-name { flex: 2; min-width: 140px; }
-    .product-card-head .head-price { width: 88px; }
-    .product-card-head .head-desc { flex: 1; min-width: 200px; }
+    .product-card-head .head-name { grid-column: 1; min-width: 0; }
+    .product-card-head .head-price { grid-column: 2; min-width: 0; }
+    .product-card-head .head-desc { grid-column: 3; min-width: 0; }
+    .product-card-head .product-card-toggle { grid-column: 4; justify-self: end; }
     .product-card-head input,
     .product-card-head textarea {
       width: 100%;
       padding: 10px 12px;
-      border-radius: 10px;
+      border-radius: 8px;
       border: 1px solid var(--border);
       background: var(--bg);
       color: var(--text);
       font-size: 0.9rem;
       font-family: inherit;
+      box-sizing: border-box;
     }
-    .product-card-head textarea.head-desc-ta { min-height: 48px; resize: vertical; }
-    .product-card-head .price-label { font-size: 0.72rem; color: var(--muted); margin-bottom: 4px; font-weight: 500; }
+    .product-card-head textarea.head-desc-ta { min-height: 44px; resize: vertical; }
+    .product-card-head .head-price {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .product-card-head .head-price .price-label { font-size: 0.75rem; color: var(--muted); margin-bottom: 0; font-weight: 500; white-space: nowrap; }
+    .product-card-head .head-price input { width: 70px; flex-shrink: 0; }
     .product-card-toggle {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
+      min-width: 80px;
+      padding: 8px 12px;
+      border-radius: 8px;
       border: 1px solid var(--border);
       background: var(--surface-2);
       color: var(--muted);
-      font-size: 1.25rem;
+      font-size: 0.85rem;
+      font-weight: 500;
       cursor: pointer;
-      flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: center;
       transition: background 0.2s, color 0.2s, border-color 0.2s;
-    }
-    .product-card-toggle:hover { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
-    .product-card.expanded .product-card-body { display: block; }
-    .product-card-body {
-      display: none;
-      padding: 16px 18px;
-      border-top: 1px solid var(--border);
-      background: rgba(10,10,15,0.4);
-    }
-    .product-card-body .body-row {
-      display: flex;
-      gap: 14px;
-      flex-wrap: wrap;
-      align-items: flex-start;
-      margin-bottom: 14px;
-    }
-    .product-card-body .body-row:last-child { margin-bottom: 0; }
-    .product-card-body .field-group { flex: 1; min-width: 160px; }
-    .product-card-body .field-group label { display: block; font-size: 0.72rem; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
-    .product-card-body .field-group input,
-    .product-card-body .field-group textarea {
-      width: 100%;
-      padding: 8px 10px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text);
-      font-size: 0.85rem;
       font-family: inherit;
     }
-    .product-card-body .field-group textarea { min-height: 68px; resize: vertical; }
-    .product-card-body .field-group.contents-group textarea { min-height: 100px; font-size: 0.85rem; }
-    .product-card-body .field-group.extras-group textarea { min-height: 72px; font-size: 0.82rem; }
-    .product-card-body label.dine-in-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem; color: var(--muted); }
-    .product-card-body .btn-remove { background: #dc2626; color: #fff; padding: 8px 14px; border: none; border-radius: 10px; cursor: pointer; font-size: 0.85rem; font-weight: 500; }
-    .product-card-body .btn-remove:hover { background: #b91c1c; }
+    .product-card-toggle:hover { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+    .ingredient-row, .extra-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .ingredient-row input[type="text"], .extra-row input[type="text"] { flex: 1; min-width: 0; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.85rem; }
+    .extra-row input[type="number"] { width: 70px; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.85rem; }
+    .btn-small { padding: 6px 10px; font-size: 0.8rem; }
+    .btn-add-line { margin-top: 6px; background: var(--accent-dim); color: var(--accent); border: 1px dashed var(--accent); padding: 8px 14px; font-size: 0.85rem; }
+    .btn-add-line:hover { background: rgba(16,185,129,0.2); }
+    label.dine-in-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem; color: var(--muted); }
+    .btn-remove, .btn-danger {
+      background: var(--accent-dim) !important;
+      color: var(--accent) !important;
+      border: 1px solid rgba(16, 185, 129, 0.35) !important;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+      font-family: inherit;
+    }
+    .btn-remove:hover, .btn-danger:hover {
+      background: var(--accent) !important;
+      color: #fff !important;
+      border-color: #0d9488 !important;
+    }
     .coupon-row {
       display: flex;
       gap: 12px;
@@ -547,9 +560,103 @@
       .order-id { color: #0d9488; }
       .section-title { margin-bottom: 16px; }
     }
+    .detail-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .detail-modal-overlay.is-open { display: flex; }
+    .detail-modal-card {
+      background: var(--surface);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      box-shadow: 0 24px 48px rgba(0,0,0,0.4);
+      max-width: 520px;
+      width: 100%;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .detail-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .detail-modal-header h3 { font-size: 1.1rem; font-weight: 600; margin: 0; }
+    .detail-modal-close {
+      width: 36px; height: 36px;
+      border: none;
+      background: var(--surface-2);
+      color: var(--muted);
+      border-radius: 10px;
+      font-size: 1.4rem;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, color 0.2s;
+    }
+    .detail-modal-close:hover { background: var(--border); color: var(--text); }
+    .detail-modal-body {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+      min-height: 0;
+    }
+    .detail-modal-body .body-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; margin-bottom: 14px; }
+    .detail-modal-body .body-row:last-of-type { margin-bottom: 0; }
+    .detail-modal-body .field-group { flex: 1; min-width: 140px; }
+    .detail-modal-body .field-group label { display: block; font-size: 0.75rem; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+    .detail-modal-body .detail-card-title { font-size: 0.8rem; color: var(--muted); margin: 14px 0 8px; font-weight: 600; }
+    .detail-modal-body .detail-card-title:first-child { margin-top: 0; }
+    .detail-modal-body input,
+    .detail-modal-body textarea {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.85rem;
+      font-family: inherit;
+      box-sizing: border-box;
+    }
+    .detail-modal-body textarea { min-height: 72px; resize: vertical; }
+    .detail-modal-body .content-group textarea { min-height: 90px; }
+    .detail-modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
   </style>
 </head>
 <body>
+  <div id="detail-modal" class="detail-modal-overlay" onclick="if(event.target===this)closeDetailModal()">
+    <div class="detail-modal-card" onclick="event.stopPropagation()">
+      <div class="detail-modal-header">
+        <h3 id="detail-modal-title">Ürün Detayı</h3>
+        <button type="button" class="detail-modal-close" onclick="closeDetailModal()" title="Kapat">×</button>
+      </div>
+      <div id="detail-modal-body" class="detail-modal-body"></div>
+      <div class="detail-modal-footer">
+        <button type="button" class="btn" style="background:var(--surface-2);color:var(--text)" onclick="closeDetailModal()">Kapat</button>
+        <button type="button" class="btn btn-primary" onclick="saveAndCloseDetailModal()">Kaydet ve Kapat</button>
+      </div>
+    </div>
+  </div>
   <div id="login-screen" class="login-screen" style="display:none">
     <div class="login-card">
       <div class="login-logo">🍽️ MeraPaket</div>
@@ -839,6 +946,7 @@
         const url = await doUpload(file);
         setProduct(ci, pi, 'image', url);
         renderMenuEditor();
+        if (window._detailModalCi === ci && window._detailModalPi === pi) refreshDetailModalBody();
       } catch (e) { alert(e.message || 'Yükleme başarısız'); }
       fileInput.value = '';
     }
@@ -1294,7 +1402,7 @@
       loadOrders();
     }
 
-    function renderMenuEditor() {
+    function renderMenuEditor(expandCi, expandPi) {
       const cats = (menuData && menuData.categories) || [];
       const el = document.getElementById('menu-editor');
       if (!el) return;
@@ -1302,50 +1410,19 @@
         <div class="category-block">
           <h3>${cat.icon || '🍽️'} ${cat.name}</h3>
           ${(cat.products || []).map((p, pi) => `
-            <div class="product-card">
+            <div class="product-card" data-ci="${ci}" data-pi="${pi}">
               <div class="product-card-head">
                 <div class="head-name">
                   <input type="text" value="${(p.name || '').replace(/"/g, '&quot;')}" onchange="setProduct(${ci},${pi},'name',this.value)" placeholder="Ürün adı">
                 </div>
                 <div class="head-price">
-                  <div class="price-label">Paket ₺</div>
+                  <span class="price-label">Paket ₺</span>
                   <input type="number" value="${p.price ?? ''}" min="0" onchange="setProduct(${ci},${pi},'price',this.value)" placeholder="0">
                 </div>
                 <div class="head-desc">
                   <textarea class="head-desc-ta" onchange="setProduct(${ci},${pi},'description',this.value)" placeholder="Kısa açıklama">${(p.description || '').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</textarea>
                 </div>
-                <button type="button" class="product-card-toggle" onclick="var c=this.closest('.product-card');c.classList.toggle('expanded');this.textContent=c.classList.contains('expanded')?'−':'+';" title="Detayları aç/kapat">+</button>
-              </div>
-              <div class="product-card-body">
-                <div class="body-row">
-                  <div class="field-group">
-                    <label>Restoran ₺ (opsiyonel)</label>
-                    <input type="number" value="${p.priceRestoran ?? ''}" min="0" onchange="setProduct(${ci},${pi},'priceRestoran',this.value)" placeholder="Opsiyonel">
-                  </div>
-                  <label class="dine-in-label">
-                    <input type="checkbox" ${p.onlyDineIn ? 'checked' : ''} onchange="setProduct(${ci},${pi},'onlyDineIn',this.checked)">
-                    Sadece restoran içi
-                  </label>
-                  <div class="field-group" style="flex:1;min-width:180px">
-                    <label>Görsel (URL veya yükle)</label>
-                    <div style="display:flex;gap:8px;align-items:center">
-                      <input type="file" id="prod-img-${ci}-${pi}" accept="image/*" style="display:none" onchange="uploadProductImage(${ci},${pi},this)">
-                      <button type="button" class="btn" style="background:var(--accent);color:#fff;padding:6px 10px;font-size:0.8rem" onclick="document.getElementById('prod-img-${ci}-${pi}').click()">📤 Yükle</button>
-                      <input type="url" value="${(p.image || '').replace(/"/g,'&quot;')}" onchange="setProduct(${ci},${pi},'image',this.value)" placeholder="URL" style="flex:1;min-width:0;font-size:0.85rem">
-                    </div>
-                  </div>
-                  <button type="button" class="btn-remove" onclick="removeProduct(${ci},${pi})">Sil</button>
-                </div>
-                <div class="body-row">
-                  <div class="field-group contents-group">
-                    <label>İçerik (malzemeler) – her satıra bir malzeme</label>
-                    <textarea onchange="setProductContents(${ci},${pi},this.value)" placeholder="domates&#10;soğan&#10;kıyma">${formatContentsForEdit(p.contents)}</textarea>
-                  </div>
-                  <div class="field-group extras-group">
-                    <label>Ekstra malzemeler (her satır: Malzeme, Fiyat)</label>
-                    <textarea onchange="setProductExtras(${ci},${pi},this.value)" placeholder="Extra peynir, 10">${formatExtrasForEdit(p.extras)}</textarea>
-                  </div>
-                </div>
+                <button type="button" class="product-card-toggle" onclick="openDetailModal(${ci},${pi})" title="Detayları aç">Detay</button>
               </div>
             </div>
           `).join('')}
@@ -1353,16 +1430,143 @@
         </div>
       `).join('');
     }
-    function formatContentsForEdit(contents) {
-      if (!contents || typeof contents !== 'string') return '';
-      return contents.split(/[,\n]/).map(x => x.trim()).filter(Boolean).join('\n').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    function getDetailModalContent(ci, pi, p) {
+      if (!p) return '';
+      return `
+        <div class="body-row">
+          <div class="field-group">
+            <label>Restoran ₺ (opsiyonel)</label>
+            <input type="number" value="${p.priceRestoran ?? ''}" min="0" onchange="setProduct(${ci},${pi},'priceRestoran',this.value)" placeholder="Opsiyonel">
+          </div>
+          <label class="dine-in-label">
+            <input type="checkbox" ${p.onlyDineIn ? 'checked' : ''} onchange="setProduct(${ci},${pi},'onlyDineIn',this.checked)">
+            Sadece restoran içi
+          </label>
+          <div class="field-group" style="flex:1;min-width:180px">
+            <label>Görsel (URL veya yükle)</label>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input type="file" id="detail-prod-img-${ci}-${pi}" accept="image/*" style="display:none" onchange="uploadProductImage(${ci},${pi},this)">
+              <button type="button" class="btn" style="background:var(--accent);color:#fff;padding:6px 10px;font-size:0.8rem" onclick="document.getElementById('detail-prod-img-${ci}-${pi}').click()">📤 Yükle</button>
+              <input type="url" value="${(p.image || '').replace(/"/g,'&quot;')}" onchange="setProduct(${ci},${pi},'image',this.value)" placeholder="URL" style="flex:1;min-width:0;font-size:0.85rem">
+            </div>
+          </div>
+        </div>
+        <div class="detail-card-title">İçerik</div>
+        <div class="body-row">
+          <div class="field-group content-group" style="flex:1;min-width:100%">
+            <textarea class="scroll-modern" onchange="setProduct(${ci},${pi},'content',this.value)" placeholder="Ürün içeriği veya tarif metni…">${(p.content || '').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</textarea>
+          </div>
+        </div>
+        <div class="detail-card-title">Malzemeler</div>
+        <div class="ingredients-list">
+          ${getIngredientsList(p.contents).map((ing, idx) => `
+            <div class="ingredient-row">
+              <input type="text" value="${(ing || '').replace(/"/g,'&quot;')}" placeholder="Malzeme" onchange="setIngredient(${ci},${pi},${idx},this.value)">
+              <button type="button" class="btn-remove btn-small" style="background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.4);" onmouseover="this.style.background='#10b981';this.style.color='#fff';" onmouseout="this.style.background='rgba(16,185,129,0.15)';this.style.color='#10b981';" onclick="removeIngredient(${ci},${pi},${idx})">Çıkar</button>
+            </div>
+          `).join('')}
+        </div>
+        <button type="button" class="btn btn-add-line" onclick="addIngredient(${ci},${pi})">+ Malzeme Ekle</button>
+        <div class="detail-card-title" style="margin-top:14px">Ekstra malzemeler (Malzeme, Fiyat)</div>
+        <div class="extras-list">
+          ${(p.extras || []).map((ex, idx) => `
+            <div class="extra-row">
+              <input type="text" value="${(ex.name || '').replace(/"/g,'&quot;')}" placeholder="Malzeme" onchange="setExtraName(${ci},${pi},${idx},this.value)">
+              <input type="number" value="${ex.price ?? ''}" min="0" placeholder="₺" onchange="setExtraPrice(${ci},${pi},${idx},this.value)">
+              <button type="button" class="btn-remove btn-small" style="background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.4);" onmouseover="this.style.background='#10b981';this.style.color='#fff';" onmouseout="this.style.background='rgba(16,185,129,0.15)';this.style.color='#10b981';" onclick="removeExtra(${ci},${pi},${idx})">Çıkar</button>
+            </div>
+          `).join('')}
+        </div>
+        <button type="button" class="btn btn-add-line" onclick="addExtra(${ci},${pi})">+ Ekstra Ekle</button>
+      `;
     }
-    function setProductContents(ci, pi, val) {
+    function refreshDetailModalBody() {
+      if (window._detailModalCi == null || window._detailModalPi == null) return;
+      const ci = window._detailModalCi, pi = window._detailModalPi;
+      const p = menuData?.categories?.[ci]?.products?.[pi];
+      const el = document.getElementById('detail-modal-body');
+      if (el && p) el.innerHTML = getDetailModalContent(ci, pi, p);
+    }
+    function openDetailModal(ci, pi) {
+      const p = menuData?.categories?.[ci]?.products?.[pi];
+      if (!p) return;
+      window._detailModalCi = ci;
+      window._detailModalPi = pi;
+      document.getElementById('detail-modal-title').textContent = (p.name || 'Ürün') + ' – Detay';
+      document.getElementById('detail-modal-body').innerHTML = getDetailModalContent(ci, pi, p);
+      document.getElementById('detail-modal').classList.add('is-open');
+    }
+    function closeDetailModal() {
+      document.getElementById('detail-modal').classList.remove('is-open');
+      window._detailModalCi = null;
+      window._detailModalPi = null;
+    }
+    function saveAndCloseDetailModal() {
+      saveMenu();
+      closeDetailModal();
+    }
+    function getIngredientsList(contents) {
+      if (!contents || typeof contents !== 'string') return [];
+      return contents.split(/[,\n]/).map(x => x.trim()).filter(Boolean);
+    }
+    function setIngredient(ci, pi, idx, val) {
       if (!menuData.categories) return;
       const p = menuData.categories[ci]?.products?.[pi];
       if (!p) return;
-      const lines = (val || '').split('\n').map(x => x.trim()).filter(Boolean);
-      p.contents = lines.join(',');
+      const list = getIngredientsList(p.contents);
+      list[idx] = String(val || '').trim();
+      p.contents = list.filter(Boolean).join(',');
+    }
+    function addIngredient(ci, pi) {
+      if (!menuData.categories) return;
+      const p = menuData.categories[ci]?.products?.[pi];
+      if (!p) return;
+      const list = getIngredientsList(p.contents);
+      list.push('');
+      p.contents = list.join(',');
+      if (window._detailModalCi === ci && window._detailModalPi === pi) refreshDetailModalBody();
+    }
+    function removeIngredient(ci, pi, idx) {
+      if (!menuData.categories) return;
+      const p = menuData.categories[ci]?.products?.[pi];
+      if (!p) return;
+      const list = getIngredientsList(p.contents);
+      list.splice(idx, 1);
+      p.contents = list.join(',');
+      if (window._detailModalCi === ci && window._detailModalPi === pi) refreshDetailModalBody();
+    }
+    function setExtraName(ci, pi, idx, val) {
+      if (!menuData.categories) return;
+      const p = menuData.categories[ci]?.products?.[pi];
+      if (!p) return;
+      if (!Array.isArray(p.extras)) p.extras = [];
+      if (!p.extras[idx]) p.extras[idx] = { name: '', price: 0 };
+      p.extras[idx].name = String(val || '').trim();
+    }
+    function setExtraPrice(ci, pi, idx, val) {
+      if (!menuData.categories) return;
+      const p = menuData.categories[ci]?.products?.[pi];
+      if (!p) return;
+      if (!Array.isArray(p.extras)) p.extras = [];
+      if (!p.extras[idx]) p.extras[idx] = { name: '', price: 0 };
+      const n = parseInt(val, 10);
+      p.extras[idx].price = (val === '' || isNaN(n)) ? 0 : n;
+    }
+    function addExtra(ci, pi) {
+      if (!menuData.categories) return;
+      const p = menuData.categories[ci]?.products?.[pi];
+      if (!p) return;
+      if (!Array.isArray(p.extras)) p.extras = [];
+      p.extras.push({ name: '', price: 0 });
+      if (window._detailModalCi === ci && window._detailModalPi === pi) refreshDetailModalBody();
+    }
+    function removeExtra(ci, pi, idx) {
+      if (!menuData.categories) return;
+      const p = menuData.categories[ci]?.products?.[pi];
+      if (!p) return;
+      if (!Array.isArray(p.extras)) p.extras = [];
+      p.extras.splice(idx, 1);
+      if (window._detailModalCi === ci && window._detailModalPi === pi) refreshDetailModalBody();
     }
     function formatExtrasForEdit(extras) {
       if (!extras || !Array.isArray(extras)) return '';
@@ -1404,7 +1608,7 @@
       if (!menuData.categories) return;
       const cat = menuData.categories[ci];
       if (!cat.products) cat.products = [];
-      cat.products.push({ id: 'new-' + Date.now(), name: 'Yeni Ürün', price: 0, image: '', onlyDineIn: false, contents: '', description: '', extras: [] });
+      cat.products.push({ id: 'new-' + Date.now(), name: 'Yeni Ürün', price: 0, image: '', onlyDineIn: false, contents: '', content: '', description: '', extras: [] });
       renderMenuEditor();
     }
     function removeProduct(ci, pi) {
@@ -1451,7 +1655,7 @@
               <option ${c.type === 'fixed' ? 'selected' : ''}>fixed</option>
             </select>
             <input type="text" value="${c.description || ''}" placeholder="Açıklama" onchange="setCoupon(${i},'description',this.value)">
-            <button class="btn" style="background:#dc2626;color:#fff" onclick="removeCoupon(${i})">Sil</button>
+            <button type="button" class="btn btn-danger" onclick="removeCoupon(${i})">Sil</button>
           </div>
         `).join('');
       } catch (e) {}
@@ -2012,7 +2216,7 @@
               <option ${c.type === 'fixed' ? 'selected' : ''}>fixed</option>
             </select>
             <input type="text" value="${c.description || ''}" placeholder="Açıklama" onchange="setCoupon(${i},'description',this.value)">
-            <button class="btn" style="background:#dc2626;color:#fff" onclick="removeCoupon(${i})">Sil</button>
+            <button type="button" class="btn btn-danger" onclick="removeCoupon(${i})">Sil</button>
           </div>
         `).join('');
       } catch (e) {}
