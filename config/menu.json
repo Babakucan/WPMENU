@@ -13,7 +13,7 @@
           "id": "lahmacun",
           "name": "Lahmacun",
           "price": 45,
-          "image": "/uploads/f18ea5e28f04c952c9cffabc9721d8ad.jpeg",
+          "image": "https://images.unsplash.com/photo-1593504049359-74330189a345?w=600&q=80",
           "contents": "domates,kıyma,soğan,biber salçası,maydanoz",
           "description": "İnce açılmış hamur üzerine kıymalı harç. Taş fırında pişirilir.",
           "extras": [
@@ -27,7 +27,7 @@
           "id": "pizza-orta",
           "name": "Pizza (Orta)",
           "price": 95,
-          "image": "/uploads/e08fbf60c6b0491f35f9ed59d008816a.jpeg",
+          "image": "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=600&q=80",
           "contents": "domates sosu,mozzarella,sucuk,sosis",
           "description": "Orta boy, 6 dilim. İnce hamur.",
           "extras": [
@@ -45,19 +45,19 @@
           "id": "doner-durum",
           "name": "Döner Dürüm",
           "price": 75,
-          "image": "/uploads/9f9b6be8e274e741c8b9479f4660d56c.jpeg"
+          "image": "https://images.unsplash.com/photo-1529006557810-274b9b2fc783?w=600&q=80"
         },
         {
           "id": "kebap",
           "name": "Adana Kebap",
           "price": 120,
-          "image": "/uploads/e1e5ac535e0303bed01611784d8ea4aa.jpeg"
+          "image": "https://images.unsplash.com/photo-1603360946369-dc9bbf58050f?w=600&q=80"
         },
         {
           "id": "pide",
           "name": "Kıymalı Pide",
           "price": 85,
-          "image": "/uploads/68cf0632e828821ef403140ef779025a.jpeg"
+          "image": "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&q=80"
         }
       ]
     },
@@ -70,31 +70,31 @@
           "id": "ayran",
           "name": "Ayran",
           "price": 15,
-          "image": "/uploads/1d7d41c6c90a703c0fb158287b1a30fa.png"
+          "image": "https://images.unsplash.com/photo-1544145945-f90425340c7e?w=600&q=80"
         },
         {
           "id": "kola",
           "name": "Kola",
           "price": 25,
-          "image": "/uploads/cecf411e6b3e540bcacfe5fc28a93cda.png"
+          "image": "https://images.unsplash.com/photo-1629203851122-3726ecdf080e?w=600&q=80"
         },
         {
           "id": "fanta",
           "name": "Fanta",
           "price": 25,
-          "image": "/uploads/1d14971f2a412a3e09df9aaea1181b00.png"
+          "image": "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=600&q=80"
         },
         {
           "id": "su",
           "name": "Su",
           "price": 10,
-          "image": "/uploads/9d0546a244a879c7c3d52c46e0b6a838.png"
+          "image": "https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=600&q=80"
         },
         {
           "id": "cay",
           "name": "Çay",
           "price": 12,
-          "image": "/uploads/773b28a1bb3f8b6ac67e903a96770153.png"
+          "image": "https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=600&q=80"
         }
       ]
     },
@@ -107,13 +107,13 @@
           "id": "kunefe",
           "name": "Künefe",
           "price": 85,
-          "image": "/uploads/41f6a69cb48742806e1a24c8fe4a49d4.png"
+          "image": "https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=600&q=80"
         },
         {
           "id": "baklava",
           "name": "Baklava (3 dilim)",
           "price": 75,
-          "image": "/uploads/18100bcd7b14f4e31299e6e4f276ddfc.png"
+          "image": "https://images.unsplash.com/photo-1599599810769-bcde5a160d32?w=600&q=80"
         }
       ]
     }

@@ -1,1296 +1,413 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Menü - MeraPaket</title>
-  <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#ea580c">
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="telegram-web-app.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Menü</title>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#12151a" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#fef7ee',
+              100: '#fdedd6',
+              200: '#fad7ac',
+              300: '#f6ba77',
+              400: '#f19340',
+              500: '#ed751a',
+              600: '#de5b10',
+              700: '#b84410',
+              800: '#933715',
+              900: '#772f14',
+              950: '#401508',
+            },
+            surface: {
+              850: '#1a1d21',
+              900: '#12151a',
+              950: '#0c0e11',
+            },
+          },
+          animation: {
+            'modal-in': 'modalIn 0.25s ease-out',
+            'cart-bounce': 'cartBounce 0.4s ease',
+          },
+          keyframes: {
+            modalIn: {
+              '0%': { opacity: '0', transform: 'scale(0.96)' },
+              '100%': { opacity: '1', transform: 'scale(1)' },
+            },
+            cartBounce: {
+              '0%, 100%': { transform: 'scale(1)' },
+              '50%': { transform: 'scale(1.08)' },
+            },
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
   <style>
-    :root {
-      --bg: #0f0e0d;
-      --surface: #1c1917;
-      --surface-2: #292524;
-      --border: #3f3935;
-      --accent: #ea580c;
-      --accent-dim: rgba(234, 88, 12, 0.15);
-      --text: #fafaf9;
-      --muted: #a8a29e;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      padding-bottom: 220px;
-    }
-    .header {
-      position: relative;
-      padding: 0 0 20px;
-      background: linear-gradient(180deg, var(--surface) 0%, var(--bg) 100%);
-    }
-    .header-top { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px 12px; gap: 12px; }
-    .search-box {
-      padding: 10px 14px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: var(--surface-2);
-      color: var(--text);
-      flex: 1;
-      min-width: 0;
-      font-size: 0.9rem;
-      font-family: inherit;
-      transition: border-color 0.2s;
-    }
-    .search-box:focus { outline: none; border-color: var(--accent); }
-    .search-box::placeholder { color: var(--muted); }
-    .theme-btn {
-      padding: 10px 14px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: var(--surface-2);
-      color: var(--muted);
-      cursor: pointer;
-      font-size: 0.9rem;
-      transition: all 0.2s;
-    }
-    .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
-    .header-inner { padding: 0 20px 20px; border-bottom: 1px solid var(--border); }
-    .header-hero {
-      position: relative;
-      width: 100%;
-      margin-bottom: 0;
-      overflow: hidden;
-      background: var(--surface);
-    }
-    .header-banner-wrap {
-      position: relative;
-      width: 100%;
-      height: 160px;
-      background: var(--surface-2);
-      overflow: hidden;
-    }
-    .header-banner-wrap img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      object-position: center center;
-      display: block;
-    }
-    .header-banner-wrap::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(180deg, rgba(15,14,13,0.3) 0%, rgba(15,14,13,0.6) 50%, rgba(15,14,13,0.92) 100%);
-      pointer-events: none;
-    }
-    .header-brand-block {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding: 20px 20px 16px;
-      z-index: 1;
-    }
-    .header-logo {
-      width: 52px;
-      height: 52px;
-      border-radius: 12px;
-      overflow: hidden;
-      flex-shrink: 0;
-      background: rgba(28,25,23,0.9);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: 2px solid rgba(255,255,255,0.15);
-      font-size: 1.6rem;
-    }
-    .header-logo img { width: 100%; height: 100%; object-fit: contain; padding: 6px; }
-    .header-brand-text { flex: 1; min-width: 0; }
-    .header h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 2px; color: #fff; letter-spacing: -0.02em; }
-    .header-sub { color: rgba(255,255,255,0.85); font-size: 0.88rem; margin: 0; }
-    .header-hero:not(.has-banner) .header-brand-block { padding: 24px 20px; flex-direction: row; }
-    .header-hero.has-banner .header-brand-block { position: absolute; bottom: 0; left: 0; right: 0; }
-    .header-hero:not(.has-banner) h1 { color: var(--text); }
-    .header-hero:not(.has-banner) .header-sub { color: var(--muted); }
-    .header-hero:not(.has-banner) .header-logo { background: var(--surface-2); border-color: var(--border); }
-    body.light {
-      --bg: #f8fafc;
-      --surface: #ffffff;
-      --surface-2: #f1f5f9;
-      --border: #e2e8f0;
-      --text: #0f172a;
-      --muted: #64748b;
-    }
-    body.light .product { background: var(--surface); border-color: var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
-    body.light .product:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-    body.light .cart { background: var(--surface); border-color: var(--border); box-shadow: 0 -4px 20px rgba(0,0,0,0.08); }
-    body.light .header-hero { background: var(--surface); }
-    body.light .header-banner-wrap::after { background: linear-gradient(180deg, rgba(248,250,252,0.4) 0%, rgba(248,250,252,0.7) 50%, rgba(248,250,252,0.95) 100%); }
-    body.light .header h1 { color: #0f172a; }
-    body.light .header-sub { color: #475569; }
-    body.light .header-logo { background: rgba(255,255,255,0.95); border-color: rgba(0,0,0,0.08); }
-    body.light .category-nav { background: rgba(248,250,252,0.98); border-color: var(--border); }
-    body.light .category-pill { background: var(--surface-2); }
-    body.light .category-pill:hover { background: var(--border); }
-    body.light .category-pill.active { background: rgba(234,88,12,0.12); color: #c2410c; border-color: rgba(234,88,12,0.4); }
-    body.light .section-tab { background: var(--surface-2); }
-    body.light .section-tab:hover { background: var(--border); }
-    body.light .section-tab.active { background: rgba(234,88,12,0.12); color: #c2410c; border-color: rgba(234,88,12,0.4); }
-    body.light .favorite-card { background: var(--surface); border-color: var(--border); }
-    .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .categories { padding: 24px 20px; max-width: 520px; margin: 0 auto; }
-    .category { margin-bottom: 32px; }
-    .category h2 {
-      font-size: 0.95rem;
-      color: var(--muted);
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: 600;
-    }
-    .product {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding: 16px;
-      background: var(--surface);
-      border-radius: 14px;
-      margin-bottom: 10px;
-      border: 1px solid var(--border);
-      transition: all 0.2s;
-    }
-    .product:hover { border-color: var(--accent); box-shadow: 0 4px 16px rgba(234,88,12,0.15); }
-    .product-img {
-      width: 56px;
-      height: 56px;
-      background: var(--surface-2);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.5rem;
-      flex-shrink: 0;
-    }
-    .product-img img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
-    .product-info { flex: 1; min-width: 0; }
-    .product-name { font-weight: 600; margin-bottom: 2px; }
-    .product-detail-box {
-      margin-top: 10px; padding: 12px 14px; background: rgba(41, 37, 36, 0.6); border-radius: 12px; border: 1px solid var(--border);
-    }
-    .product-contents-wrap { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 0; }
-    .product-contents-wrap .label { font-size: 0.7rem; color: var(--muted); font-weight: 600; letter-spacing: 0.04em; margin-bottom: 6px; width: 100%; }
-    .product-contents-chip {
-      display: inline-flex; align-items: center; padding: 6px 12px; background: var(--surface-2); color: var(--text); border-radius: 999px; font-size: 0.8rem; border: 1px solid transparent; cursor: pointer; transition: all 0.2s; user-select: none;
-    }
-    .product-contents-chip:hover { border-color: var(--accent); background: var(--accent-dim); }
-    .product-contents-chip.removed { text-decoration: line-through; opacity: 0.6; border-color: rgba(239,68,68,0.5); background: rgba(239,68,68,0.1); }
-    .product-extras-wrap { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
-    .product-extras-wrap .label { font-size: 0.7rem; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
-    .product-extra-chip {
-      display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; margin: 4px 6px 4px 0; background: var(--surface-2); color: var(--muted); border-radius: 999px; font-size: 0.78rem; border: 1px solid var(--border); cursor: pointer; transition: all 0.2s; user-select: none;
-    }
-    .product-extra-chip:hover { color: var(--text); }
-    .product-extra-chip.selected { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
-    .product-extra-chip .extra-price { color: var(--accent); font-size: 0.75rem; margin-left: 2px; }
-    .product-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.45; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
-    .product-price { color: var(--accent); font-size: 1rem; font-weight: 700; margin-top: 4px; }
-    .customize-hint { font-size: 0.72rem; color: var(--accent); margin-top: 8px; }
-    .product-actions { display: flex; align-items: center; gap: 8px; }
-    .qty-btn {
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: var(--surface-2);
-      color: var(--text);
-      font-size: 1.2rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .qty-btn:hover { background: var(--accent-dim); border-color: var(--accent); }
-    .qty-val { min-width: 24px; text-align: center; font-weight: 600; }
-
-    .cart {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: var(--surface);
-      border-top: 1px solid var(--border);
-      padding: 20px 20px;
-      max-width: 520px;
-      margin: 0 auto;
-      box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
-    }
-    .cart-items {
-      max-height: 100px;
-      overflow-y: auto;
-      font-size: 0.9rem;
-      color: var(--muted);
-      margin-bottom: 12px;
-    }
-    .cart-line { display: flex; justify-content: space-between; margin-bottom: 4px; }
-    .cart-total { font-size: 1.35rem; font-weight: 700; color: var(--accent); margin-bottom: 12px; }
-    .order-btn {
-      width: 100%;
-      padding: 14px;
-      background: var(--accent);
-      color: white;
-      border: none;
-      border-radius: 12px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-      font-family: inherit;
-    }
-    .order-btn:hover { filter: brightness(1.1); }
-    .order-btn:disabled { background: var(--border); cursor: not-allowed; filter: none; }
-
-    .form-section { display: none; padding: 20px; max-width: 480px; margin: 0 auto; }
-    .form-section.show { display: block; }
-    .form-section h2 { font-size: 1.25rem; margin-bottom: 16px; }
-    .order-type-toggle {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-    .order-type-btn {
-      flex: 1;
-      padding: 12px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: transparent;
-      color: var(--muted);
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .order-type-btn.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
-    .form-group { margin-bottom: 16px; }
-    .form-group label { display: block; font-size: 0.9rem; color: var(--muted); margin-bottom: 6px; }
-    input, textarea {
-      width: 100%;
-      padding: 12px 14px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: var(--surface-2);
-      color: var(--text);
-      font-size: 1rem;
-      font-family: inherit;
-      transition: border-color 0.2s;
-    }
-    input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
-    .form-select, select.form-select { background: var(--surface-2); border: 1px solid var(--border); color: var(--text); font-family: inherit; }
-    .error { color: #ef4444; font-size: 0.9rem; margin-top: 8px; }
-    .success { display: none; text-align: center; padding: 60px 20px; }
-    .success.show { display: block; }
-    .success h2 { font-size: 1.5rem; margin-bottom: 12px; }
-    .success p { color: #71717a; }
-    .loading { text-align: center; padding: 40px; color: #71717a; }
-    .loading .spinner { display: block; margin: 0 auto 12px; }
-    .retry-btn { margin-top: 16px; padding: 12px 24px; background: var(--accent); color: #fff; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-family: inherit; }
-    .retry-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
-    .category-nav {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      background: rgba(15,14,13,0.95);
-      backdrop-filter: blur(8px);
-      border-bottom: 1px solid var(--border);
-      padding: 12px 0;
-      margin: 0 -20px 16px -20px;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-    }
-    .category-nav::-webkit-scrollbar { display: none; }
-    .category-nav-inner { display: flex; gap: 8px; padding: 0 20px; min-width: max-content; }
-    .category-pill {
-      flex-shrink: 0;
-      padding: 10px 18px;
-      border-radius: 12px;
-      background: var(--surface-2);
-      color: var(--muted);
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: all 0.2s;
-      border: 1px solid transparent;
-    }
-    .category-pill:hover { background: var(--border); color: var(--text); }
-    .category-pill.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
-    .section-tabs { display: flex; gap: 10px; padding: 0 20px 16px; max-width: 520px; margin: 0 auto; justify-content: center; }
-    .section-tab {
-      padding: 12px 24px;
-      border-radius: 12px;
-      background: var(--surface-2);
-      color: var(--muted);
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      border: 1px solid transparent;
-      transition: all 0.2s;
-    }
-    .section-tab:hover { background: var(--border); color: var(--text); }
-    .section-tab.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
-    .favorites-section { display: none; padding: 0 20px 120px; max-width: 480px; margin: 0 auto; }
-    .favorites-section.show { display: block; }
-    .favorite-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 10px; transition: border-color 0.2s; }
-    .favorite-card:hover { border-color: var(--accent); }
-    .favorite-card h3 { font-size: 1rem; margin-bottom: 6px; }
-    .favorite-card .fav-items { font-size: 0.9rem; color: #71717a; margin-bottom: 8px; }
-    .favorite-card .fav-total { font-weight: 700; color: var(--accent); margin-bottom: 10px; }
-    .favorite-card .fav-add-btn { width: 100%; padding: 10px; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.9rem; font-family: inherit; transition: filter 0.2s; }
-    .favorite-card .fav-add-btn:hover { filter: brightness(1.1); }
-    .favorite-card .fav-add-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
-    .favorite-card .fav-add-btn.secondary { background: transparent; border: 2px solid var(--accent); color: var(--accent); margin-top: 6px; }
-    .favorite-card .fav-add-btn.secondary:hover { filter: brightness(1.1); }
-    .favorite-card .fav-add-btn.added { background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); cursor: default; }
-    .fav-remove-btn { padding: 6px 10px; font-size: 0.8rem; background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 8px; cursor: pointer; font-family: inherit; margin-top: 6px; }
-    .fav-remove-btn:hover { border-color: #f87171; color: #f87171; }
-    .past-orders-back { display: inline-block; margin-bottom: 14px; color: var(--accent); cursor: pointer; font-size: 0.9rem; }
-    .past-orders-back:hover { text-decoration: underline; }
-    .past-orders-link { color: var(--accent); cursor: pointer; font-size: 0.88rem; margin-top: 8px; display: inline-block; }
-    .past-orders-link:hover { text-decoration: underline; }
-    .product-img { cursor: pointer; }
-    .product-img:has(img) { cursor: pointer; }
-    .product-img:not(:has(img)) { cursor: default; }
-    .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
-    .lightbox img { max-width: 100%; max-height: 90vh; border-radius: 12px; }
-    .lightbox-close { position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.2); color: #fff; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 1.5rem; cursor: pointer; }
-    #offline-banner { display: none; position: fixed; top: 0; left: 0; right: 0; background: #dc2626; color: #fff; padding: 10px 20px; text-align: center; z-index: 9998; font-size: 0.9rem; }
-
-    @media (max-width: 600px) {
-      .header-top { padding: 10px 14px; gap: 8px; }
-      .header-inner { padding: 0 14px 16px; }
-      .header-brand-block { padding: 16px 14px 12px; gap: 12px; }
-      .header h1 { font-size: 1.25rem; }
-      .header-sub { font-size: 0.82rem; }
-      .header-logo { width: 44px; height: 44px; font-size: 1.3rem; }
-      .categories { padding: 16px 14px; }
-      .category { margin-bottom: 24px; }
-      .category h2 { font-size: 0.88rem; margin-bottom: 10px; }
-      .product {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 12px;
-        padding: 14px;
-        margin-bottom: 10px;
-      }
-      .product-img {
-        width: 100%;
-        max-width: 120px;
-        height: 100px;
-        margin: 0 auto;
-        align-self: center;
-      }
-      .product-img img { border-radius: 10px; }
-      .product-info { min-width: 0; }
-      .product-name { word-break: break-word; overflow-wrap: break-word; font-size: 0.95rem; }
-      .product-detail-box {
-        margin-top: 8px;
-        padding: 10px 12px;
-      }
-      .product-contents-wrap { gap: 6px; }
-      .product-contents-chip { padding: 5px 10px; font-size: 0.75rem; }
-      .product-extras-wrap { margin-top: 8px; padding-top: 8px; }
-      .product-extra-chip { padding: 4px 8px; font-size: 0.72rem; margin: 2px 4px 2px 0; }
-      .product-desc { font-size: 0.78rem; margin-top: 6px; padding-top: 6px; }
-      .product-price { font-size: 0.95rem; margin-top: 6px; }
-      .product-actions {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 4px;
-        padding-top: 10px;
-        border-top: 1px solid var(--border);
-      }
-      .qty-btn { width: 40px; height: 40px; font-size: 1.1rem; }
-      .qty-val { min-width: 28px; }
-      .category-nav { margin: 0 -14px 12px -14px; padding: 10px 0; }
-      .category-nav-inner { padding: 0 14px; gap: 6px; }
-      .category-pill { padding: 8px 14px; font-size: 0.82rem; }
-      .section-tabs {
-        flex-wrap: wrap;
-        gap: 8px;
-        padding: 0 14px 12px;
-        justify-content: center;
-      }
-      .section-tab { padding: 10px 18px; font-size: 0.88rem; }
-      .favorites-section { padding: 0 14px 120px; }
-      .favorite-card { padding: 12px; margin-bottom: 8px; }
-      .cart { padding: 16px 14px; }
-      .cart-items { max-height: 80px; font-size: 0.85rem; }
-      .cart-total { font-size: 1.2rem; margin-bottom: 10px; }
-      .order-btn { padding: 12px; font-size: 0.95rem; min-height: 48px; }
-      .form-section { padding: 16px 14px; }
-      .form-section h2 { font-size: 1.1rem; margin-bottom: 12px; }
-      .order-type-btn { padding: 10px; font-size: 0.9rem; }
-      body { padding-bottom: 200px; }
-    }
-
-    @media print { .cart, .theme-btn, .search-box, .section-tabs, .category-nav { display: none !important; } body { padding-bottom: 0; } }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .safe-area-pb { padding-bottom: max(0.75rem, env(safe-area-inset-bottom)); }
   </style>
 </head>
-<body>
-  <div id="offline-banner">📡 İnternet bağlantısı yok. Lütfen kontrol edin.</div>
-  <div id="app">
-    <div class="header">
-      <div class="header-top">
-        <input type="text" id="search" class="search-box" placeholder="🔍 Ürün ara...">
-        <button type="button" id="theme-btn" class="theme-btn">☀️</button>
+<body class="font-sans antialiased bg-stone-50 text-stone-900 min-h-screen pb-24">
+  <div id="app" x-data="menuApp()" x-init="init()" class="min-h-screen">
+    <!-- HEADER -->
+    <header class="sticky top-0 z-40 bg-surface-900/95 backdrop-blur-md border-b border-white/5 shadow-lg">
+      <div class="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
+        <img
+          :src="restaurant.logo || ''"
+          alt="Logo"
+          class="w-11 h-11 rounded-xl object-cover ring-2 ring-white/10 shadow"
+          x-show="restaurant.logo"
+        />
+        <span x-show="!restaurant.logo" class="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center text-2xl">🍽️</span>
+        <h1 class="text-lg font-semibold text-white tracking-tight" x-text="restaurant.name"></h1>
       </div>
-      <div id="header-hero" class="header-hero">
-        <div id="header-banner" class="header-banner-wrap" style="display:none"></div>
-        <div class="header-brand-block">
-          <div id="header-logo" class="header-logo">🍽️</div>
-          <div class="header-brand-text">
-            <h1 id="header-title">MeraPaket</h1>
-            <p class="header-sub">Menüden seçim yapın</p>
+    </header>
+
+    <!-- YATAY KATEGORİ MENÜSÜ -->
+    <nav class="sticky top-[60px] z-30 bg-stone-50/95 backdrop-blur-sm border-b border-stone-200/80 shadow-sm">
+      <div class="max-w-2xl mx-auto px-2 py-2">
+        <div class="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-2 px-2" style="scrollbar-width: none; -ms-overflow-style: none;">
+          <template x-for="cat in categories" :key="cat.id">
+            <button
+              :id="'nav-' + cat.id"
+              type="button"
+              @click="setActiveCategory(cat.id)"
+              :class="activeCategory === cat.id
+                ? 'bg-surface-900 text-white shadow-md'
+                : 'bg-white text-stone-600 border border-stone-200 hover:border-stone-300'"
+              class="shrink-0 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap"
+            >
+              <span x-text="cat.name"></span>
+            </button>
+          </template>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ÜRÜN LİSTESİ -->
+    <main class="max-w-2xl mx-auto px-4 py-6">
+      <template x-for="cat in categories" :key="'section-' + cat.id">
+        <section
+          :id="'cat-' + cat.id"
+          x-intersect:enter.threshold.0.2="activeCategory = cat.id"
+          class="scroll-mt-32"
+        >
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-stone-400 mb-3 px-0.5" x-text="cat.name"></h2>
+          <template x-if="loading">
+            <div class="space-y-4">
+              <template x-for="i in 3" :key="i">
+                <div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-stone-100 animate-pulse">
+                  <div class="h-44 bg-stone-200"></div>
+                  <div class="p-4 space-y-2">
+                    <div class="h-5 bg-stone-200 rounded w-3/4"></div>
+                    <div class="h-4 bg-stone-100 rounded w-full"></div>
+                    <div class="h-4 bg-stone-100 rounded w-1/2"></div>
+                    <div class="h-10 bg-stone-200 rounded-xl w-28 mt-3"></div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </template>
+          <div x-show="!loading" class="space-y-4" :class="loading ? 'hidden' : ''">
+            <template x-for="product in filteredProducts(cat.id)" :key="product.id">
+              <article
+                class="bg-white rounded-2xl overflow-hidden shadow-sm border border-stone-100 hover:shadow-md hover:border-stone-200/80 transition-all duration-300 active:scale-[0.99]"
+              >
+                <button type="button" @click="openModal(product)" class="block w-full text-left">
+                  <div class="aspect-[4/3] overflow-hidden bg-stone-100">
+                    <img
+                      x-show="product.image"
+                      :src="product.image"
+                      :alt="product.name"
+                      class="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                      loading="lazy"
+                    />
+                    <div x-show="!product.image" class="w-full h-full flex items-center justify-center text-4xl">🍽️</div>
+                  </div>
+                  <div class="p-4">
+                    <h3 class="font-semibold text-stone-900 text-base mb-1" x-text="product.name"></h3>
+                    <p class="text-sm text-stone-500 line-clamp-2 mb-3" x-text="product.description || ''"></p>
+                    <div class="flex items-center justify-between">
+                      <span class="text-lg font-bold text-brand-600" x-text="product.price + '₺'"></span>
+                      <span class="text-sm font-medium text-brand-600">Detay →</span>
+                    </div>
+                  </div>
+                </button>
+                <div class="px-4 pb-4">
+                  <button
+                    type="button"
+                    @click.stop="addToCartQuick(product)"
+                    class="w-full py-3 rounded-xl bg-surface-900 text-white text-sm font-semibold hover:bg-surface-850 active:scale-[0.98] transition-all duration-200"
+                  >
+                    Sepete ekle
+                  </button>
+                </div>
+              </article>
+            </template>
+          </div>
+        </section>
+      </template>
+    </main>
+
+    <!-- ÜRÜN DETAY MODALI -->
+    <div
+      x-show="modalOpen"
+      x-transition:enter="ease-out duration-200"
+      x-transition:enter-start="opacity-0"
+      x-transition:enter-end="opacity-100"
+      x-transition:leave="ease-in duration-150"
+      x-transition:leave-start="opacity-100"
+      x-transition:leave-end="opacity-0"
+      class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm"
+      @click.self="closeModal()"
+    >
+      <div
+        x-show="modalOpen"
+        x-transition:enter="ease-out duration-200"
+        x-transition:enter-start="opacity-0 translate-y-full sm:translate-y-0 sm:scale-95"
+        x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+        x-transition:leave="ease-in duration-150"
+        class="w-full max-w-lg max-h-[90vh] overflow-hidden bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col animate-modal-in"
+        @click.stop
+      >
+        <template x-if="modalProduct">
+          <div class="overflow-y-auto flex-1">
+            <div class="aspect-[4/3] bg-stone-100 shrink-0">
+              <img x-show="modalProduct.image" :src="modalProduct.image" :alt="modalProduct.name" class="w-full h-full object-cover" />
+              <div x-show="!modalProduct.image" class="w-full h-full flex items-center justify-center text-5xl">🍽️</div>
+            </div>
+            <div class="p-5 pb-8">
+              <h3 class="text-xl font-bold text-stone-900 mb-1" x-text="modalProduct.name"></h3>
+              <p class="text-stone-500 text-sm mb-4" x-text="modalProduct.description || ''"></p>
+              <p class="text-lg font-bold text-brand-600 mb-5" x-text="modalProduct.price + '₺'"></p>
+
+              <template x-if="modalProduct.ingredientIds && modalProduct.ingredientIds.length">
+                <div class="mb-5">
+                  <h4 class="text-sm font-semibold text-stone-700 mb-2">Çıkarılabilecekler</h4>
+                  <div class="flex flex-wrap gap-2">
+                    <template x-for="ingId in modalProduct.ingredientIds" :key="ingId">
+                      <button
+                        type="button"
+                        @click="toggleRemove(ingId)"
+                        :class="modalRemoves.includes(ingId) ? 'bg-brand-500 text-white border-brand-500' : 'bg-stone-100 text-stone-600 border-stone-200 hover:bg-stone-200'"
+                        class="px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors"
+                      >
+                        <span x-text="getIngredientName(ingId)"></span>
+                        <span x-show="modalRemoves.includes(ingId)"> ✓</span>
+                      </button>
+                    </template>
+                  </div>
+                </div>
+              </template>
+
+              <template x-if="modalProduct.extraIds && modalProduct.extraIds.length">
+                <div class="mb-6">
+                  <h4 class="text-sm font-semibold text-stone-700 mb-2">Extra</h4>
+                  <div class="space-y-2">
+                    <template x-for="exId in modalProduct.extraIds" :key="exId">
+                      <label class="flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-colors"
+                        :class="modalExtras[exId] ? 'border-brand-500 bg-brand-50' : 'border-stone-200 hover:bg-stone-50'">
+                        <span class="font-medium text-stone-800" x-text="getExtra(modalProduct, exId)?.name"></span>
+                        <div class="flex items-center gap-2">
+                          <span class="text-sm text-brand-600 font-semibold" x-text="'+' + (getExtra(modalProduct, exId)?.price || 0) + '₺'"></span>
+                          <input type="checkbox" x-model="modalExtras[exId]" class="rounded border-stone-300 text-brand-600 focus:ring-brand-500" />
+                        </div>
+                      </label>
+                    </template>
+                  </div>
+                </div>
+              </template>
+
+              <button
+                type="button"
+                @click="addToCartFromModal()"
+                class="w-full py-4 rounded-xl bg-surface-900 text-white font-semibold hover:bg-surface-850 active:scale-[0.98] transition-all duration-200"
+              >
+                Sepete ekle
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- STICKY SEPET BAR -->
+    <div
+      x-show="checkoutStep === 'cart' && cart.length > 0"
+      x-transition:enter="ease-out duration-300"
+      x-transition:leave="ease-in duration-200"
+      class="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-stone-200 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] safe-area-pb"
+    >
+      <div class="max-w-2xl mx-auto px-4 py-3 flex items-center gap-4">
+        <div class="flex items-center gap-2 min-w-0">
+          <span
+            class="flex items-center justify-center w-10 h-10 rounded-xl bg-surface-900 text-white font-bold text-sm"
+            :class="{ 'animate-cart-bounce': addToCartBounce }"
+            x-text="cartCount()"
+          ></span>
+          <span class="text-stone-500 text-sm truncate" x-text="cartCount() + ' ürün'"></span>
+        </div>
+        <div class="flex-1 text-right">
+          <span class="text-xl font-bold text-stone-900" x-text="cartTotal() + '₺'"></span>
+        </div>
+        <button
+          type="button"
+          @click="startCheckout()"
+          class="shrink-0 px-6 py-3 rounded-xl bg-brand-500 text-white font-semibold hover:bg-brand-600 active:scale-[0.98] transition-all duration-200 shadow-lg shadow-brand-500/25"
+        >
+          Siparişi tamamla
+        </button>
+      </div>
+    </div>
+
+    <!-- CHECKOUT OVERLAY -->
+    <div
+      x-show="checkoutStep !== 'cart'"
+      x-transition:enter="ease-out duration-200"
+      x-transition:enter-start="opacity-0"
+      x-transition:enter-end="opacity-100"
+      class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
+      @click.self="backToCart()"
+    >
+      <div
+        x-show="checkoutStep === 'mode'"
+        x-transition
+        class="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl p-6 pb-8 safe-area-pb"
+        @click.stop
+      >
+        <h3 class="text-lg font-bold text-stone-900 mb-4">Sipariş türü</h3>
+        <div class="space-y-3">
+          <button
+            type="button"
+            @click="setOrderMode('in')"
+            class="w-full p-4 rounded-xl border-2 border-stone-200 hover:border-brand-500 hover:bg-brand-50 text-left font-medium text-stone-800 transition-colors"
+          >
+            Restoran içi — Masa <span x-text="restaurant.tableNumber || '—'"></span>
+          </button>
+          <button
+            type="button"
+            @click="setOrderMode('out')"
+            class="w-full p-4 rounded-xl border-2 border-stone-200 hover:border-brand-500 hover:bg-brand-50 text-left font-medium text-stone-800 transition-colors"
+          >
+            Paket / Restoran dışı
+          </button>
+        </div>
+        <button type="button" @click="backToCart()" class="mt-4 w-full py-3 text-stone-500 font-medium">
+          ← Sepete dön
+        </button>
+      </div>
+
+      <div
+        x-show="checkoutStep === 'form'"
+        x-transition
+        class="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl p-6 pb-8 max-h-[90vh] overflow-y-auto safe-area-pb"
+        @click.stop
+      >
+        <h3 class="text-lg font-bold text-stone-900 mb-4">İletişim bilgileri</h3>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-stone-700 mb-1">Ad Soyad</label>
+            <input
+              type="text"
+              x-model="customer.name"
+              placeholder="Adınız"
+              class="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none transition"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-stone-700 mb-1">Telefon</label>
+            <input
+              type="tel"
+              x-model="customer.phone"
+              placeholder="05XX XXX XX XX"
+              class="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none transition"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-stone-700 mb-1">Adres</label>
+            <textarea
+              x-model="customer.address"
+              placeholder="Teslimat adresi"
+              rows="3"
+              class="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none transition resize-none"
+            ></textarea>
           </div>
         </div>
+        <button
+          type="button"
+          @click="submitCustomerForm()"
+          class="mt-6 w-full py-4 rounded-xl bg-surface-900 text-white font-semibold hover:bg-surface-850"
+        >
+          Devam et
+        </button>
+        <button type="button" @click="backToMode()" class="mt-3 w-full py-2 text-stone-500 font-medium text-sm">
+          ← Geri
+        </button>
       </div>
-      <div class="header-inner">
-        <div id="closed-banner" style="display:none;margin-bottom:12px;padding:12px;background:rgba(239,68,68,0.12);border-radius:10px;color:#f87171;border:1px solid rgba(239,68,68,0.25)">🕐 Restoran şu an kapalı. <span id="hours-text"></span> <span id="opens-in-text"></span></div>
-        <div class="section-tabs" id="section-tabs" style="display:none">
-          <button type="button" class="section-tab active" data-section="menu">🍽️ Menü</button>
-          <button type="button" class="section-tab" data-section="orders">📋 Siparişlerim</button>
-          <button type="button" class="section-tab" data-section="favorites">⭐ Favorilerim</button>
-        </div>
-      </div>
-    </div>
 
-    <div id="orders-section" class="favorites-section" style="display:none">
-      <div class="loading"><span class="spinner"></span>Siparişler yükleniyor...</div>
-    </div>
-    <div id="favorites-section" class="favorites-section">
-      <div class="loading"><span class="spinner"></span>Favoriler yükleniyor...</div>
-    </div>
-
-    <div id="menu-section" class="categories">
-      <div class="loading"><span class="spinner"></span>Menü yükleniyor...</div>
-    </div>
-
-    <div class="cart" id="cart">
-      <div class="cart-items" id="cart-items">Sepetiniz boş</div>
-      <div class="cart-total" id="cart-total">0₺</div>
-      <button class="order-btn" id="order-btn" disabled>Sipariş Ver</button>
-      <div id="add-error" class="error" style="margin-top:8px"></div>
-    </div>
-
-    <div id="form-section" class="form-section">
-      <h2>📋 Sipariş Detayları</h2>
-      <div class="order-type-toggle">
-        <button type="button" class="order-type-btn active" data-type="paket">📦 Paket Servis</button>
-        <button type="button" class="order-type-btn" data-type="restoran">🏠 Restoran İçi</button>
+      <div
+        x-show="checkoutStep === 'summary'"
+        x-transition
+        class="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl p-6 pb-8 max-h-[90vh] overflow-y-auto safe-area-pb"
+        @click.stop
+      >
+        <h3 class="text-lg font-bold text-stone-900 mb-4">Sipariş özeti</h3>
+        <template x-if="orderMode === 'in'">
+          <p class="text-stone-600 text-sm mb-4">Masa: <span x-text="restaurant.tableNumber || '—'"></span></p>
+        </template>
+        <template x-if="orderMode === 'out'">
+          <div class="text-sm text-stone-600 mb-4 space-y-1">
+            <p>Ad: <span x-text="customer.name"></span></p>
+            <p>Telefon: <span x-text="customer.phone"></span></p>
+            <p>Adres: <span x-text="customer.address"></span></p>
+          </div>
+        </template>
+        <ul class="border-t border-stone-200 pt-4 space-y-2 mb-4">
+          <template x-for="(item, idx) in cart" :key="idx">
+            <li class="flex justify-between text-sm">
+              <span>
+                <span x-text="item.qty + 'x ' + item.product.name"></span>
+                <template x-if="item.removes && item.removes.length">
+                  <span class="text-stone-400 block text-xs" x-text="'- ' + item.removes.join(', ')"></span>
+                </template>
+                <template x-if="item.extras && item.extras.length">
+                  <span class="text-brand-600 block text-xs" x-text="'+ ' + item.extras.map(e => e.name).join(', ')"></span>
+                </template>
+              </span>
+              <span class="font-medium" x-text="(item.product.price * item.qty + (item.extras || []).reduce((s,e) => s + e.price * item.qty, 0)) + '₺'"></span>
+            </li>
+          </template>
+        </ul>
+        <p class="text-right font-bold text-lg text-stone-900 mb-6">Toplam: <span x-text="cartTotal() + '₺'"></span></p>
+        <button
+          type="button"
+          @click="sendWhatsApp()"
+          class="flex items-center justify-center gap-2 w-full py-4 rounded-xl bg-[#25D366] text-white font-semibold hover:bg-[#20BD5A] active:scale-[0.98] transition-all"
+        >
+          <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          WhatsApp ile gönder
+        </button>
+        <button type="button" @click="backToCart()" class="mt-3 w-full py-2 text-stone-500 font-medium text-sm">
+          ← Sepete dön
+        </button>
       </div>
-      <div class="form-group" id="address-group">
-        <label>Adres</label>
-        <select id="saved-addresses" style="width:100%;padding:12px;border-radius:10px;margin-bottom:8px;display:none" class="form-select"><option value="">Kayıtlı adresler...</option></select>
-        <div style="display:flex;gap:8px;margin-bottom:8px">
-          <input type="text" id="address" placeholder="Teslimat adresi" style="flex:1">
-          <button type="button" id="location-btn" class="order-type-btn" style="white-space:nowrap">📍 Konum</button>
-        </div>
-        <span style="font-size:0.85rem;color:#71717a">İsterseniz konum gönderebilirsiniz.</span>
-      </div>
-      <div class="form-group" id="table-group" style="display:none">
-        <label>Masa No</label>
-        <input type="text" id="table" placeholder="Örn: 5">
-      </div>
-      <div class="form-group" id="coupon-group">
-        <label>Kupon Kodu (isteğe bağlı)</label>
-        <div style="display:flex;gap:8px">
-          <input type="text" id="coupon" placeholder="Örn: HOSGELDIN" style="flex:1">
-          <button type="button" id="apply-coupon" class="order-type-btn">Uygula</button>
-        </div>
-        <span id="coupon-result" style="font-size:0.85rem;margin-top:4px;display:block"></span>
-      </div>
-      <div class="form-group">
-        <label>Ödeme Yöntemi</label>
-        <div class="order-type-toggle">
-          <button type="button" class="order-type-btn active" data-payment="kapida_nakit">💵 Kapıda Nakit</button>
-          <button type="button" class="order-type-btn" data-payment="kapida_pos">💳 Kapıda POS</button>
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Notlar (isteğe bağlı)</label>
-        <textarea id="notes" rows="2" placeholder="Örn: Acılı olsun"></textarea>
-      </div>
-      <button class="order-btn" id="submit-btn">Siparişi Tamamla</button>
-      <div id="form-error" class="error"></div>
-    </div>
-
-    <div id="success" class="success">
-      <h2>✅ Siparişiniz alındı!</h2>
-      <p id="success-channel-msg">Onay mesajınızı kontrol edin.</p>
     </div>
   </div>
 
-  <div id="lightbox" class="lightbox" style="display:none" role="dialog" aria-label="Ürün fotoğrafı">
-    <button type="button" class="lightbox-close" aria-label="Kapat">×</button>
-    <img src="" alt="">
-  </div>
-
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
-    }
-    const params = new URLSearchParams(location.search);
-    let telegramId = params.get('tg');
-    if (!telegramId && window.Telegram?.WebApp?.initData) {
-      try {
-        const userStr = new URLSearchParams(window.Telegram.WebApp.initData).get('user');
-        if (userStr) { const u = JSON.parse(decodeURIComponent(userStr)); telegramId = u?.id ? String(u.id) : null; }
-      } catch (_) {}
-    }
-    const isWhatsApp = params.get('channel') === 'whatsapp' && params.get('userId');
-    let whatsappId = isWhatsApp ? params.get('userId') : null;
-    const userChannel = whatsappId ? 'whatsapp' : (telegramId ? 'telegram' : null);
-    const lat = params.get('lat');
-    const lng = params.get('lng');
-    const reorderId = params.get('reorder');
-    const favId = params.get('fav');
-    const addOrderId = params.get('add');
-    const sectionParam = params.get('section');
-    if (!userChannel) {
-      document.body.innerHTML = '<div class="header"><h1 style="color:#ef4444">Link Telegram veya WhatsApp üzerinden açılmalı.</h1><p style="color:#71717a;margin-top:8px">Menü linkini bot sohbetinden alın.</p></div>';
-    } else {
-      let cart = [];
-      let orderType = 'paket';
-      const customizationState = {};
-      function getEffectivePrice(row) {
-        const base = parseInt(row.dataset.basePrice || row.dataset.price, 10) || 0;
-        const restoran = row.dataset.priceRestoran !== '' && row.dataset.priceRestoran != null ? parseInt(row.dataset.priceRestoran, 10) : null;
-        return (orderType === 'gel_al' && restoran != null && !isNaN(restoran)) ? restoran : base;
-      }
-      function cartKey(i) {
-        const r = (i.removed && i.removed.length) ? i.removed.slice().sort().join(',') : '';
-        const a = (i.added && i.added.length) ? i.added.map(x => x.name + '_' + x.price).join(',') : '';
-        return i.name + '_' + i.price + '_' + r + '_' + a;
-      }
-      function cartLineLabel(i) {
-        let s = i.name;
-        if (i.removed && i.removed.length) s += ' (çıkar: ' + i.removed.join(', ') + ')';
-        if (i.added && i.added.length) s += ' (+' + i.added.map(a => a.name + ' ' + a.price + '₺').join(', ') + ')';
-        return s;
-      }
-      let restaurantInfo = { isOpen: true, minOrderAmount: 0 };
-      let appliedCoupon = null;
-      let allProducts = [];
-
-      const icons = { 'ana-yemekler': '🍽️', 'icecekler': '🥤', 'tatlilar': '🍰' };
-      const lb = document.getElementById('lightbox');
-      if (lb) { lb.addEventListener('click', (e) => { if (e.target === lb || e.target.classList.contains('lightbox-close')) lb.style.display = 'none'; }); lb.querySelector('.lightbox-close')?.addEventListener('click', () => { lb.style.display = 'none'; }); }
-      window.addEventListener('online', () => { const b = document.getElementById('offline-banner'); if (b) b.style.display = 'none'; });
-      window.addEventListener('offline', () => { const b = document.getElementById('offline-banner'); if (b) b.style.display = 'block'; });
-      if (!navigator.onLine) { const b = document.getElementById('offline-banner'); if (b) b.style.display = 'block'; }
-      let ptrStartY = 0, ptrLastY = 0;
-      document.addEventListener('touchstart', (e) => { if (window.scrollY === 0) { ptrStartY = ptrLastY = e.touches[0].clientY; } }, { passive: true });
-      document.addEventListener('touchmove', (e) => { if (ptrStartY) ptrLastY = e.touches[0].clientY; }, { passive: true });
-      document.addEventListener('touchend', () => { if (ptrStartY && window.scrollY === 0 && ptrLastY - ptrStartY > 80) loadMenu(); ptrStartY = ptrLastY = 0; }, { passive: true });
-      if (localStorage.getItem('theme') === 'light') { document.body.classList.add('light'); document.getElementById('theme-btn').textContent = '🌙'; }
-      document.getElementById('theme-btn').addEventListener('click', () => {
-        document.body.classList.toggle('light');
-        const isLight = document.body.classList.contains('light');
-        localStorage.setItem('theme', isLight ? 'light' : '');
-        document.getElementById('theme-btn').textContent = isLight ? '🌙' : '☀️';
-      });
-
-      async function loadRestaurant() {
-        try {
-          const r = await fetch('/api/restaurant');
-          restaurantInfo = await r.json();
-          const title = document.getElementById('header-title');
-          const logoEl = document.getElementById('header-logo');
-          const bannerEl = document.getElementById('header-banner');
-          if (title) title.textContent = restaurantInfo.name || 'MeraPaket';
-          const logoUrl = (restaurantInfo.logo || '').trim();
-          if (logoEl) logoEl.innerHTML = logoUrl ? `<img src="${logoUrl.replace(/"/g,'&quot;')}" alt="">` : '🍽️';
-          const bannerUrl = (restaurantInfo.banner || '').trim();
-          if (bannerEl) {
-            if (bannerUrl) { bannerEl.innerHTML = `<img src="${bannerUrl.replace(/"/g,'&quot;')}" alt="">`; bannerEl.style.display = 'block'; }
-            else bannerEl.style.display = 'none';
-          }
-          const hero = document.getElementById('header-hero');
-          if (hero) hero.classList.toggle('has-banner', !!bannerUrl);
-          if (!restaurantInfo.isOpen) {
-            document.getElementById('closed-banner').style.display = 'block';
-            const hoursStr = restaurantInfo.hours || (restaurantInfo.hoursOpen && restaurantInfo.hoursClose ? restaurantInfo.hoursOpen + ' - ' + restaurantInfo.hoursClose : '10:00 - 23:00');
-            document.getElementById('hours-text').textContent = 'Çalışma saatleri: ' + hoursStr + '.';
-            const openStr = restaurantInfo.hoursOpen || '10:00';
-            const [oh, om] = openStr.split(':').map(Number);
-            const now = new Date();
-            const nowMin = now.getHours() * 60 + now.getMinutes();
-            const openMin = (oh || 10) * 60 + (om || 0);
-            const closeStr = restaurantInfo.hoursClose || '23:00';
-            const [ch, cm] = closeStr.split(':').map(Number);
-            const closeMin = (ch || 23) * 60 + (cm || 0);
-            let opensIn = '';
-            if (nowMin < openMin) {
-              const m = openMin - nowMin;
-              if (m >= 60) opensIn = Math.floor(m / 60) + ' saat ' + (m % 60 ? m % 60 + ' dk ' : '') + 'sonra açılıyor (' + openStr + ')';
-              else opensIn = m + ' dakika sonra açılıyor';
-            } else {
-              opensIn = 'Yarın ' + openStr + '\u2019da açılıyor';
-            }
-            document.getElementById('opens-in-text').textContent = opensIn ? '— ' + opensIn : '';
-            document.getElementById('order-btn').disabled = true;
-          }
-        } catch (_) {}
-      }
-
-      async function loadMenu() {
-        const el = document.getElementById('menu-section');
-        try {
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 10000);
-          const res = await fetch('/api/menu', { signal: controller.signal });
-          clearTimeout(timeout);
-          if (!res.ok) throw new Error('API hata');
-          const menu = await res.json();
-        allProducts = (menu.categories || []).flatMap(c => (c.products || []).map(p => ({ ...p, cat: c })));
-        const navHtml = `<div class="category-nav"><div class="category-nav-inner">${menu.categories.map((cat, ci) => 
-          `<button type="button" class="category-pill" data-target="cat-${ci}">${cat.icon || icons[cat.id] || '🍽️'} ${cat.name}</button>`
-        ).join('')}</div></div>`;
-        el.innerHTML = navHtml + menu.categories.map((cat, ci) => `
-          <div class="category" id="cat-${ci}">
-            <h2>${cat.icon || icons[cat.id] || '🍽️'} ${cat.name}</h2>
-            ${cat.products.map(p => {
-              const hasContents = (p.contents || '').trim();
-              const hasExtras = (p.extras && p.extras.length);
-              const hasCustomize = !!hasContents || !!hasExtras;
-              const esc = s => (s+'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
-              const chips = hasContents ? (p.contents+'').split(',').map(x => x.trim()).filter(Boolean) : [];
-              const extras = p.extras || [];
-              return `
-              <div class="product" data-id="${p.id}" data-name="${p.name}" data-price="${p.price ?? 0}" data-price-restoran="${p.priceRestoran ?? ''}" data-base-price="${p.price ?? 0}" data-contents="${esc(p.contents || '')}" data-extras="${esc(JSON.stringify(extras))}" data-has-customize="${hasCustomize ? '1' : '0'}" data-image="${esc(p.image || '')}" ${p.onlyDineIn ? 'data-only-dine-in="true"' : ''}>
-                <div class="product-img" ${p.image ? 'role="button" tabindex="0"' : ''}>${p.image ? `<img src="${p.image}" alt="">` : '🍽️'}</div>
-                <div class="product-info">
-                  <div class="product-name">${p.name}</div>
-                  ${(chips.length || extras.length || p.description) ? `<div class="product-detail-box">
-                    ${chips.length ? `<div class="product-contents-wrap"><span class="label">İçindekiler</span>${chips.map(c => `<button type="button" class="product-contents-chip" data-ingredient="${esc(c)}">${esc(c)}</button>`).join('')}</div>` : ''}
-                    ${extras.length ? `<div class="product-extras-wrap"><span class="label">Ekstra</span>${extras.map(ex => `<button type="button" class="product-extra-chip" data-name="${esc(ex.name||'')}" data-price="${ex.price||0}"><span>${esc(ex.name||'')}</span><span class="extra-price">+${ex.price||0}₺</span></button>`).join('')}</div>` : ''}
-                    ${p.description ? `<div class="product-desc">${esc(p.description)}</div>` : ''}
-                  </div>` : ''}
-                  ${hasCustomize ? '<div class="customize-hint">Çıkarmak için malzemeye tıklayın; ekstra eklemek için tıklayın.</div>' : ''}
-                  <div class="product-price" data-base-price="${p.price ?? 0}" data-restoran-price="${p.priceRestoran ?? ''}">${(p.price ?? 0)}₺</div>
-                </div>
-                <div class="product-actions">
-                  <button class="qty-btn minus">−</button>
-                  <span class="qty-val">0</span>
-                  <button class="qty-btn plus">+</button>
-                </div>
-              </div>
-            `}).join('')}
-          </div>
-        `).join('');
-
-        await loadRestaurant();
-        await loadSavedAddresses();
-        await loadReorderOrFav();
-        loadFavoritesSection();
-        if (cart.length) updateCart();
-        if (sectionParam === 'favorites') showSection('favorites');
-        else if (sectionParam === 'orders') showSection('orders');
-        el.querySelectorAll('.product').forEach(row => {
-          const pid = row.dataset.id;
-          const name = row.dataset.name;
-          const hasCustomize = row.dataset.hasCustomize === '1';
-          if (hasCustomize && pid) customizationState[pid] = { removed: [], added: [] };
-          const plus = row.querySelector('.plus');
-          const minus = row.querySelector('.minus');
-          const qtyEl = row.querySelector('.qty-val');
-          const priceEl = row.querySelector('.product-price');
-          function refreshQty() { qtyEl.textContent = cart.filter(i => i.name === name).length; }
-          refreshQty();
-          if (priceEl) priceEl.textContent = getEffectivePrice(row) + '₺';
-
-          row.querySelectorAll('.product-contents-chip').forEach(chip => {
-            chip.addEventListener('click', () => {
-              const ing = chip.dataset.ingredient;
-              if (!pid || !customizationState[pid]) return;
-              const idx = (customizationState[pid].removed || []).indexOf(ing);
-              if (idx >= 0) { customizationState[pid].removed.splice(idx, 1); chip.classList.remove('removed'); }
-              else { customizationState[pid].removed.push(ing); chip.classList.add('removed'); }
-            });
-          });
-          row.querySelectorAll('.product-extra-chip').forEach(chip => {
-            chip.addEventListener('click', () => {
-              const exName = chip.dataset.name;
-              const exPrice = parseInt(chip.dataset.price, 10) || 0;
-              if (!pid || !customizationState[pid]) return;
-              if (!customizationState[pid].added) customizationState[pid].added = [];
-              const idx = customizationState[pid].added.findIndex(a => a.name === exName);
-              if (idx >= 0) { customizationState[pid].added.splice(idx, 1); chip.classList.remove('selected'); }
-              else { customizationState[pid].added.push({ name: exName, price: exPrice }); chip.classList.add('selected'); }
-            });
-          });
-
-          plus.addEventListener('click', () => {
-            if (hasCustomize) {
-              const basePrice = parseInt(row.dataset.basePrice || row.dataset.price, 10) || 0;
-              const state = customizationState[pid] || { removed: [], added: [] };
-              const addTotal = (state.added || []).reduce((s, a) => s + a.price, 0);
-              cart.push({ name, price: getEffectivePrice(row) + addTotal, removed: (state.removed && state.removed.length) ? state.removed : undefined, added: (state.added && state.added.length) ? state.added : undefined });
-            } else {
-              cart.push({ name, price: getEffectivePrice(row) });
-            }
-            updateCart();
-            refreshQty();
-          });
-          minus.addEventListener('click', () => {
-            const idx = cart.findIndex(i => i.name === name);
-            if (idx >= 0) { cart.splice(idx, 1); updateCart(); refreshQty(); }
-          });
-        });
-        applyDineInVisibility();
-        const pills = el.querySelectorAll('.category-pill');
-        if (pills.length) pills[0].classList.add('active');
-        pills.forEach(pill => {
-          pill.addEventListener('click', () => {
-            const id = pill.dataset.target;
-            const target = document.getElementById(id);
-            if (target) {
-              target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              el.querySelectorAll('.category-pill').forEach(p => p.classList.remove('active'));
-              pill.classList.add('active');
-            }
-          });
-        });
-        document.querySelectorAll('.section-tab').forEach(tab => {
-          tab.addEventListener('click', () => showSection(tab.dataset.section));
-        });
-        el.querySelectorAll('.product-img:has(img)').forEach(imgWrap => {
-          const img = imgWrap.querySelector('img');
-          if (img) imgWrap.addEventListener('click', () => {
-            const lb = document.getElementById('lightbox');
-            if (lb) { lb.querySelector('img').src = img.src; lb.style.display = 'flex'; }
-          });
-        });
-        } catch (e) {
-          el.innerHTML = '<div class="loading" style="color:#f87171"><span class="spinner"></span>Menü yüklenemedi.<br><small>' + (e.name === 'AbortError' ? 'Zaman aşımı.' : 'Bağlantı hatası.') + '</small><button type="button" class="retry-btn" onclick="loadMenu()">Tekrar Dene</button></div>';
-        }
-      }
-      document.getElementById('search').addEventListener('input', (e) => {
-        const q = (e.target.value || '').toLowerCase();
-        document.querySelectorAll('.category').forEach(cat => {
-          let hasVisible = false;
-          cat.querySelectorAll('.product').forEach(p => {
-            const ok = !q || (p.dataset.name || '').toLowerCase().includes(q);
-            p.style.display = ok ? '' : 'none';
-            if (ok) hasVisible = true;
-          });
-          cat.style.display = hasVisible ? '' : 'none';
-        });
-      });
-      async function loadSavedAddresses() {
-        try {
-          const q = telegramId ? 'telegramId=' + telegramId : 'whatsappId=' + whatsappId;
-          const r = await fetch('/api/user/prefs?' + q);
-          const p = await r.json();
-          const raw = p.addresses || [];
-          const addrs = raw.filter(a => {
-            const t = (a || '').trim();
-            return t && t !== 'Gel Al' && !/^Masa\s/i.test(t);
-          });
-          const sel = document.getElementById('saved-addresses');
-          sel.innerHTML = '<option value="">Yeni adres yazın veya seçin</option>' + addrs.map(a => '<option value="' + String(a).replace(/"/g, '&quot;') + '">' + (a.length > 45 ? a.slice(0, 42) + '...' : a) + '</option>').join('');
-          sel.style.display = addrs.length ? 'block' : 'none';
-          sel.addEventListener('change', () => { if (sel.value) document.getElementById('address').value = sel.value; });
-        } catch (_) {}
-      }
-
-      function getOrderBtnText() {
-        return addOrderId ? 'Siparişe Ekle' : 'Sipariş Ver';
-      }
-      function updateCart() {
-        const itemsEl = document.getElementById('cart-items');
-        const totalEl = document.getElementById('cart-total');
-        const orderBtn = document.getElementById('order-btn');
-
-        const subtotal = cart.reduce((s, i) => s + i.price, 0);
-        if (cart.length === 0) {
-          itemsEl.innerHTML = 'Sepetiniz boş';
-          totalEl.textContent = '0₺';
-          orderBtn.disabled = true;
-          orderBtn.textContent = getOrderBtnText();
-        } else {
-          const minOk = subtotal >= (restaurantInfo.minOrderAmount || 0);
-          orderBtn.disabled = addOrderId ? (cart.length === 0) : !minOk;
-          orderBtn.textContent = getOrderBtnText();
-          const groups = {};
-          cart.forEach(i => { const k = cartKey(i); groups[k] = (groups[k] || 0) + 1; });
-          itemsEl.innerHTML = Object.entries(groups).map(([k, q]) => {
-            const first = cart.find(i => cartKey(i) === k);
-            const label = cartLineLabel(first);
-            const price = first.price * q;
-            return `<div class="cart-line"><span>${q}x ${label}</span><span>${price}₺</span></div>`;
-          }).join('');
-          const discount = appliedCoupon ? appliedCoupon.discount : 0;
-          const total = Math.max(0, subtotal - discount);
-          let totalText = total + '₺';
-          if (discount) totalText = `<s>${subtotal}₺</s> ${total}₺ (-${discount}₺)`;
-          totalEl.innerHTML = totalText;
-          if (!addOrderId && restaurantInfo.minOrderAmount && subtotal < restaurantInfo.minOrderAmount) {
-            itemsEl.innerHTML += `<div class="cart-line" style="color:#f87171;margin-top:6px">Min. sipariş: ${restaurantInfo.minOrderAmount}₺</div>`;
-          }
-        }
-      }
-
-      function updateProductPrices() {
-        document.querySelectorAll('.product').forEach(row => {
-          const priceEl = row.querySelector('.product-price');
-          if (priceEl) priceEl.textContent = getEffectivePrice(row) + '₺';
-        });
-      }
-      function applyDineInVisibility() {
-        const isGelAlOrRestoran = orderType === 'gel_al' || orderType === 'restoran';
-        document.querySelectorAll('.product[data-only-dine-in="true"]').forEach(el => {
-          el.style.display = isGelAlOrRestoran ? '' : 'none';
-        });
-      }
-      document.querySelectorAll('.order-type-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.querySelectorAll('.order-type-btn').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          orderType = btn.dataset.type;
-          document.getElementById('address-group').style.display = orderType === 'paket' ? 'block' : 'none';
-          const tableGroup = document.getElementById('table-group');
-          if (tableGroup) tableGroup.style.display = orderType === 'restoran' ? 'block' : 'none';
-          updateProductPrices();
-          applyDineInVisibility();
-        });
-      });
-
-      document.getElementById('order-btn').addEventListener('click', () => {
-        if (addOrderId) {
-          const groups = {};
-          cart.forEach(i => { const k = cartKey(i); groups[k] = (groups[k] || 0) + 1; });
-          const itemsStr = Object.entries(groups).map(([k, q]) => {
-            const first = cart.find(i => cartKey(i) === k);
-            return `${q}x ${cartLineLabel(first)} (${first.price * q}₺)`;
-          }).join(', ');
-          const total = cart.reduce((s, i) => s + i.price, 0);
-          if (total < 1) return;
-          const ob = document.getElementById('order-btn');
-          const orig = ob.innerHTML;
-          ob.disabled = true;
-          ob.innerHTML = '<span class="spinner"></span> Ekleniyor...';
-          fetch(`/api/orders/${addOrderId}/add`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...(telegramId ? { telegramId } : { whatsappId }), items: itemsStr, total })
-          }).then(r => r.json()).then(d => {
-            const errEl = document.getElementById('add-error');
-            if (d.ok) {
-              errEl.textContent = '';
-              document.getElementById('menu-section').style.display = 'none';
-              document.getElementById('cart').style.display = 'none';
-              document.getElementById('success').innerHTML = '<h2>✅ Eklemeler siparişe eklendi!</h2><p>Telegram\'dan onay mesajını kontrol edin.</p>';
-              document.getElementById('success').classList.add('show');
-              if (typeof window.closeTelegramWebApp === 'function') window.closeTelegramWebApp();
-            } else {
-              errEl.textContent = d.error || 'Hata';
-            }
-          }).catch(() => { document.getElementById('add-error').textContent = 'Bağlantı hatası.'; })
-          .finally(() => { updateCart(); });
-        } else {
-          document.getElementById('menu-section').style.display = 'none';
-          document.getElementById('cart').style.display = 'none';
-          document.getElementById('form-section').classList.add('show');
-        }
-      });
-
-      let paymentMethod = 'kapida_nakit';
-      let orderLocation = null;
-
-      document.querySelectorAll('[data-payment]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.querySelectorAll('[data-payment]').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          paymentMethod = btn.dataset.payment;
-        });
-      });
-
-      document.getElementById('location-btn').addEventListener('click', () => {
-        if (!navigator.geolocation) {
-          document.getElementById('form-error').textContent = 'Konum desteklenmiyor.';
-          return;
-        }
-        document.getElementById('form-error').textContent = '';
-        const locBtn = document.getElementById('location-btn');
-        const locOrig = locBtn.textContent;
-        locBtn.disabled = true;
-        locBtn.textContent = '...';
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            orderLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-            document.getElementById('address').value = `Konum: ${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
-            locBtn.disabled = false;
-            locBtn.textContent = locOrig;
-          },
-          () => {
-            document.getElementById('form-error').textContent = 'Konum alınamadı. Tarayıcı konum iznini verdiğinizden emin olun.';
-            locBtn.disabled = false;
-            locBtn.textContent = locOrig;
-          }
-        );
-      });
-
-      document.getElementById('apply-coupon').addEventListener('click', async () => {
-        const code = document.getElementById('coupon').value.trim();
-        const subtotal = cart.reduce((s, i) => s + i.price, 0);
-        if (!code) { document.getElementById('coupon-result').textContent = ''; appliedCoupon = null; updateCart(); return; }
-        const acBtn = document.getElementById('apply-coupon');
-        const acOrig = acBtn.textContent || 'Uygula';
-        acBtn.disabled = true;
-        acBtn.textContent = '...';
-        try {
-          const r = await fetch('/api/coupon/validate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code, subtotal })
-          });
-          const d = await r.json();
-          if (d.ok) {
-            appliedCoupon = { code, discount: d.discount };
-            document.getElementById('coupon-result').textContent = '✓ ' + d.discount + '₺ indirim uygulandı';
-            document.getElementById('coupon-result').style.color = '#ea580c';
-          } else {
-            appliedCoupon = null;
-            document.getElementById('coupon-result').textContent = d.error || 'Geçersiz kupon';
-            document.getElementById('coupon-result').style.color = '#f87171';
-          }
-        } catch {
-          document.getElementById('coupon-result').textContent = 'Kupon kontrol edilemedi';
-          document.getElementById('coupon-result').style.color = '#f87171';
-        }
-        acBtn.disabled = false;
-        acBtn.textContent = acOrig;
-        updateCart();
-      });
-
-      document.getElementById('submit-btn').addEventListener('click', async () => {
-        const subtotal = cart.reduce((s, i) => s + i.price, 0);
-        const minOrder = restaurantInfo.minOrderAmount || 0;
-        if (subtotal < minOrder) {
-          document.getElementById('form-error').textContent = `Minimum sipariş tutarı ${minOrder}₺. Sepetiniz: ${subtotal}₺`;
-          return;
-        }
-        if (!restaurantInfo.isOpen) {
-          document.getElementById('form-error').textContent = 'Restoran şu an kapalı.';
-          return;
-        }
-        const address = orderType === 'paket'
-          ? (document.getElementById('address').value.trim() || 'Belirtilmedi')
-          : ('Masa ' + (document.getElementById('table').value.trim() || '-'));
-        const notes = document.getElementById('notes').value.trim();
-
-        const groups = {};
-        cart.forEach(i => { const k = cartKey(i); groups[k] = (groups[k] || 0) + 1; });
-        const itemsStr = Object.entries(groups).map(([k, q]) => {
-          const first = cart.find(i => cartKey(i) === k);
-          return `${q}x ${cartLineLabel(first)} (${first.price * q}₺)`;
-        }).join(', ');
-        const subtotalCart = cart.reduce((s, i) => s + i.price, 0);
-
-        document.getElementById('form-error').textContent = '';
-        const submitBtn = document.getElementById('submit-btn');
-        const origText = submitBtn.textContent;
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="spinner"></span> Gönderiliyor...';
-        try {
-          if (Notification.permission === 'default') Notification.requestPermission();
-          const res = await fetch('/api/order', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              ...(telegramId ? { telegramId } : { whatsappId }),
-              items: itemsStr, total: subtotalCart, address, notes, orderType, paymentMethod, location: orderLocation,
-              couponCode: appliedCoupon ? appliedCoupon.code : null
-            })
-          });
-          const data = await res.json();
-          if (data.ok) {
-            document.getElementById('form-section').classList.remove('show');
-            document.getElementById('success').classList.add('show');
-            const channelMsg = userChannel === 'whatsapp' ? 'WhatsApp\'tan onay mesajını kontrol edin.' : 'Telegram\'dan onay mesajını kontrol edin.';
-            document.getElementById('success-channel-msg').textContent = channelMsg;
-            if (Notification.permission === 'granted') new Notification('Siparişiniz alındı!', { body: channelMsg });
-            if (userChannel === 'telegram' && typeof window.closeTelegramWebApp === 'function') window.closeTelegramWebApp();
-          } else {
-            document.getElementById('form-error').textContent = data.error || 'Hata oluştu';
-          }
-        } catch (e) {
-          document.getElementById('form-error').textContent = 'Bağlantı kurulamadı. İnternet bağlantınızı kontrol edin veya kısa süre sonra tekrar deneyin.';
-        }
-        submitBtn.disabled = false;
-        submitBtn.textContent = origText;
-      });
-
-      if (lat && lng) {
-        orderLocation = { lat: parseFloat(lat), lng: parseFloat(lng) };
-        const addr = document.getElementById('address');
-        if (addr) addr.value = `Konum: ${lat}, ${lng}`;
-      }
-      function parseItemsStr(itemsStr) {
-        const parts = itemsStr.split(', ');
-        const out = [];
-        for (const p of parts) {
-          const m = p.match(/(\d+)x\s+(.+?)\s+\((\d+)₺\)/);
-          if (m) {
-            const qty = parseInt(m[1]);
-            const name = m[2].trim();
-            const total = parseInt(m[3]);
-            const price = Math.round(total / qty);
-            for (let i = 0; i < qty; i++) out.push({ name, price });
-          }
-        }
-        return out;
-      }
-      const favQuery = () => telegramId ? 'telegramId=' + encodeURIComponent(telegramId) : 'whatsappId=' + encodeURIComponent(whatsappId);
-      async function loadPastOrdersForFavorites() {
-        const el = document.getElementById('favorites-section');
-        if (!el) return;
-        const q = favQuery();
-        try {
-          const [ordersRes, favRes] = await Promise.all([fetch('/api/my-orders?' + q), fetch('/api/favorites?' + q)]);
-          if (!ordersRes.ok || !favRes.ok) { el.innerHTML = '<div class="loading" style="color:#f87171">Yüklenemedi.</div>'; return; }
-          const orders = (await ordersRes.json()).orders || [];
-          const favs = (await favRes.json()).favorites || [];
-          const favoritedOrderIds = new Set((favs || []).map(f => f.orderId));
-          el.innerHTML = '<a class="past-orders-back" id="past-orders-back">← Favorilerim</a>' + (orders.length === 0
-            ? '<div class="loading" style="color:#71717a">Henüz siparişiniz yok.</div>'
-            : orders.map(o => {
-                const itemsPreview = (o.items || '-').replace(/</g, '&lt;').slice(0, 60) + ((o.items || '').length > 60 ? '…' : '');
-                const isFav = favoritedOrderIds.has(o.id);
-                return `<div class="favorite-card" data-order-id="${o.id}">
-                  <h3>#${o.id} — ${String(o.status).replace(/</g, '&lt;')}</h3>
-                  <div class="fav-items">${itemsPreview}</div>
-                  <div class="fav-total">${o.total || 0}₺</div>
-                  <button type="button" class="fav-add-btn secondary order-fav-btn ${isFav ? 'added' : ''}" data-order-id="${o.id}" ${isFav ? 'disabled' : ''}>${isFav ? '✓ Favoride' : '⭐ Favorilere ekle'}</button>
-                </div>`;
-              }).join(''));
-          document.getElementById('past-orders-back')?.addEventListener('click', () => loadFavoritesSection());
-          el.querySelectorAll('.order-fav-btn:not(.added)').forEach(btn => {
-            btn.addEventListener('click', async () => {
-              const oid = btn.getAttribute('data-order-id');
-              const card = btn.closest('.favorite-card');
-              const items = card?.querySelector('.fav-items')?.textContent || '';
-              const totalEl = card?.querySelector('.fav-total');
-              const total = totalEl ? parseInt((totalEl.textContent || '0').replace(/[^\d]/g, ''), 10) : 0;
-              if (!oid || !card) return;
-              btn.disabled = true;
-              try {
-                const body = { orderId: oid, items: (card.getAttribute('data-items') || ''), total };
-                if (telegramId) body.telegramId = telegramId;
-                if (whatsappId) body.whatsappId = whatsappId;
-                body.name = 'Sipariş #' + oid;
-                const rawOrder = orders.find(x => x.id === parseInt(oid, 10));
-                if (rawOrder && rawOrder.items) body.items = rawOrder.items;
-                const res = await fetch('/api/favorites', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-                const data = await res.json();
-                if (data.ok) loadFavoritesSection();
-                else { btn.disabled = false; }
-              } catch (_) { btn.disabled = false; }
-            });
-          });
-          el.querySelectorAll('.favorite-card').forEach(card => {
-            const oid = card.getAttribute('data-order-id');
-            const o = orders.find(x => x.id === parseInt(oid, 10));
-            if (o && o.items) card.setAttribute('data-items', o.items);
-          });
-        } catch (_) {
-          el.innerHTML = '<div class="loading" style="color:#f87171">Yüklenemedi.</div>';
-        }
-      }
-      async function loadFavoritesSection() {
-        const el = document.getElementById('favorites-section');
-        const tabs = document.getElementById('section-tabs');
-        if (!el || !tabs) return;
-        try {
-          const q = favQuery();
-          const r = await fetch('/api/favorites?' + q);
-          const d = await r.json();
-          const favs = d.favorites || [];
-          if (favs.length === 0) {
-            el.innerHTML = '<div class="loading" style="color:#71717a">Henüz favori siparişin yok.<br><small>Geçmiş siparişlerden favorilere <a class="past-orders-link" id="link-past-orders-fav">ekleyebilirsin</a>.</small></div>';
-            document.getElementById('link-past-orders-fav')?.addEventListener('click', loadPastOrdersForFavorites);
-          } else {
-            el.innerHTML = favs.map(f => {
-              const name = (f.name || 'Sipariş').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-              const itemsPreview = (f.items || '-').replace(/</g, '&lt;').slice(0, 80) + ((f.items || '').length > 80 ? '…' : '');
-              return `<div class="favorite-card" data-fav-id="${f.id}">
-                <h3>⭐ ${name}</h3>
-                <div class="fav-items">${itemsPreview}</div>
-                <div class="fav-total">${f.total || 0}₺</div>
-                <button type="button" class="fav-add-btn">🛒 Sepete ekle</button>
-                <button type="button" class="fav-remove-btn">Favoriden çıkar</button>
-              </div>`;
-            }).join('') + '<div style="margin-top:12px"><a class="past-orders-link" id="link-past-orders-fav">Geçmiş siparişlerden ekle</a></div>';
-            document.getElementById('link-past-orders-fav')?.addEventListener('click', loadPastOrdersForFavorites);
-            el.querySelectorAll('.favorite-card .fav-add-btn').forEach(btn => {
-              btn.addEventListener('click', async () => {
-                const card = btn.closest('.favorite-card');
-                const fid = card?.getAttribute('data-fav-id');
-                if (!fid) return;
-                try {
-                  const r = await fetch(`/api/favorites/${fid}?${q}`);
-                  if (!r.ok) return;
-                  const f = await r.json();
-                  const items = parseItemsStr(f.items || '');
-                  items.forEach(i => cart.push(i));
-                  updateCart();
-                  document.querySelector('.section-tab[data-section="menu"]')?.click();
-                } catch (_) {}
-              });
-            });
-            el.querySelectorAll('.fav-remove-btn').forEach(btn => {
-              btn.addEventListener('click', async () => {
-                const card = btn.closest('.favorite-card');
-                const fid = card?.getAttribute('data-fav-id');
-                if (!fid) return;
-                btn.disabled = true;
-                try {
-                  const res = await fetch(`/api/favorites/${fid}?${q}`, { method: 'DELETE' });
-                  const data = await res.json();
-                  if (data.ok) loadFavoritesSection();
-                  else btn.disabled = false;
-                } catch (_) { btn.disabled = false; }
-              });
-            });
-          }
-          tabs.style.display = 'flex';
-        } catch (_) {
-          el.innerHTML = '<div class="loading" style="color:#f87171">Favoriler yüklenemedi.</div>';
-          tabs.style.display = 'flex';
-        }
-      }
-      function showSection(section) {
-        const isFav = section === 'favorites';
-        const isOrders = section === 'orders';
-        document.getElementById('menu-section').style.display = (isFav || isOrders) ? 'none' : 'block';
-        document.getElementById('favorites-section').classList.toggle('show', isFav);
-        document.getElementById('orders-section').style.display = isOrders ? 'block' : 'none';
-        if (isOrders) document.getElementById('orders-section').classList.add('show');
-        else document.getElementById('orders-section').classList.remove('show');
-        document.querySelectorAll('.section-tab').forEach(t => t.classList.toggle('active', t.dataset.section === section));
-        const url = new URL(location.href);
-        if (section === 'favorites') url.searchParams.set('section', 'favorites');
-        else if (section === 'orders') url.searchParams.set('section', 'orders');
-        else url.searchParams.delete('section');
-        history.replaceState({}, '', url);
-        if (isOrders) loadMyOrders();
-      }
-      const CANCEL_MINUTES = 10;
-      function canCancelOrder(order) {
-        return order.status === 'Alındı' && (Date.now() - new Date(order.createdAt).getTime()) < CANCEL_MINUTES * 60 * 1000;
-      }
-      async function loadMyOrders() {
-        const el = document.getElementById('orders-section');
-        const q = telegramId ? 'telegramId=' + encodeURIComponent(telegramId) : 'whatsappId=' + encodeURIComponent(whatsappId);
-        try {
-          const [ordersRes, favRes] = await Promise.all([fetch('/api/my-orders?' + q), fetch('/api/favorites?' + q)]);
-          if (!ordersRes.ok) { el.innerHTML = '<div class="loading" style="color:#f87171">Siparişler yüklenemedi.</div>'; return; }
-          const d = await ordersRes.json();
-          const list = d.orders || [];
-          const favs = favRes.ok ? (await favRes.json()).favorites || [] : [];
-          const favoritedOrderIds = new Set(favs.map(f => f.orderId));
-          if (list.length === 0) {
-            el.innerHTML = '<div class="loading" style="color:#71717a">Henüz siparişiniz yok.</div>';
-          } else {
-            el.innerHTML = list.map(o => {
-              const itemsPreview = (o.items || '-').replace(/</g, '&lt;').slice(0, 60) + ((o.items || '').length > 60 ? '…' : '');
-              const cancelable = canCancelOrder(o);
-              const isFav = favoritedOrderIds.has(o.id);
-              return `<div class="favorite-card" data-order-id="${o.id}">
-                <h3>#${o.id} — ${String(o.status).replace(/</g, '&lt;')}</h3>
-                <div class="fav-items">${itemsPreview}</div>
-                <div class="fav-total">${o.total || 0}₺</div>
-                <div style="display:flex;gap:8px;flex-wrap:wrap">
-                  ${!isFav ? '<button type="button" class="fav-add-btn secondary order-fav-add-btn">⭐ Favorilere ekle</button>' : '<span class="fav-add-btn added" style="padding:10px;border-radius:10px;font-size:0.9rem">✓ Favoride</span>'}
-                  ${cancelable ? '<button type="button" class="fav-add-btn order-cancel-btn">❌ İptal et</button>' : ''}
-                </div>
-              </div>`;
-            }).join('');
-            el.querySelectorAll('.order-cancel-btn').forEach(btn => {
-              btn.addEventListener('click', async () => {
-                const card = btn.closest('.favorite-card');
-                const oid = card?.getAttribute('data-order-id');
-                if (!oid) return;
-                btn.disabled = true;
-                try {
-                  const body = { status: 'İptal' };
-                  if (telegramId) body.telegramId = telegramId;
-                  if (whatsappId) body.whatsappId = whatsappId;
-                  const res = await fetch('/api/orders/' + oid, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-                  const data = await res.json();
-                  if (data.ok) loadMyOrders();
-                  else { btn.disabled = false; alert(data.error || 'İptal edilemedi'); }
-                } catch (_) { btn.disabled = false; alert('Bağlantı hatası'); }
-              });
-            });
-            el.querySelectorAll('.order-fav-add-btn').forEach(btn => {
-              btn.addEventListener('click', async () => {
-                const card = btn.closest('.favorite-card');
-                const oid = card?.getAttribute('data-order-id');
-                const o = list.find(x => x.id === parseInt(oid, 10));
-                if (!oid || !o) return;
-                btn.disabled = true;
-                try {
-                  const body = { orderId: oid, items: o.items || '', total: o.total ?? 0, name: 'Sipariş #' + oid };
-                  if (telegramId) body.telegramId = telegramId;
-                  if (whatsappId) body.whatsappId = whatsappId;
-                  const res = await fetch('/api/favorites', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-                  const data = await res.json();
-                  if (data.ok) loadMyOrders();
-                  else btn.disabled = false;
-                } catch (_) { btn.disabled = false; }
-              });
-            });
-          }
-        } catch (_) {
-          el.innerHTML = '<div class="loading" style="color:#f87171">Siparişler yüklenemedi.</div>';
-        }
-      }
-      async function loadReorderOrFav() {
-        const q = telegramId ? 'telegramId=' + telegramId : 'whatsappId=' + whatsappId;
-        if (addOrderId) {
-          document.querySelector('.header p').textContent = 'Siparişe eklemek için ürün seçin';
-        } else if (reorderId) {
-          try {
-            const res = await fetch(`/api/orders/${reorderId}?${q}`);
-            if (res.ok) {
-              const o = await res.json();
-              const mine = telegramId ? o.telegramId === telegramId : o.whatsappId === whatsappId;
-              if (mine) cart.push(...parseItemsStr(o.items));
-            }
-          } catch (_) {}
-        } else if (favId) {
-          try {
-            const res = await fetch(`/api/favorites/${favId}?${q}`);
-            if (res.ok) {
-              const f = await res.json();
-              const mine = telegramId ? f.telegramId === telegramId : f.whatsappId === whatsappId;
-              if (mine) cart.push(...parseItemsStr(f.items));
-            }
-          } catch (_) {}
-        }
-      }
-      loadMenu();
-    }
-  </script>
+  <script src="/menu.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
 </body>
 </html>
