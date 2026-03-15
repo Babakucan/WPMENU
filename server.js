@@ -451,6 +451,7 @@ app.delete('/api/favorites/:id', (req, res) => {
   res.json({ ok: true });
 });
 app.get('/api/restaurant', (req, res) => {
+  res.set('Cache-Control', 'no-store');
   const rest = getCachedRestaurant();
   rest.isOpen = isOpen(rest);
   rest.minOrderAmount = Number(rest.minOrderAmount) || 0;

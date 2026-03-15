@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Menü</title>
+  <title>MenÃ¼</title>
   <link rel="manifest" href="/manifest.json" />
   <meta name="theme-color" content="#12151a" />
   <script src="https://cdn.tailwindcss.com"></script>
@@ -71,12 +71,12 @@
           class="w-11 h-11 rounded-xl object-cover ring-2 ring-white/10 shadow"
           x-show="restaurant.logo"
         />
-        <span x-show="!restaurant.logo" class="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center text-2xl">🍽️</span>
+        <span x-show="!restaurant.logo" class="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center text-2xl">ğŸ½ï¸</span>
         <h1 class="text-lg font-semibold text-white tracking-tight" x-text="restaurant.name"></h1>
       </div>
     </header>
 
-    <!-- YATAY KATEGORİ MENÜSÜ -->
+    <!-- YATAY KATEGORÄ° MENÃœSÃœ -->
     <nav class="sticky top-[60px] z-30 bg-stone-50/95 backdrop-blur-sm border-b border-stone-200/80 shadow-sm">
       <div class="max-w-2xl mx-auto px-2 py-2">
         <div class="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-2 px-2" style="scrollbar-width: none; -ms-overflow-style: none;">
@@ -97,7 +97,7 @@
       </div>
     </nav>
 
-    <!-- ÜRÜN LİSTESİ -->
+    <!-- ÃœRÃœN LÄ°STESÄ° -->
     <main class="max-w-2xl mx-auto px-4 py-6">
       <template x-for="cat in categories" :key="'section-' + cat.id">
         <section
@@ -135,14 +135,14 @@
                       class="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
                       loading="lazy"
                     />
-                    <div x-show="!product.image" class="w-full h-full flex items-center justify-center text-4xl">🍽️</div>
+                    <div x-show="!product.image" class="w-full h-full flex items-center justify-center text-4xl">ğŸ½ï¸</div>
                   </div>
                   <div class="p-4">
                     <h3 class="font-semibold text-stone-900 text-base mb-1" x-text="product.name"></h3>
                     <p class="text-sm text-stone-500 line-clamp-2 mb-3" x-text="product.description || ''"></p>
                     <div class="flex items-center justify-between">
-                      <span class="text-lg font-bold text-brand-600" x-text="product.price + '₺'"></span>
-                      <span class="text-sm font-medium text-brand-600">Detay →</span>
+                      <span class="text-lg font-bold text-brand-600" x-text="product.price + 'â‚º'"></span>
+                      <span class="text-sm font-medium text-brand-600">Detay â†’</span>
                     </div>
                   </div>
                 </button>
@@ -162,7 +162,7 @@
       </template>
     </main>
 
-    <!-- ÜRÜN DETAY MODALI -->
+    <!-- ÃœRÃœN DETAY MODALI -->
     <div
       x-show="modalOpen"
       x-transition:enter="ease-out duration-200"
@@ -187,16 +187,16 @@
           <div class="overflow-y-auto flex-1">
             <div class="aspect-[4/3] bg-stone-100 shrink-0">
               <img x-show="modalProduct.image" :src="modalProduct.image" :alt="modalProduct.name" class="w-full h-full object-cover" />
-              <div x-show="!modalProduct.image" class="w-full h-full flex items-center justify-center text-5xl">🍽️</div>
+              <div x-show="!modalProduct.image" class="w-full h-full flex items-center justify-center text-5xl">ğŸ½ï¸</div>
             </div>
             <div class="p-5 pb-8">
               <h3 class="text-xl font-bold text-stone-900 mb-1" x-text="modalProduct.name"></h3>
               <p class="text-stone-500 text-sm mb-4" x-text="modalProduct.description || ''"></p>
-              <p class="text-lg font-bold text-brand-600 mb-5" x-text="modalProduct.price + '₺'"></p>
+              <p class="text-lg font-bold text-brand-600 mb-5" x-text="modalProduct.price + 'â‚º'"></p>
 
               <template x-if="modalProduct.ingredientIds && modalProduct.ingredientIds.length">
                 <div class="mb-5">
-                  <h4 class="text-sm font-semibold text-stone-700 mb-2">Çıkarılabilecekler</h4>
+                  <h4 class="text-sm font-semibold text-stone-700 mb-2">Ã‡Ä±karÄ±labilecekler</h4>
                   <div class="flex flex-wrap gap-2">
                     <template x-for="ingId in modalProduct.ingredientIds" :key="ingId">
                       <button
@@ -206,7 +206,7 @@
                         class="px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors"
                       >
                         <span x-text="getIngredientName(ingId)"></span>
-                        <span x-show="modalRemoves.includes(ingId)"> ✓</span>
+                        <span x-show="modalRemoves.includes(ingId)"> âœ“</span>
                       </button>
                     </template>
                   </div>
@@ -222,7 +222,7 @@
                         :class="modalExtras[exId] ? 'border-brand-500 bg-brand-50' : 'border-stone-200 hover:bg-stone-50'">
                         <span class="font-medium text-stone-800" x-text="getExtra(modalProduct, exId)?.name"></span>
                         <div class="flex items-center gap-2">
-                          <span class="text-sm text-brand-600 font-semibold" x-text="'+' + (getExtra(modalProduct, exId)?.price || 0) + '₺'"></span>
+                          <span class="text-sm text-brand-600 font-semibold" x-text="'+' + (getExtra(modalProduct, exId)?.price || 0) + 'â‚º'"></span>
                           <input type="checkbox" x-model="modalExtras[exId]" class="rounded border-stone-300 text-brand-600 focus:ring-brand-500" />
                         </div>
                       </label>
@@ -258,17 +258,17 @@
             :class="{ 'animate-cart-bounce': addToCartBounce }"
             x-text="cartCount()"
           ></span>
-          <span class="text-stone-500 text-sm truncate" x-text="cartCount() + ' ürün'"></span>
+          <span class="text-stone-500 text-sm truncate" x-text="cartCount() + ' Ã¼rÃ¼n'"></span>
         </div>
         <div class="flex-1 text-right">
-          <span class="text-xl font-bold text-stone-900" x-text="cartTotal() + '₺'"></span>
+          <span class="text-xl font-bold text-stone-900" x-text="cartTotal() + 'â‚º'"></span>
         </div>
         <button
           type="button"
           @click="startCheckout()"
           class="shrink-0 px-6 py-3 rounded-xl bg-brand-500 text-white font-semibold hover:bg-brand-600 active:scale-[0.98] transition-all duration-200 shadow-lg shadow-brand-500/25"
         >
-          Siparişi tamamla
+          SipariÅŸi tamamla
         </button>
       </div>
     </div>
@@ -288,25 +288,25 @@
         class="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl p-6 pb-8 safe-area-pb"
         @click.stop
       >
-        <h3 class="text-lg font-bold text-stone-900 mb-4">Sipariş türü</h3>
+        <h3 class="text-lg font-bold text-stone-900 mb-4">SipariÅŸ tÃ¼rÃ¼</h3>
         <div class="space-y-3">
           <button
             type="button"
             @click="setOrderMode('in')"
             class="w-full p-4 rounded-xl border-2 border-stone-200 hover:border-brand-500 hover:bg-brand-50 text-left font-medium text-stone-800 transition-colors"
           >
-            Restoran içi — Masa <span x-text="restaurant.tableNumber || '—'"></span>
+            Restoran iÃ§i â€” Masa <span x-text="restaurant.tableNumber || 'â€”'"></span>
           </button>
           <button
             type="button"
             @click="setOrderMode('out')"
             class="w-full p-4 rounded-xl border-2 border-stone-200 hover:border-brand-500 hover:bg-brand-50 text-left font-medium text-stone-800 transition-colors"
           >
-            Paket / Restoran dışı
+            Paket / Restoran dÄ±ÅŸÄ±
           </button>
         </div>
         <button type="button" @click="backToCart()" class="mt-4 w-full py-3 text-stone-500 font-medium">
-          ← Sepete dön
+          â† Sepete dön
         </button>
       </div>
 
@@ -316,14 +316,14 @@
         class="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl p-6 pb-8 max-h-[90vh] overflow-y-auto safe-area-pb"
         @click.stop
       >
-        <h3 class="text-lg font-bold text-stone-900 mb-4">İletişim bilgileri</h3>
+        <h3 class="text-lg font-bold text-stone-900 mb-4">Ä°letiÅŸim bilgileri</h3>
         <div class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-stone-700 mb-1">Ad Soyad</label>
             <input
               type="text"
               x-model="customer.name"
-              placeholder="Adınız"
+              placeholder="AdÄ±nÄ±z"
               class="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none transition"
             />
           </div>
@@ -354,7 +354,7 @@
           Devam et
         </button>
         <button type="button" @click="backToMode()" class="mt-3 w-full py-2 text-stone-500 font-medium text-sm">
-          ← Geri
+          â† Geri
         </button>
       </div>
 
@@ -364,9 +364,9 @@
         class="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl p-6 pb-8 max-h-[90vh] overflow-y-auto safe-area-pb"
         @click.stop
       >
-        <h3 class="text-lg font-bold text-stone-900 mb-4">Sipariş özeti</h3>
+        <h3 class="text-lg font-bold text-stone-900 mb-4">SipariÅŸ Ã¶zeti</h3>
         <template x-if="orderMode === 'in'">
-          <p class="text-stone-600 text-sm mb-4">Masa: <span x-text="restaurant.tableNumber || '—'"></span></p>
+          <p class="text-stone-600 text-sm mb-4">Masa: <span x-text="restaurant.tableNumber || 'â€”'"></span></p>
         </template>
         <template x-if="orderMode === 'out'">
           <div class="text-sm text-stone-600 mb-4 space-y-1">
@@ -387,11 +387,11 @@
                   <span class="text-brand-600 block text-xs" x-text="'+ ' + item.extras.map(e => e.name).join(', ')"></span>
                 </template>
               </span>
-              <span class="font-medium" x-text="(item.product.price * item.qty + (item.extras || []).reduce((s,e) => s + e.price * item.qty, 0)) + '₺'"></span>
+              <span class="font-medium" x-text="(item.product.price * item.qty + (item.extras || []).reduce((s,e) => s + e.price * item.qty, 0)) + 'â‚º'"></span>
             </li>
           </template>
         </ul>
-        <p class="text-right font-bold text-lg text-stone-900 mb-6">Toplam: <span x-text="cartTotal() + '₺'"></span></p>
+        <p class="text-right font-bold text-lg text-stone-900 mb-6">Toplam: <span x-text="cartTotal() + 'â‚º'"></span></p>
         <button
           type="button"
           @click="sendWhatsApp()"
@@ -401,7 +401,7 @@
           WhatsApp ile gönder
         </button>
         <button type="button" @click="backToCart()" class="mt-3 w-full py-2 text-stone-500 font-medium text-sm">
-          ← Sepete dön
+          â† Sepete dön
         </button>
       </div>
     </div>
