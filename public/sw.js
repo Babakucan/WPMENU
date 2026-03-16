@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wpmenu-v2';
+const CACHE_NAME = 'wpmenu-v3';
 const STATIC_URLS = ['/manifest.json', '/telegram-web-app.js'];
 
 self.addEventListener('install', (event) => {
@@ -16,7 +16,14 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   if (event.request.url.includes('/api/')) return;
-  if (event.request.url.includes('panel.html') || event.request.url.includes('menu.html')) return event.respondWith(fetch(event.request));
+  // Kritik dosyalar: her zaman network (cache mismatch önle)
+  if (
+    event.request.url.includes('panel.html') ||
+    event.request.url.includes('menu.html') ||
+    event.request.url.includes('/menu.js')
+  ) {
+    return event.respondWith(fetch(event.request));
+  }
   event.respondWith(
     caches.match(event.request).then((cached) => cached || fetch(event.request).then((res) => {
       const clone = res.clone();
