@@ -770,59 +770,6 @@
           </div>
           <p style="font-size:0.8rem;color:var(--muted);margin-top:12px">Dosya yükleyin veya harici URL yapıştırın. Kaydet'e basın.</p>
         </div>
-        <div class="card media-card">
-          <h3 style="margin-bottom:20px;font-size:1.1rem">🖼️ Banner Ayarları</h3>
-          <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px">Menü sayfasındaki üst banner görseli. Görünüm ve hizalama menüde nasıl gösterileceğini belirler.</p>
-          <div class="form-group">
-            <label>Banner görseli</label>
-            <span style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:8px">Önerilen: 1200×300 px</span>
-            <div style="display:flex;flex-direction:column;gap:12px">
-              <div class="media-preview-wrap banner-wrap" id="banner-preview"><span class="ph">🖼️</span></div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <input type="file" id="banner-file" accept="image/*" style="display:none" onchange="uploadAndSet('banner',this)">
-                <button type="button" class="btn btn-primary" onclick="document.getElementById('banner-file').click()">📤 Yükle</button>
-                <input type="url" id="r-banner" placeholder="URL yapıştır" style="flex:1;min-width:200px" oninput="updateMediaPreview('banner',this.value)">
-              </div>
-            </div>
-          </div>
-          <div class="form-grid" style="margin-top:20px">
-            <div class="form-group">
-              <label>Menüde görünüm</label>
-              <select id="r-bannerObjectFit" style="width:100%;padding:10px 12px;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:0.9rem">
-                <option value="cover">Alanı doldur (kırp)</option>
-                <option value="contain">Tam göster (sığdır)</option>
-                <option value="fill">Uzat</option>
-              </select>
-              <span style="font-size:0.75rem;color:var(--muted)">Görselin banner alanına nasıl yerleşeceği</span>
-            </div>
-            <div class="form-group">
-              <label>Hizalama</label>
-              <select id="r-bannerObjectPosition" style="width:100%;padding:10px 12px;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:0.9rem" onchange="syncBannerPreset()">
-                <option value="center">Orta</option>
-                <option value="top">Üst</option>
-                <option value="bottom">Alt</option>
-                <option value="left">Sol</option>
-                <option value="right">Sağ</option>
-                <option value="center top">Üst orta</option>
-                <option value="center bottom">Alt orta</option>
-                <option value="custom">Özel (sürükle)</option>
-              </select>
-              <span style="font-size:0.75rem;color:var(--muted)">Kırpılmada öncelikli bölge</span>
-            </div>
-          </div>
-          <div class="form-grid" style="margin-top:12px">
-            <div class="form-group">
-              <label>Yatay %</label>
-              <input type="number" id="r-bannerPosX" min="0" max="100" value="50" style="width:100%;padding:8px 12px;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--text)" onchange="applyBannerPosition()">
-            </div>
-            <div class="form-group">
-              <label>Dikey %</label>
-              <input type="number" id="r-bannerPosY" min="0" max="100" value="50" style="width:100%;padding:8px 12px;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--text)" onchange="applyBannerPosition()">
-            </div>
-          </div>
-          <p style="font-size:0.8rem;color:var(--muted);margin-top:8px">Görseli önizlemede sürükleyerek konumlandırabilirsiniz.</p>
-          <p style="font-size:0.8rem;color:var(--muted);margin-top:16px">Değişiklikleri görmek için Kaydet'e basıp menü sayfasını yenileyin.</p>
-        </div>
         <div class="card">
           <div class="form-grid">
             <div class="form-group"><label>Restoran Adı</label><input type="text" id="r-name"></div>

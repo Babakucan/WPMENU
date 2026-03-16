@@ -112,7 +112,7 @@
     "paymentMethod": "kapida_nakit",
     "location": null,
     "couponCode": null,
-    "status": "Alındı",
+    "status": "Teslim Edildi",
     "createdAt": "2026-03-13T16:47:41.532Z"
   },
   {
@@ -127,7 +127,7 @@
     "paymentMethod": "kapida_nakit",
     "location": null,
     "couponCode": null,
-    "status": "Alındı",
+    "status": "Teslim Edildi",
     "createdAt": "2026-03-14T11:42:42.000Z",
     "whatsappId": "905330686788"
   },
@@ -146,7 +146,7 @@
       "lng": 27.1024128
     },
     "couponCode": null,
-    "status": "Alındı",
+    "status": "Teslim Edildi",
     "createdAt": "2026-03-14T11:46:42.379Z",
     "whatsappId": "905330686788"
   },
@@ -165,7 +165,7 @@
       "lng": 27.1024128
     },
     "couponCode": null,
-    "status": "Alındı",
+    "status": "Teslim Edildi",
     "createdAt": "2026-03-14T11:47:51.869Z",
     "whatsappId": "905330686788"
   },
@@ -184,7 +184,7 @@
       "lng": 27.199318
     },
     "couponCode": null,
-    "status": "İptal",
+    "status": "Teslim Edildi",
     "createdAt": "2026-03-14T12:22:16.263Z",
     "whatsappId": "905330686788"
   },
@@ -200,7 +200,7 @@
     "paymentMethod": "gelal_nakit",
     "location": null,
     "couponCode": null,
-    "status": "Hazır",
+    "status": "Teslim Edildi",
     "createdAt": "2026-03-14T14:17:49.781Z",
     "whatsappId": "905330686788"
   },
@@ -267,7 +267,7 @@
     "paymentMethod": "kapida_nakit",
     "location": null,
     "couponCode": null,
-    "status": "Hazırlanıyor",
+    "status": "Teslim Edildi",
     "createdAt": "2026-03-14T14:44:09.014Z",
     "whatsappId": "905330686788",
     "estimatedMinutes": 50
@@ -354,5 +354,90 @@
     "createdAt": "2026-03-14T16:29:25.908Z",
     "whatsappId": "905330686788",
     "estimatedMinutes": 25
+  },
+  {
+    "id": 24,
+    "items": "1x Lahmacun — 45₺, 1x Lahmacun — 45₺",
+    "total": 90,
+    "subtotal": 90,
+    "discountAmount": 0,
+    "address": "İzmir bayraklı",
+    "notes": "",
+    "orderType": "paket",
+    "paymentMethod": "kapida_nakit",
+    "location": null,
+    "couponCode": null,
+    "status": "Teslim Edildi",
+    "createdAt": "2026-03-16T12:15:10.841Z",
+    "estimatedMinutes": 30,
+    "whatsappId": "905330686788"
+  },
+  {
+    "id": 25,
+    "items": "1x Lahmacun — 45₺, 1x Lahmacun — 45₺",
+    "total": 90,
+    "subtotal": 90,
+    "discountAmount": 0,
+    "address": "izmir bayraklı",
+    "notes": "",
+    "orderType": "paket",
+    "paymentMethod": "kapida_nakit",
+    "location": null,
+    "couponCode": null,
+    "status": "Teslim Edildi",
+    "createdAt": "2026-03-16T12:16:42.769Z",
+    "estimatedMinutes": 30,
+    "whatsappId": "905330686788"
+  },
+  {
+    "id": 26,
+    "items": "1x Lahmacun — 45₺",
+    "total": 45,
+    "subtotal": 45,
+    "discountAmount": 0,
+    "address": "Belirtilmedi",
+    "notes": "",
+    "orderType": "gel_al",
+    "paymentMethod": "kapida_nakit",
+    "location": null,
+    "couponCode": null,
+    "status": "Teslim Edildi",
+    "createdAt": "2026-03-16T12:35:21.088Z",
+    "estimatedMinutes": 15,
+    "whatsappId": "905330686788"
+  },
+  {
+    "id": 27,
+    "items": "5x Lahmacun — 225₺, 5x Pizza (Orta) — 475₺",
+    "total": 700,
+    "subtotal": 700,
+    "discountAmount": 0,
+    "address": "Belirtilmedi",
+    "notes": "",
+    "orderType": "gel_al",
+    "paymentMethod": "kapida_nakit",
+    "location": null,
+    "couponCode": null,
+    "status": "Teslim Edildi",
+    "createdAt": "2026-03-16T12:44:47.851Z",
+    "estimatedMinutes": 15,
+    "whatsappId": "905330686788"
+  },
+  {
+    "id": 28,
+    "items": "1x Lahmacun — 45₺",
+    "total": 45,
+    "subtotal": 45,
+    "discountAmount": 0,
+    "address": "Belirtilmedi",
+    "notes": "",
+    "orderType": "gel_al",
+    "paymentMethod": "kapida_nakit",
+    "location": null,
+    "couponCode": null,
+    "status": "Teslim Edildi",
+    "createdAt": "2026-03-16T12:48:30.145Z",
+    "estimatedMinutes": 15,
+    "whatsappId": "905330686788"
   }
 ]

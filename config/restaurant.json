@@ -1,8 +1,8 @@
 {
   "name": "Reychef",
-  "logo": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=200&h=200&fit=crop",
-  "banner": "/uploads/2d3f0421f705179940f982010b38e701.jpeg",
-  "bannerObjectFit": "fill",
+  "logo": "/uploads/fb90abba1ec1c8ea73f59128e4078fdd.png",
+  "banner": "",
+  "bannerObjectFit": "cover",
   "bannerObjectPosition": "50% 50%",
   "address": "Örnek Mah. Restoran Sok. No:1",
   "estimatedMinutes": 25,
