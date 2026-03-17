@@ -20,6 +20,25 @@ describe('restaurant lib', () => {
     it('returns false when current time is outside range', () => {
       assert.strictEqual(isOpen({ hoursOpen: '00:00', hoursClose: '01:00' }), false);
     });
+
+    it('uses weeklyHours when provided', () => {
+      const now = new Date();
+      const day = String(now.getDay());
+      const h = now.getHours();
+      const open = `${String(Math.max(0, h - 1)).padStart(2, '0')}:00`;
+      const close = `${String((h + 2) % 24).padStart(2, '0')}:00`;
+      assert.strictEqual(isOpen({ weeklyHours: { [day]: { enabled: true, open, close } } }), true);
+    });
+
+    it('specialDays closed overrides normal hours', () => {
+      const now = new Date();
+      const date = now.toISOString().slice(0, 10);
+      assert.strictEqual(isOpen({
+        hoursOpen: '00:00',
+        hoursClose: '23:59',
+        specialDays: [{ date, closed: true }]
+      }), false);
+    });
   });
 
   describe('validateCoupon', () => {

@@ -10,7 +10,7 @@ const rateLimit = require('express-rate-limit');
 const { logError } = require('./lib/logger');
 const helmet = require('helmet');
 const { validateRestaurant, validateMenu } = require('./lib/validators');
-const { loadOrders, saveOrders, loadFavorites, saveFavorites, loadPrefs, savePrefs, orderUserMatch, prefsKey } = require('./lib/orders');
+const { loadOrders, saveOrders, loadFavorites, saveFavorites, loadPrefs, savePrefs, loadFeedback, saveFeedback, normalizeItemsStructured, orderUserMatch, prefsKey } = require('./lib/orders');
 const restaurantLib = require('./lib/restaurant');
 const { getCachedRestaurant, getCachedMenu, invalidateRestaurantCache, invalidateMenuCache, isOpen, validateCoupon, formatOrderConfirm, getActiveCampaign, loadMenuForPreview, MENU_PATH, RESTAURANT_PATH } = restaurantLib;
 const getRestaurant = getCachedRestaurant;
@@ -108,6 +108,43 @@ async function sendWhatsAppReplyButtons(to, bodyText, buttons) {
   }
 }
 
+// WhatsApp interaktif liste: 1 seçimli puanlama gibi akışlar için
+async function sendWhatsAppList(to, bodyText, buttonText, sections) {
+  if (!whatsappEnabled || !Array.isArray(sections) || !sections.length) return;
+  const url = `https://graph.facebook.com/${WA_API_VERSION}/${waPhone()}/messages`;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + WA_ACCESS_TOKEN,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: waTo(to),
+        type: 'interactive',
+        interactive: {
+          type: 'list',
+          body: { text: bodyText },
+          action: {
+            button: String(buttonText || 'Seç').slice(0, 20),
+            sections: sections
+          }
+        }
+      })
+    });
+    const body = await res.text();
+    if (!res.ok) {
+      console.error('[WhatsApp] List hatası:', res.status, body);
+      logError('WhatsApp list', new Error(body));
+    }
+  } catch (e) {
+    console.error('[WhatsApp] List exception:', e.message);
+    logError('WhatsApp list', e);
+  }
+}
+
 // WhatsApp: tek butonla URL açan mesaj (Menü linki için)
 async function sendWhatsAppUrlButton(to, bodyText, buttonText, url) {
   if (!whatsappEnabled) return;
@@ -152,10 +189,79 @@ async function sendWhatsAppUrlButton(to, bodyText, buttonText, url) {
 
 let orders = [];
 let orderIdCounter = 1;
+let feedbacks = [];
+const pendingFeedbackComment = new Map();
 
 async function initOrders() {
   orders = await loadOrders();
   orderIdCounter = Math.max(1, ...orders.map(o => o.id), 0) + 1;
+}
+
+async function initFeedbacks() {
+  feedbacks = await loadFeedback();
+}
+
+function serializeStructuredLine(item, menuMap) {
+  const qty = Math.max(1, Number(item.qty) || 1);
+  const menuItem = item.productId ? menuMap.get(String(item.productId)) : null;
+  const name = menuItem ? menuItem.name : (item.productName || item.productId || 'Ürün');
+  const removes = Array.isArray(item.removes) ? item.removes.filter(Boolean) : [];
+  const extras = Array.isArray(item.extras) ? item.extras.filter((x) => x && x.name) : [];
+  const base = menuItem ? Number(menuItem.price) || 0 : Number(item.basePrice) || 0;
+  const extrasTotal = extras.reduce((s, ex) => s + (Number(ex.price) || 0), 0);
+  const price = (base + extrasTotal) * qty;
+  let text = `${qty}x ${name}`;
+  if (removes.length) text += ` (- ${removes.join(', ')})`;
+  if (extras.length) text += ` (+ ${extras.map((e) => e.name).join(', ')})`;
+  return `${text} — ${price}₺`;
+}
+
+function getMenuProductMap() {
+  const map = new Map();
+  const menu = getCachedMenu();
+  if (!menu || !Array.isArray(menu.categories)) return map;
+  menu.categories.forEach((cat) => {
+    (cat.products || []).forEach((p) => {
+      if (p && p.id) map.set(String(p.id), p);
+    });
+  });
+  return map;
+}
+
+function structuredToItemsText(itemsStructured) {
+  const rows = normalizeItemsStructured(itemsStructured);
+  if (!rows.length) return '';
+  const menuMap = getMenuProductMap();
+  return rows.map((row) => serializeStructuredLine(row, menuMap)).join(', ');
+}
+
+function upsertFeedback({ orderId, telegramId, whatsappId, rating, comment }) {
+  const idNum = Number(orderId);
+  const tg = telegramId ? String(telegramId) : null;
+  const wa = whatsappId ? String(whatsappId) : null;
+  const idx = feedbacks.findIndex((f) => Number(f.orderId) === idNum && (
+    (tg && f.telegramId === tg) || (wa && f.whatsappId === wa)
+  ));
+  if (idx >= 0) {
+    if (rating != null) feedbacks[idx].rating = Number(rating);
+    if (comment != null) feedbacks[idx].comment = String(comment || '').trim().slice(0, 500);
+    feedbacks[idx].updatedAt = new Date().toISOString();
+    saveFeedback(feedbacks);
+    return feedbacks[idx];
+  }
+  const nextId = feedbacks.length ? Math.max(...feedbacks.map((f) => Number(f.id) || 0)) + 1 : 1;
+  const fb = {
+    id: nextId,
+    orderId: idNum,
+    rating: Number(rating) || 5,
+    comment: String(comment || '').trim().slice(0, 500),
+    createdAt: new Date().toISOString()
+  };
+  if (tg) fb.telegramId = tg;
+  if (wa) fb.whatsappId = wa;
+  feedbacks.push(fb);
+  saveFeedback(feedbacks);
+  return fb;
 }
 
 // SSE: panel için sipariş akışı
@@ -271,6 +377,17 @@ app.post('/webhook/whatsapp', express.raw({ type: 'application/json' }), async (
       for (const msg of messages) {
         const from = msg.from;
         const type = msg.type;
+        const feedbackKey = 'wa_' + String(from);
+        if (type === 'text' && msg.text && pendingFeedbackComment.has(feedbackKey)) {
+          const comment = (msg.text.body || '').trim();
+          if (comment) {
+            const orderId = pendingFeedbackComment.get(feedbackKey);
+            upsertFeedback({ orderId, whatsappId: from, comment });
+            pendingFeedbackComment.delete(feedbackKey);
+            sendWhatsAppMessage(from, 'Teşekkürler, yorumunuz kaydedildi.');
+            continue;
+          }
+        }
         if (type === 'location' && msg.location) {
           const locKey = 'wa_' + from;
           const orderId = pendingLocationForOrder.get(locKey);
@@ -292,8 +409,10 @@ app.post('/webhook/whatsapp', express.raw({ type: 'application/json' }), async (
           const btn = msg.interactive.button_reply || msg.interactive.list_reply;
           body = (btn && (btn.title || btn.id)) || '';
         }
-        // Buton yanıtı: interactive.button_reply.id
-        const buttonId = (type === 'interactive' && msg.interactive?.button_reply?.id) ? msg.interactive.button_reply.id.trim().toLowerCase() : '';
+        // Buton/Liste yanıtı id'si
+        const buttonId = (type === 'interactive' && (msg.interactive?.button_reply?.id || msg.interactive?.list_reply?.id))
+          ? String(msg.interactive.button_reply?.id || msg.interactive.list_reply?.id).trim().toLowerCase()
+          : '';
         const cmd = buttonId || body.toLowerCase();
         console.log('[WhatsApp] Yanıtlanıyor from:', from, 'cmd:', cmd || '(hoş geldin)');
         const menuLink = `${baseUrl}/menu.html?channel=whatsapp&userId=${from}`;
@@ -301,7 +420,19 @@ app.post('/webhook/whatsapp', express.raw({ type: 'application/json' }), async (
         const openNow = isOpen(r);
         const status = openNow ? '🟢 Açık' : '🔴 Kapalı';
 
-        if (cmd === 'menu' || cmd === 'menü' || cmd === 'sipariş' || cmd === 'siparis' || cmd === '1') {
+        if (/^fb_rate_\d+_[1-5]$/.test(cmd)) {
+          const m = cmd.match(/^fb_rate_(\d+)_(\d)$/);
+          const orderId = m ? Number(m[1]) : 0;
+          const rating = m ? Number(m[2]) : 0;
+          const order = orders.find((o) => o.id === orderId && o.whatsappId === String(from));
+          if (!order) {
+            sendWhatsAppMessage(from, 'Bu sipariş için puanlama bulunamadı.');
+          } else {
+            upsertFeedback({ orderId, whatsappId: from, rating });
+            pendingFeedbackComment.set(feedbackKey, orderId);
+            sendWhatsAppMessage(from, `Teşekkürler, ${rating} yıldız verdiniz. İsterseniz kısa yorum yazabilirsiniz.`);
+          }
+        } else if (cmd === 'menu' || cmd === 'menü' || cmd === 'sipariş' || cmd === 'siparis' || cmd === '1') {
           sendWhatsAppUrlButton(from, `${r.name || 'MeraPaket'} — ${status}\n\nSipariş vermek için aşağıdaki butona tıklayın.`, 'Menüyü Aç', menuLink);
         } else if (cmd === 'siparişlerim' || cmd === 'siparislerim' || cmd === '2' || cmd === 'orders') {
           const userOrders = orders.filter(o => o.whatsappId === String(from)).slice(-5).reverse();
@@ -462,6 +593,72 @@ app.get('/api/analytics', requireAdmin, (req, res) => {
   orders.forEach(o => { byStatus[o.status] = (byStatus[o.status] || 0) + 1; });
   res.json({ byStatus, total: orders.length });
 });
+app.get('/api/admin/coupon-analytics', requireAdmin, (req, res) => {
+  const map = {};
+  orders.forEach((o) => {
+    const code = String(o.couponCode || '').trim();
+    if (!code) return;
+    if (!map[code]) map[code] = { code, uses: 0, totalDiscount: 0, totalSubtotal: 0, totalFinal: 0 };
+    map[code].uses += 1;
+    map[code].totalDiscount += Number(o.discountAmount || 0) || 0;
+    map[code].totalSubtotal += Number(o.subtotal || o.total || 0) || 0;
+    map[code].totalFinal += Number(o.total || 0) || 0;
+  });
+  const rows = Object.values(map).sort((a, b) => b.uses - a.uses);
+  res.json({ ok: true, coupons: rows });
+});
+
+app.get('/api/admin/kitchen/orders', requireAdmin, (req, res) => {
+  const liveStatuses = new Set(['Alındı', 'Hazırlanıyor', 'Hazır']);
+  const list = [...orders]
+    .filter((o) => liveStatuses.has(o.status))
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  res.json({ ok: true, orders: list });
+});
+
+app.get('/api/admin/feedback', requireAdmin, (req, res) => {
+  res.json({ ok: true, feedback: [...feedbacks].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) });
+});
+
+app.post('/api/feedback', (req, res) => {
+  const { orderId, telegramId, whatsappId, rating, comment } = req.body || {};
+  const userId = telegramId || whatsappId;
+  const order = orders.find((o) => o.id === Number(orderId) && orderUserMatch(o, telegramId, whatsappId));
+  if (!userId || !order) return res.status(400).json({ ok: false, error: 'Geçersiz sipariş veya kullanıcı.' });
+  const n = Number(rating);
+  if (Number.isNaN(n) || n < 1 || n > 5) return res.status(400).json({ ok: false, error: 'Puan 1-5 arası olmalı.' });
+  const fb = upsertFeedback({ orderId, telegramId, whatsappId, rating: n, comment });
+  res.json({ ok: true, feedbackId: fb.id });
+});
+
+app.get('/api/orders/:id/reorder-data', (req, res) => {
+  const { telegramId, whatsappId } = req.query;
+  const order = orders.find(o => o.id === parseInt(req.params.id) && orderUserMatch(o, telegramId, whatsappId));
+  if (!order) return res.status(404).json({ ok: false, error: 'Sipariş bulunamadı' });
+  res.json({
+    ok: true,
+    orderId: order.id,
+    itemsStructured: normalizeItemsStructured(order.itemsStructured),
+    itemsText: order.items || ''
+  });
+});
+
+app.get('/api/favorites/:id/reorder-data', async (req, res) => {
+  const { telegramId, whatsappId } = req.query;
+  const favs = await loadFavorites();
+  const fav = favs.find((f) => {
+    if (f.id !== parseInt(req.params.id)) return false;
+    return orderUserMatch(f, telegramId, whatsappId);
+  });
+  if (!fav) return res.status(404).json({ ok: false, error: 'Favori bulunamadı' });
+  res.json({
+    ok: true,
+    favoriteId: fav.id,
+    itemsStructured: normalizeItemsStructured(fav.itemsStructured),
+    itemsText: fav.items || ''
+  });
+});
+
 app.get('/api/favorites/:id', async (req, res) => {
   const { telegramId, whatsappId } = req.query;
   const favs = await loadFavorites();
@@ -473,7 +670,7 @@ app.get('/api/favorites/:id', async (req, res) => {
   res.json(fav);
 });
 app.post('/api/favorites', async (req, res) => {
-  const { telegramId, whatsappId, orderId, items, total, name } = req.body;
+  const { telegramId, whatsappId, orderId, items, itemsStructured, total, name } = req.body;
   const userId = telegramId || whatsappId;
   if (!userId || !orderId || !items || total == null) {
     return res.status(400).json({ ok: false, error: 'Eksik bilgi' });
@@ -482,7 +679,8 @@ app.post('/api/favorites', async (req, res) => {
   const id = favs.length ? Math.max(...favs.map(f => f.id)) + 1 : 1;
   const fav = {
     id, orderId: parseInt(orderId), items, total: Number(total),
-    name: name || `Sipariş ${orderId}`
+    name: name || `Sipariş ${orderId}`,
+    itemsStructured: normalizeItemsStructured(itemsStructured)
   };
   if (telegramId) fav.telegramId = String(telegramId);
   if (whatsappId) fav.whatsappId = String(whatsappId);
@@ -573,7 +771,8 @@ app.post('/api/admin/backup', requireAdmin, async (req, res) => {
       menu: getCachedMenu(),
       orders,
       favorites,
-      prefs
+      prefs,
+      feedback: feedbacks
     };
     fs.writeFileSync(fullPath, JSON.stringify(snapshot, null, 2), 'utf8');
     res.json({ ok: true, file: fileName });
@@ -614,6 +813,10 @@ app.post('/api/admin/restore', requireAdmin, async (req, res) => {
     if (snapshot.prefs && typeof snapshot.prefs === 'object') {
       await savePrefs(snapshot.prefs);
     }
+    if (Array.isArray(snapshot.feedback)) {
+      feedbacks = snapshot.feedback;
+      saveFeedback(feedbacks);
+    }
     res.json({ ok: true });
   } catch (e) {
     logError('Admin backup restore', e);
@@ -649,9 +852,10 @@ app.put('/api/menu', requireAdmin, (req, res) => {
 // ——— Sipariş API ———
 app.post('/api/order', async (req, res) => {
   try {
-    const { telegramId, whatsappId, items, total, address, notes, orderType, paymentMethod, location, couponCode, saveAddress } = req.body;
+    const { telegramId, whatsappId, items, itemsStructured, total, address, notes, orderType, paymentMethod, location, couponCode, saveAddress } = req.body;
     const userId = telegramId || whatsappId;
-    if (!userId || !items || total == null) {
+    const normalizedStructured = normalizeItemsStructured(itemsStructured);
+    if (!userId || (!items && !normalizedStructured.length) || total == null) {
       return res.status(400).json({ ok: false, error: 'Eksik bilgi (telegramId veya whatsappId gerekli)' });
     }
     const rest = getRestaurant();
@@ -679,7 +883,9 @@ app.post('/api/order', async (req, res) => {
       ? (rest.estimatedMinutesGelAl ?? rest.estimatedMinutes ?? 25)
       : (rest.estimatedMinutesPaket ?? rest.estimatedMinutes ?? 25);
     const order = {
-      id, items,
+      id,
+      items: items || structuredToItemsText(normalizedStructured),
+      itemsStructured: normalizedStructured,
       total: finalTotal, subtotal, discountAmount,
       address: address || 'Belirtilmedi', notes: notes || '', orderType: orderType || 'paket',
       paymentMethod: payMethod,
@@ -765,14 +971,20 @@ app.get('/api/orders/:id', (req, res) => {
 
 app.post('/api/orders/:id/add', async (req, res) => {
   const id = parseInt(req.params.id);
-  const { telegramId, whatsappId, items, total } = req.body;
+  const { telegramId, whatsappId, items, itemsStructured, total } = req.body;
   const order = orders.find(o => o.id === id && orderUserMatch(o, telegramId, whatsappId));
   if (!order) return res.status(404).json({ ok: false, error: 'Sipariş bulunamadı' });
   const canAdd = ['Alındı', 'Hazırlanıyor', 'Hazır'].includes(order.status);
   if (!canAdd) return res.status(400).json({ ok: false, error: 'Sipariş yola çıktı, ekleme yapılamaz' });
-  if (!items || total == null) return res.status(400).json({ ok: false, error: 'Eksik bilgi' });
+  const nextStructured = normalizeItemsStructured(itemsStructured);
+  if ((!items && !nextStructured.length) || total == null) return res.status(400).json({ ok: false, error: 'Eksik bilgi' });
   const prevItems = order.items || '';
-  order.items = prevItems ? `${prevItems}, ${items}` : items;
+  const textItems = items || structuredToItemsText(itemsStructured);
+  order.items = prevItems && textItems ? `${prevItems}, ${textItems}` : (prevItems || textItems || '');
+  if (nextStructured.length) {
+    if (!Array.isArray(order.itemsStructured)) order.itemsStructured = [];
+    order.itemsStructured = order.itemsStructured.concat(nextStructured);
+  }
   order.total = (order.total || 0) + Number(total);
   if (order.subtotal != null) order.subtotal += Number(total);
   await saveOrders(orders);
@@ -852,19 +1064,39 @@ app.patch('/api/orders/:id', async (req, res, next) => {
         if (status === 'Teslim Edildi') {
           const favs = await loadFavorites();
           const isFav = favs.some(f => f.telegramId === order.telegramId && f.orderId === id);
-          if (!isFav) opts.reply_markup = { inline_keyboard: [[{ text: '⭐ Favorilere Ekle', callback_data: `fav_add_${id}` }]] };
+          const rows = [];
+          if (!isFav) rows.push([{ text: '⭐ Favorilere Ekle', callback_data: `fav_add_${id}` }]);
+          rows.push([
+            { text: '⭐1', callback_data: `fb_rate_${id}_1` },
+            { text: '⭐2', callback_data: `fb_rate_${id}_2` },
+            { text: '⭐3', callback_data: `fb_rate_${id}_3` },
+            { text: '⭐4', callback_data: `fb_rate_${id}_4` },
+            { text: '⭐5', callback_data: `fb_rate_${id}_5` }
+          ]);
+          opts.reply_markup = { inline_keyboard: rows };
         }
         bot.sendMessage(order.telegramId, `📦 <b>Sipariş #${id}</b>\n\n${msgs[status]}`, { parse_mode: 'HTML', ...opts }).catch(() => {});
         if (status === 'Teslim Edildi') {
           setTimeout(() => {
-            bot.sendMessage(order.telegramId, 'Siparişiniz nasıldı? Yorumlarınız bizim için önemli 💚').catch(() => {});
+            bot.sendMessage(order.telegramId, 'Siparişinizi yıldızlayabilirsiniz.').catch(() => {});
           }, 60 * 1000);
         }
       } else if (order.whatsappId) {
         sendWhatsAppMessage(order.whatsappId, statusText);
         if (status === 'Teslim Edildi') {
           setTimeout(() => {
-            sendWhatsAppMessage(order.whatsappId, 'Siparişiniz nasıldı? Yorumlarınız bizim için önemli 💚');
+            sendWhatsAppList(order.whatsappId, 'Siparişinizi puanlar mısınız?', 'Seç', [
+              {
+                title: 'Puan',
+                rows: [
+                  { id: `fb_rate_${id}_5`, title: '⭐⭐⭐⭐⭐' },
+                  { id: `fb_rate_${id}_4`, title: '⭐⭐⭐⭐' },
+                  { id: `fb_rate_${id}_3`, title: '⭐⭐⭐' },
+                  { id: `fb_rate_${id}_2`, title: '⭐⭐' },
+                  { id: `fb_rate_${id}_1`, title: '⭐' }
+                ]
+              }
+            ]);
           }, 60 * 1000);
         }
       }
@@ -915,6 +1147,19 @@ function sendMainMenu(chatId, firstName) {
 const pendingLocationForOrder = new Map();
 
 bot.on('message', async (msg) => {
+  if (msg.text) {
+    const feedbackKey = 'tg_' + String(msg.chat.id);
+    if (pendingFeedbackComment.has(feedbackKey)) {
+      const comment = String(msg.text || '').trim();
+      if (comment) {
+        const orderId = pendingFeedbackComment.get(feedbackKey);
+        upsertFeedback({ orderId, telegramId: msg.chat.id, comment });
+        pendingFeedbackComment.delete(feedbackKey);
+        bot.sendMessage(msg.chat.id, 'Teşekkürler, yorumunuz kaydedildi.', { reply_markup: buildMainKeyboard(msg.chat.id) }).catch(() => {});
+        return;
+      }
+    }
+  }
   if (msg.location) {
     const chatId = msg.chat.id;
     const orderId = pendingLocationForOrder.get(String(chatId));
@@ -1133,11 +1378,38 @@ bot.on('callback_query', async (query) => {
       telegramId: String(chatId),
       orderId,
       items: order.items,
+      itemsStructured: normalizeItemsStructured(order.itemsStructured),
       total: order.total,
       name: `Sipariş ${orderId}`
     });
     await saveFavorites(favs);
     bot.answerCallbackQuery(query.id, { text: '⭐ Favorilere eklendi' });
+    return;
+  }
+
+  if (data.startsWith('fb_rate_')) {
+    bot.answerCallbackQuery(query.id);
+    const m = data.match(/^fb_rate_(\d+)_(\d)$/);
+    if (!m) return;
+    const orderId = Number(m[1]);
+    const rating = Number(m[2]);
+    const order = orders.find((o) => o.id === orderId && o.telegramId === String(chatId));
+    if (!order) {
+      await bot.sendMessage(chatId, 'Bu sipariş için puanlama bulunamadı.', { reply_markup: buildMainKeyboard(chatId) });
+      return;
+    }
+    upsertFeedback({ orderId, telegramId: chatId, rating });
+    pendingFeedbackComment.set('tg_' + String(chatId), orderId);
+    await bot.sendMessage(chatId, `Teşekkürler, ${rating} yıldız verdiniz. İsterseniz kısa yorum yazabilirsiniz.`, {
+      reply_markup: { inline_keyboard: [[{ text: 'Yorumu atla', callback_data: 'fb_skip_comment' }]] }
+    });
+    return;
+  }
+
+  if (data === 'fb_skip_comment') {
+    bot.answerCallbackQuery(query.id);
+    pendingFeedbackComment.delete('tg_' + String(chatId));
+    await bot.sendMessage(chatId, 'Teşekkürler, geri bildiriminiz kaydedildi.', { reply_markup: buildMainKeyboard(chatId) });
     return;
   }
 
@@ -1273,7 +1545,7 @@ function startServer(port) {
     } else throw err;
   });
 }
-initOrders()
+Promise.all([initOrders(), initFeedbacks()])
   .then(() => startServer(PORT))
   .catch(e => {
     console.error('❌ Başlatma hatası:', e.message);

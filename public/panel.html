@@ -678,10 +678,12 @@
       <div class="sidebar-logo">🍽️ MeraPaket</div>
       <nav>
         <a class="nav-item active" data-tab="orders">📋 Siparişler</a>
+        <a class="nav-item" data-tab="kitchen">🍳 Mutfak Ekranı</a>
         <a class="nav-item" data-tab="menu">🍴 Menü</a>
         <a class="nav-item" data-tab="restaurant">⚙️ Restoran</a>
         <a class="nav-item" data-tab="campaigns">🎯 Kampanyalar</a>
         <a class="nav-item" data-tab="stats">📊 İstatistik</a>
+        <a class="nav-item" data-tab="feedback">💬 Geri Bildirim</a>
       </nav>
       <button class="btn logout-btn nav-item" onclick="doLogout()" style="margin:20px;width:calc(100% - 40px)">🚪 Çıkış</button>
     </aside>
@@ -737,6 +739,16 @@
         <div class="last-update" id="orders-update">Son güncelleme: -</div>
       </section>
 
+      <section id="section-kitchen" class="section">
+        <div class="section-header">
+          <h1 class="section-title">Mutfak Ekranı</h1>
+          <div style="display:flex;gap:8px">
+            <button class="btn" style="background:var(--surface-2);color:var(--text)" onclick="renderKitchenBoard()">Yenile</button>
+          </div>
+        </div>
+        <div id="kitchen-board"></div>
+      </section>
+
       <section id="section-menu" class="section">
         <div class="section-header">
           <h1 class="section-title">Menü Yönetimi</h1>
@@ -779,6 +791,14 @@
             <div class="form-group"><label>Kapanış (HH:mm)</label><input type="text" id="r-hoursClose" placeholder="23:00"></div>
             <div class="form-group"><label>Min. Sipariş (₺)</label><input type="number" id="r-minOrder" min="0" placeholder="30"></div>
             <div class="form-group"><label>Tahmini teslimat (dk)</label><input type="number" id="r-estMinutes" min="5" placeholder="25"></div>
+          </div>
+          <div class="form-group" style="margin-top:16px">
+            <label>Haftalık Saatler (JSON)</label>
+            <textarea id="r-weeklyHours" rows="4" placeholder='{"1":{"enabled":true,"open":"10:00","close":"23:00"}}'></textarea>
+          </div>
+          <div class="form-group" style="margin-top:12px">
+            <label>Özel Günler (JSON dizi)</label>
+            <textarea id="r-specialDays" rows="4" placeholder='[{"date":"2026-03-30","closed":true,"note":"Bayram"}]'></textarea>
           </div>
           <div class="form-group" style="margin-top:24px">
             <label>Kuponlar</label>
@@ -887,6 +907,18 @@
             <div id="stat-summary" style="display:grid;gap:12px"></div>
           </div>
         </div>
+        <div class="card" style="margin-bottom:24px">
+          <h3 style="margin-bottom:16px">🏷️ Kupon Analitiği</h3>
+          <div id="coupon-analytics-table"></div>
+        </div>
+      </section>
+
+      <section id="section-feedback" class="section">
+        <div class="section-header">
+          <h1 class="section-title">Müşteri Geri Bildirimleri</h1>
+          <button class="btn btn-primary" onclick="loadFeedbackList()">Yenile</button>
+        </div>
+        <div id="feedback-list"></div>
       </section>
     </main>
   </div>
@@ -1028,6 +1060,8 @@
         n.classList.add('active');
         document.getElementById('section-' + n.dataset.tab).classList.add('active');
         if (n.dataset.tab === 'stats') { setTimeout(() => loadStats(), 50); }
+        if (n.dataset.tab === 'kitchen') { setTimeout(() => renderKitchenBoard(), 50); }
+        if (n.dataset.tab === 'feedback') { setTimeout(() => loadFeedbackList(), 50); }
         if (n.dataset.tab === 'menu') loadMenuEditor();
         if (n.dataset.tab === 'restaurant') loadRestaurantForm();
         if (n.dataset.tab === 'restaurant' && typeof loadBackups === 'function' && typeof getRole === 'function' && getRole() === 'admin') loadBackups();
@@ -1500,6 +1534,14 @@
             <input type="checkbox" ${p.onlyDineIn ? 'checked' : ''} onchange="setProduct(${ci},${pi},'onlyDineIn',this.checked)">
             Sadece restoran içi
           </label>
+          <label class="dine-in-label">
+            <input type="checkbox" ${p.isActive !== false ? 'checked' : ''} onchange="setProduct(${ci},${pi},'isActive',this.checked)">
+            Ürün aktif
+          </label>
+          <label class="dine-in-label">
+            <input type="checkbox" ${p.outOfStock ? 'checked' : ''} onchange="setProduct(${ci},${pi},'outOfStock',this.checked)">
+            Stokta yok
+          </label>
           <div class="field-group" style="flex:1;min-width:180px">
             <label>Görsel (URL veya yükle)</label>
             <div style="display:flex;gap:8px;align-items:center">
@@ -1666,7 +1708,7 @@
       if (!menuData.categories) return;
       const cat = menuData.categories[ci];
       if (!cat.products) cat.products = [];
-      cat.products.push({ id: 'new-' + Date.now(), name: 'Yeni Ürün', price: 0, image: '', onlyDineIn: false, contents: '', content: '', description: '', extras: [] });
+      cat.products.push({ id: 'new-' + Date.now(), name: 'Yeni Ürün', price: 0, image: '', onlyDineIn: false, isActive: true, outOfStock: false, stockNote: '', contents: '', content: '', description: '', extras: [] });
       renderMenuEditor();
     }
     function removeProduct(ci, pi) {
@@ -1716,6 +1758,10 @@
         document.getElementById('r-hoursClose').value = restaurantData.hoursClose || '23:00';
         document.getElementById('r-minOrder').value = restaurantData.minOrderAmount || 30;
         document.getElementById('r-estMinutes').value = restaurantData.estimatedMinutes || 25;
+        const weeklyEl = document.getElementById('r-weeklyHours');
+        const specialEl = document.getElementById('r-specialDays');
+        if (weeklyEl) weeklyEl.value = JSON.stringify(restaurantData.weeklyHours || {}, null, 2);
+        if (specialEl) specialEl.value = JSON.stringify(restaurantData.specialDays || [], null, 2);
         const coupons = restaurantData.coupons || [];
         const cl = document.getElementById('coupons-list');
         cl.innerHTML = coupons.map((c, i) => `
@@ -1873,6 +1919,10 @@
       restaurantData.hoursClose = document.getElementById('r-hoursClose').value;
       restaurantData.minOrderAmount = Number(document.getElementById('r-minOrder').value) || 0;
       restaurantData.estimatedMinutes = Number(document.getElementById('r-estMinutes').value) || 25;
+      const weeklyRaw = document.getElementById('r-weeklyHours')?.value || '{}';
+      const specialRaw = document.getElementById('r-specialDays')?.value || '[]';
+      try { restaurantData.weeklyHours = JSON.parse(weeklyRaw || '{}'); } catch { alert('Haftalık saatler JSON geçersiz'); return; }
+      try { restaurantData.specialDays = JSON.parse(specialRaw || '[]'); } catch { alert('Özel günler JSON geçersiz'); return; }
       restaurantData.hours = `${restaurantData.hoursOpen} - ${restaurantData.hoursClose}`;
       try {
         const r = await fetch('/api/restaurant', {
@@ -1930,6 +1980,7 @@
       loadDailyRevenue();
       loadProductDetailTable(getFilteredOrders());
       loadCancelStats();
+      loadCouponAnalytics();
       document.querySelectorAll('.stats-period-btns .btn-period').forEach(btn => {
         btn.onclick = () => {
           document.querySelectorAll('.stats-period-btns .btn-period').forEach(b => b.classList.remove('active'));
@@ -1972,6 +2023,81 @@
           `<tr><td>${new Date(k).toLocaleDateString('tr-TR')}</td><td class="num">${v.count}</td><td class="num">${v.rev.toLocaleString('tr-TR')}₺</td></tr>`
         ).join('')
       }</tbody></table>`;
+    }
+    async function loadCouponAnalytics() {
+      const el = document.getElementById('coupon-analytics-table');
+      if (!el) return;
+      try {
+        const fn = typeof authFetch === 'function' ? authFetch : fetch;
+        const r = await fn('/api/admin/coupon-analytics');
+        const d = await r.json();
+        const rows = (d && d.coupons) || [];
+        el.innerHTML = rows.length ? `<table class="stats-table"><thead><tr><th>Kod</th><th class="num">Kullanım</th><th class="num">İndirim</th><th class="num">Ciro</th></tr></thead><tbody>${
+          rows.map((x) => `<tr><td>${String(x.code || '-').replace(/</g, '&lt;')}</td><td class="num">${x.uses || 0}</td><td class="num">${Number(x.totalDiscount || 0).toLocaleString('tr-TR')}₺</td><td class="num">${Number(x.totalFinal || 0).toLocaleString('tr-TR')}₺</td></tr>`).join('')
+        }</tbody></table>` : '<p style="color:var(--muted)">Henüz kupon verisi yok</p>';
+      } catch (_) {
+        el.innerHTML = '<p style="color:var(--muted)">Kupon verisi alınamadı</p>';
+      }
+    }
+
+    async function renderKitchenBoard() {
+      const el = document.getElementById('kitchen-board');
+      if (!el) return;
+      try {
+        const fn = typeof authFetch === 'function' ? authFetch : fetch;
+        const r = await fn('/api/admin/kitchen/orders');
+        const d = await r.json();
+        const list = (d && d.orders) || [];
+        if (!list.length) {
+          el.innerHTML = '<div class="empty">Aktif mutfak siparişi yok</div>';
+          return;
+        }
+        el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px">${
+          list.map((o) => `
+            <div class="card" style="padding:16px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <strong>#${o.id}</strong>
+                <span class="status">${o.status}</span>
+              </div>
+              <div style="font-size:1.05rem;line-height:1.45;white-space:pre-wrap">${String(o.items || '').replace(/</g,'&lt;')}</div>
+              <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn" onclick="updateStatus(${o.id},'Hazırlanıyor','${String(o.status || '').replace(/'/g, '&#39;')}')">Hazırlanıyor</button>
+                <button class="btn" onclick="updateStatus(${o.id},'Hazır','${String(o.status || '').replace(/'/g, '&#39;')}')">Hazır</button>
+                <button class="btn btn-primary" onclick="updateStatus(${o.id},'Yola Çıktı','${String(o.status || '').replace(/'/g, '&#39;')}')">Yola Çıktı</button>
+              </div>
+            </div>
+          `).join('')
+        }</div>`;
+      } catch (_) {
+        el.innerHTML = '<div class="empty">Mutfak verisi alınamadı</div>';
+      }
+    }
+
+    async function loadFeedbackList() {
+      const el = document.getElementById('feedback-list');
+      if (!el) return;
+      try {
+        const fn = typeof authFetch === 'function' ? authFetch : fetch;
+        const r = await fn('/api/admin/feedback');
+        const d = await r.json();
+        const list = (d && d.feedback) || [];
+        if (!list.length) {
+          el.innerHTML = '<div class="empty">Henüz geri bildirim yok</div>';
+          return;
+        }
+        el.innerHTML = list.map((f) => `
+          <div class="card" style="padding:14px">
+            <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
+              <strong>Sipariş #${f.orderId || '-'}</strong>
+              <span style="font-weight:700">${'⭐'.repeat(Math.max(1, Number(f.rating) || 1))}</span>
+            </div>
+            <div style="margin-top:6px;color:var(--muted)">${(f.createdAt ? new Date(f.createdAt).toLocaleString('tr-TR') : '')}</div>
+            <div style="margin-top:8px;white-space:pre-wrap">${String(f.comment || '').replace(/</g, '&lt;') || 'Yorum yok'}</div>
+          </div>
+        `).join('');
+      } catch (_) {
+        el.innerHTML = '<div class="empty">Geri bildirim verisi alınamadı</div>';
+      }
     }
     function loadProductDetailTable(filteredOrders) {
       const menu = menuData?.categories || [];
@@ -2299,6 +2425,10 @@
         document.getElementById('r-hoursClose').value = restaurantData.hoursClose || '23:00';
         document.getElementById('r-minOrder').value = restaurantData.minOrderAmount || 30;
         document.getElementById('r-estMinutes').value = restaurantData.estimatedMinutes || 25;
+        const weeklyEl = document.getElementById('r-weeklyHours');
+        const specialEl = document.getElementById('r-specialDays');
+        if (weeklyEl) weeklyEl.value = JSON.stringify(restaurantData.weeklyHours || {}, null, 2);
+        if (specialEl) specialEl.value = JSON.stringify(restaurantData.specialDays || [], null, 2);
         const coupons = restaurantData.coupons || [];
         const cl = document.getElementById('coupons-list');
         cl.innerHTML = coupons.map((c, i) => `
@@ -2341,6 +2471,10 @@
       restaurantData.hoursClose = document.getElementById('r-hoursClose').value;
       restaurantData.minOrderAmount = Number(document.getElementById('r-minOrder').value) || 0;
       restaurantData.estimatedMinutes = Number(document.getElementById('r-estMinutes').value) || 25;
+      const weeklyRaw = document.getElementById('r-weeklyHours')?.value || '{}';
+      const specialRaw = document.getElementById('r-specialDays')?.value || '[]';
+      try { restaurantData.weeklyHours = JSON.parse(weeklyRaw || '{}'); } catch { alert('Haftalık saatler JSON geçersiz'); return; }
+      try { restaurantData.specialDays = JSON.parse(specialRaw || '[]'); } catch { alert('Özel günler JSON geçersiz'); return; }
       restaurantData.hours = `${restaurantData.hoursOpen} - ${restaurantData.hoursClose}`;
       try {
         const r = await authFetch('/api/restaurant', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(restaurantData) });
