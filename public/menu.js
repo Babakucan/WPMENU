@@ -45,6 +45,7 @@
       orderMode: 'in',
       orderModeSelected: false,
       customer: { name: '', phone: '', address: '', saveAddress: true },
+      paymentMethod: 'kapida_nakit',
       channel: '',
       whatsappId: '',
       telegramId: '',
@@ -247,6 +248,9 @@
         this.checkoutStep = 'mode';
       },
 
+      openCartView: function () {
+        this.checkoutStep = 'sepet';
+      },
       openCartSummary: function () {
         this.checkoutStep = 'summary';
       },
@@ -305,7 +309,7 @@
           address: this.orderMode === 'in' ? '' : (this.customer.address || ''),
           notes: '',
           orderType: this.orderMode === 'in' ? 'gel_al' : 'paket',
-          paymentMethod: 'kapida_nakit',
+          paymentMethod: this.paymentMethod || 'kapida_nakit',
           saveAddress: this.orderMode !== 'in' && this.customer.saveAddress !== false
         };
         var self = this;

@@ -150,8 +150,13 @@ async function sendWhatsAppUrlButton(to, bodyText, buttonText, url) {
   }
 }
 
-let orders = loadOrders();
-let orderIdCounter = Math.max(1, ...orders.map(o => o.id), 0) + 1;
+let orders = [];
+let orderIdCounter = 1;
+
+async function initOrders() {
+  orders = await loadOrders();
+  orderIdCounter = Math.max(1, ...orders.map(o => o.id), 0) + 1;
+}
 
 // SSE: panel için sipariş akışı
 const orderSseClients = new Set();
@@ -234,7 +239,7 @@ function verifyWhatsAppSignature(req, bodyRaw) {
   return crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
 }
 
-app.post('/webhook/whatsapp', express.raw({ type: 'application/json' }), (req, res) => {
+app.post('/webhook/whatsapp', express.raw({ type: 'application/json' }), async (req, res) => {
   const bodyRaw = Buffer.isBuffer(req.body) ? req.body : Buffer.from('');
   if (WA_APP_SECRET && !verifyWhatsAppSignature(req, bodyRaw)) {
     return res.sendStatus(403);
@@ -274,7 +279,7 @@ app.post('/webhook/whatsapp', express.raw({ type: 'application/json' }), (req, r
             const order = orders.find(o => o.id === orderId && o.whatsappId === String(from));
             if (order) {
               order.location = { lat: msg.location.latitude, lng: msg.location.longitude };
-              saveOrders(orders);
+              await saveOrders(orders);
               sendWhatsAppMessage(from, '✅ Konumunuz siparişe eklendi. Teşekkürler!');
             }
           }
@@ -419,15 +424,15 @@ app.get('/api/menu', (req, res) => {
   if (!menu) return res.status(500).json({ error: 'Menü yüklenemedi' });
   res.json(menu);
 });
-app.get('/api/favorites', (req, res) => {
+app.get('/api/favorites', async (req, res) => {
   const { telegramId, whatsappId } = req.query;
-  const favs = loadFavorites().filter(f =>
+  const favs = (await loadFavorites()).filter(f =>
     (telegramId && f.telegramId === telegramId) || (whatsappId && f.whatsappId === whatsappId)
   );
   res.json({ favorites: favs });
 });
-app.get('/api/admin/stats', requireAdmin, (req, res) => {
-  const favs = loadFavorites();
+app.get('/api/admin/stats', requireAdmin, async (req, res) => {
+  const favs = await loadFavorites();
   const today = orders.filter(o => new Date(o.createdAt).toDateString() === new Date().toDateString());
   res.json({
     favoritesCount: favs.length,
@@ -457,22 +462,23 @@ app.get('/api/analytics', requireAdmin, (req, res) => {
   orders.forEach(o => { byStatus[o.status] = (byStatus[o.status] || 0) + 1; });
   res.json({ byStatus, total: orders.length });
 });
-app.get('/api/favorites/:id', (req, res) => {
+app.get('/api/favorites/:id', async (req, res) => {
   const { telegramId, whatsappId } = req.query;
-  const fav = loadFavorites().find(f => {
+  const favs = await loadFavorites();
+  const fav = favs.find(f => {
     if (f.id !== parseInt(req.params.id)) return false;
     return (telegramId && f.telegramId === telegramId) || (whatsappId && f.whatsappId === whatsappId);
   });
   if (!fav) return res.status(404).json({ error: 'Favori bulunamadı' });
   res.json(fav);
 });
-app.post('/api/favorites', (req, res) => {
+app.post('/api/favorites', async (req, res) => {
   const { telegramId, whatsappId, orderId, items, total, name } = req.body;
   const userId = telegramId || whatsappId;
   if (!userId || !orderId || !items || total == null) {
     return res.status(400).json({ ok: false, error: 'Eksik bilgi' });
   }
-  const favs = loadFavorites();
+  const favs = await loadFavorites();
   const id = favs.length ? Math.max(...favs.map(f => f.id)) + 1 : 1;
   const fav = {
     id, orderId: parseInt(orderId), items, total: Number(total),
@@ -481,20 +487,20 @@ app.post('/api/favorites', (req, res) => {
   if (telegramId) fav.telegramId = String(telegramId);
   if (whatsappId) fav.whatsappId = String(whatsappId);
   favs.push(fav);
-  saveFavorites(favs);
+  await saveFavorites(favs);
   res.json({ ok: true, favoriteId: id });
 });
-app.delete('/api/favorites/:id', (req, res) => {
+app.delete('/api/favorites/:id', async (req, res) => {
   const { telegramId, whatsappId } = req.query;
   const id = parseInt(req.params.id);
-  const favs = loadFavorites();
+  const favs = await loadFavorites();
   const idx = favs.findIndex(f => {
     if (f.id !== id) return false;
     return (telegramId && f.telegramId === String(telegramId)) || (whatsappId && f.whatsappId === String(whatsappId));
   });
   if (idx === -1) return res.status(404).json({ ok: false, error: 'Favori bulunamadı' });
   favs.splice(idx, 1);
-  saveFavorites(favs);
+  await saveFavorites(favs);
   res.json({ ok: true });
 });
 app.get('/api/restaurant', (req, res) => {
@@ -504,17 +510,18 @@ app.get('/api/restaurant', (req, res) => {
   rest.minOrderAmount = Number(rest.minOrderAmount) || 0;
   res.json(rest);
 });
-app.get('/api/user/prefs', (req, res) => {
+app.get('/api/user/prefs', async (req, res) => {
   const key = prefsKey(req.query.telegramId, req.query.whatsappId);
   if (!key) return res.status(400).json({ error: 'telegramId veya whatsappId gerekli' });
-  const p = loadPrefs()[key] || { notify: true, addresses: [] };
+  const prefs = await loadPrefs();
+  const p = prefs[key] || { notify: true, addresses: [] };
   res.json(p);
 });
-app.post('/api/user/prefs', (req, res) => {
+app.post('/api/user/prefs', async (req, res) => {
   const { telegramId, whatsappId, notify, address, addresses } = req.body;
   const key = prefsKey(telegramId, whatsappId);
   if (!key) return res.status(400).json({ ok: false });
-  const prefs = loadPrefs();
+  const prefs = await loadPrefs();
   if (!prefs[key]) prefs[key] = { notify: true, addresses: [] };
   if (typeof notify === 'boolean') prefs[key].notify = notify;
   if (Array.isArray(addresses)) {
@@ -524,7 +531,7 @@ app.post('/api/user/prefs', (req, res) => {
     if (!addrs.includes(address)) addrs.push(address);
     prefs[key].addresses = addrs.slice(-5);
   }
-  savePrefs(prefs);
+  await savePrefs(prefs);
   res.json({ ok: true });
 });
 app.post('/api/coupon/validate', (req, res) => {
@@ -552,20 +559,21 @@ app.post('/api/upload', requireAdmin, (req, res, next) => {
   res.json({ ok: true, url: '/uploads/' + newName });
 });
 
-app.post('/api/admin/backup', requireAdmin, (req, res) => {
+app.post('/api/admin/backup', requireAdmin, async (req, res) => {
   try {
     if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
     const now = new Date();
     const stamp = now.toISOString().replace(/[:.]/g, '-');
     const fileName = `backup-${stamp}.json`;
     const fullPath = path.join(BACKUP_DIR, fileName);
+    const [favorites, prefs] = await Promise.all([loadFavorites(), loadPrefs()]);
     const snapshot = {
       createdAt: now.toISOString(),
       restaurant: getCachedRestaurant(),
       menu: getCachedMenu(),
       orders,
-      favorites: loadFavorites(),
-      prefs: loadPrefs()
+      favorites,
+      prefs
     };
     fs.writeFileSync(fullPath, JSON.stringify(snapshot, null, 2), 'utf8');
     res.json({ ok: true, file: fileName });
@@ -575,7 +583,7 @@ app.post('/api/admin/backup', requireAdmin, (req, res) => {
   }
 });
 
-app.post('/api/admin/restore', requireAdmin, (req, res) => {
+app.post('/api/admin/restore', requireAdmin, async (req, res) => {
   try {
     const { file } = req.body || {};
     if (!file) return res.status(400).json({ ok: false, error: 'Dosya belirtilmedi' });
@@ -596,15 +604,15 @@ app.post('/api/admin/restore', requireAdmin, (req, res) => {
     }
     if (Array.isArray(snapshot.orders)) {
       orders = snapshot.orders;
-      saveOrders(orders);
+      await saveOrders(orders);
       orderIdCounter = Math.max(1, ...orders.map(o => o.id), 0) + 1;
       broadcastOrderEvent('snapshot', { total: orders.length });
     }
     if (Array.isArray(snapshot.favorites)) {
-      saveFavorites(snapshot.favorites);
+      await saveFavorites(snapshot.favorites);
     }
     if (snapshot.prefs && typeof snapshot.prefs === 'object') {
-      savePrefs(snapshot.prefs);
+      await savePrefs(snapshot.prefs);
     }
     res.json({ ok: true });
   } catch (e) {
@@ -639,7 +647,7 @@ app.put('/api/menu', requireAdmin, (req, res) => {
 });
 
 // ——— Sipariş API ———
-app.post('/api/order', (req, res) => {
+app.post('/api/order', async (req, res) => {
   try {
     const { telegramId, whatsappId, items, total, address, notes, orderType, paymentMethod, location, couponCode, saveAddress } = req.body;
     const userId = telegramId || whatsappId;
@@ -665,7 +673,7 @@ app.post('/api/order', (req, res) => {
       }
     }
     const id = orderIdCounter++;
-    const payMethod = ['kapida_nakit', 'kapida_pos'].includes(paymentMethod) ? paymentMethod : 'kapida_nakit';
+    const payMethod = ['kapida_nakit', 'kapida_pos', 'online'].includes(paymentMethod) ? paymentMethod : 'kapida_nakit';
     const isGelAl = (orderType || 'paket') === 'gel_al' || (orderType || '') === 'restoran';
     const defaultEst = isGelAl
       ? (rest.estimatedMinutesGelAl ?? rest.estimatedMinutes ?? 25)
@@ -683,18 +691,18 @@ app.post('/api/order', (req, res) => {
     if (telegramId) order.telegramId = String(telegramId);
     if (whatsappId) order.whatsappId = String(whatsappId);
     orders.push(order);
-    saveOrders(orders);
+    await saveOrders(orders);
     broadcastOrderEvent('new_order', { id });
     const prefsKeyUser = prefsKey(telegramId, whatsappId);
     const addr = order.address && order.address !== 'Belirtilmedi' ? order.address : null;
     const shouldSaveAddress = (typeof saveAddress === 'undefined') ? true : !!saveAddress;
     if (addr && prefsKeyUser && shouldSaveAddress) {
-      const prefs = loadPrefs();
+      const prefs = await loadPrefs();
       if (!prefs[prefsKeyUser]) prefs[prefsKeyUser] = { notify: true, addresses: [] };
       const addrs = prefs[prefsKeyUser].addresses || [];
       if (!addrs.includes(addr)) addrs.push(addr);
       prefs[prefsKeyUser].addresses = addrs.slice(-5);
-      savePrefs(prefs);
+      await savePrefs(prefs);
     }
     const confirmText = formatOrderConfirm(order, getRestaurant);
     if (telegramId) {
@@ -755,7 +763,7 @@ app.get('/api/orders/:id', (req, res) => {
   res.json(order);
 });
 
-app.post('/api/orders/:id/add', (req, res) => {
+app.post('/api/orders/:id/add', async (req, res) => {
   const id = parseInt(req.params.id);
   const { telegramId, whatsappId, items, total } = req.body;
   const order = orders.find(o => o.id === id && orderUserMatch(o, telegramId, whatsappId));
@@ -767,7 +775,7 @@ app.post('/api/orders/:id/add', (req, res) => {
   order.items = prevItems ? `${prevItems}, ${items}` : items;
   order.total = (order.total || 0) + Number(total);
   if (order.subtotal != null) order.subtotal += Number(total);
-  saveOrders(orders);
+  await saveOrders(orders);
   broadcastOrderEvent('order_updated', { id });
   const addMsg = `➕ Eklemeler sipariş #${id} eklendi.\n\nYeni toplam: ${order.total}₺`;
   if (order.telegramId) bot.sendMessage(order.telegramId, addMsg, { parse_mode: 'HTML' }).catch(() => {});
@@ -791,7 +799,7 @@ function isAdminRequest(req) {
   return !!(expiry && Date.now() < expiry);
 }
 
-app.patch('/api/orders/:id', (req, res, next) => {
+app.patch('/api/orders/:id', async (req, res, next) => {
   const id = parseInt(req.params.id);
   const { status, cancelReason, estimatedMinutes, telegramId, whatsappId } = req.body || {};
   const order = orders.find(o => o.id === id);
@@ -803,12 +811,12 @@ app.patch('/api/orders/:id', (req, res, next) => {
     if (!canCustomerCancel(order)) return res.status(400).json({ ok: false, error: 'Sipariş artık iptal edilemez veya 10 dakika geçti.' });
     order.status = 'İptal';
     order.cancelReason = 'Müşteri iptali';
-    saveOrders(orders);
+    await saveOrders(orders);
     return res.json({ ok: true, order });
   }
   if (!isAdmin) return res.status(401).json({ ok: false, error: 'Yetkisiz. Giriş yapın.' });
   next();
-}, (req, res) => {
+}, async (req, res) => {
   const id = parseInt(req.params.id);
   const { status, cancelReason, estimatedMinutes } = req.body || {};
   const order = orders.find(o => o.id === id);
@@ -821,7 +829,7 @@ app.patch('/api/orders/:id', (req, res, next) => {
     const mins = Number(estimatedMinutes);
     if (!Number.isNaN(mins) && mins > 0) order.estimatedMinutes = mins;
   }
-  saveOrders(orders);
+  await saveOrders(orders);
   broadcastOrderEvent('order_updated', { id });
   const r = getRestaurant();
   const est = order.estimatedMinutes ?? r.estimatedMinutes ?? 25;
@@ -835,14 +843,14 @@ app.patch('/api/orders/:id', (req, res, next) => {
   };
   if (msgs[status]) {
     const prefsKeyUser = prefsKey(order.telegramId, order.whatsappId);
-    const prefs = loadPrefs();
+    const prefs = await loadPrefs();
     const notify = (prefsKeyUser && (prefs[prefsKeyUser] || {}).notify) !== false;
     if (notify) {
       const statusText = `📦 Sipariş #${id}\n\n${msgs[status]}`;
       if (order.telegramId) {
         let opts = {};
         if (status === 'Teslim Edildi') {
-          const favs = loadFavorites();
+          const favs = await loadFavorites();
           const isFav = favs.some(f => f.telegramId === order.telegramId && f.orderId === id);
           if (!isFav) opts.reply_markup = { inline_keyboard: [[{ text: '⭐ Favorilere Ekle', callback_data: `fav_add_${id}` }]] };
         }
@@ -906,7 +914,7 @@ function sendMainMenu(chatId, firstName) {
 // Konum sipariş verdikten sonra istenir (menüden değil)
 const pendingLocationForOrder = new Map();
 
-bot.on('message', (msg) => {
+bot.on('message', async (msg) => {
   if (msg.location) {
     const chatId = msg.chat.id;
     const orderId = pendingLocationForOrder.get(String(chatId));
@@ -915,7 +923,7 @@ bot.on('message', (msg) => {
       const order = orders.find(o => o.id === orderId);
       if (order) {
         order.location = { lat: msg.location.latitude, lng: msg.location.longitude };
-        saveOrders(orders);
+        await saveOrders(orders);
       }
       bot.sendMessage(chatId, '✅ Konumun alındı, teşekkürler!', { reply_markup: buildMainKeyboard(chatId) }).catch(() => {});
     } else {
@@ -1043,7 +1051,7 @@ bot.on('callback_query', async (query) => {
     }
     order.status = 'İptal';
     order.cancelReason = 'Müşteri iptali';
-    saveOrders(orders);
+    await saveOrders(orders);
     await bot.sendMessage(chatId, 'Siparişin iptal edildi.', { reply_markup: buildMainKeyboard(chatId) });
     return;
   }
@@ -1115,7 +1123,7 @@ bot.on('callback_query', async (query) => {
       await bot.sendMessage(chatId, 'Böyle bir sipariş bulunamadı.');
       return;
     }
-    const favs = loadFavorites();
+    const favs = await loadFavorites();
     if (favs.some(f => f.telegramId === String(chatId) && f.orderId === orderId)) {
       await bot.sendMessage(chatId, 'Bu sipariş zaten favorilerinde.', { reply_markup: buildMainKeyboard(chatId) });
       return;
@@ -1128,13 +1136,13 @@ bot.on('callback_query', async (query) => {
       total: order.total,
       name: `Sipariş ${orderId}`
     });
-    saveFavorites(favs);
+    await saveFavorites(favs);
     bot.answerCallbackQuery(query.id, { text: '⭐ Favorilere eklendi' });
     return;
   }
 
   if (data === 'favorites') {
-    const favs = loadFavorites().filter(f => f.telegramId === String(chatId));
+    const favs = (await loadFavorites()).filter(f => f.telegramId === String(chatId));
     bot.answerCallbackQuery(query.id);
     if (favs.length === 0) {
       await bot.sendMessage(chatId, 'Henüz favori siparişin yok. Geçmiş siparişlerden favorilere ekleyebilirsin.', { reply_markup: buildMainKeyboard(chatId) });
@@ -1152,7 +1160,7 @@ bot.on('callback_query', async (query) => {
 
   if (data.startsWith('fav_order_')) {
     const favId = parseInt(data.replace('fav_order_', ''));
-    const fav = loadFavorites().find(f => f.id === favId && f.telegramId === String(chatId));
+    const fav = (await loadFavorites()).find(f => f.id === favId && f.telegramId === String(chatId));
     bot.answerCallbackQuery(query.id);
     if (!fav) {
       await bot.sendMessage(chatId, 'Bu favori bulunamadı.', { reply_markup: buildMainKeyboard(chatId) });
@@ -1169,12 +1177,13 @@ bot.on('callback_query', async (query) => {
     bot.answerCallbackQuery(query.id);
     if (data.startsWith('notify_')) {
       const on = data === 'notify_on';
-      const prefs = loadPrefs();
+      const prefs = await loadPrefs();
       if (!prefs[chatId]) prefs[chatId] = { notify: true, addresses: [] };
       prefs[chatId].notify = on;
-      savePrefs(prefs);
+      await savePrefs(prefs);
     }
-    const prefs = loadPrefs()[chatId] || { notify: true, addresses: [] };
+    const allPrefs = await loadPrefs();
+    const prefs = allPrefs[chatId] || { notify: true, addresses: [] };
     const addrs = prefs.addresses || [];
     let text = '<b>⚙️ Ayarlar</b>\n\n';
     text += `Bildirimler: ${prefs.notify ? 'Açık — Sipariş durumu güncellenince haberdar olursun.' : 'Kapalı'}\n`;
@@ -1264,4 +1273,9 @@ function startServer(port) {
     } else throw err;
   });
 }
-startServer(PORT);
+initOrders()
+  .then(() => startServer(PORT))
+  .catch(e => {
+    console.error('❌ Başlatma hatası:', e.message);
+    process.exit(1);
+  });

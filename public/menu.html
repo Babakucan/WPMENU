@@ -265,7 +265,7 @@
         <button
           type="button"
           class="flex items-center gap-3 min-w-0 flex-1 text-left"
-          @click="openCartSummary()"
+          @click="openCartView()"
         >
           <div class="flex items-center gap-2 min-w-0">
             <span
@@ -301,6 +301,50 @@
       class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
       @click.self="backToCart()"
     >
+      <!-- SEPET: Sadece ürün listesi, toplam, Siparişi tamamla -->
+      <div
+        x-show="checkoutStep === 'sepet'"
+        x-transition
+        class="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl p-6 pb-8 max-h-[90vh] overflow-y-auto safe-area-pb"
+        @click.stop
+      >
+        <h3 class="text-lg font-bold text-stone-900 mb-4">Sepet</h3>
+        <ul class="border-t border-stone-200 pt-4 space-y-3 mb-6">
+          <template x-for="(item, idx) in cart" :key="idx">
+            <li class="flex justify-between items-center text-sm gap-3">
+              <div class="min-w-0 flex-1">
+                <span class="font-medium" x-text="item.product.name"></span>
+                <template x-if="item.removes && item.removes.length">
+                  <span class="text-stone-400 block text-xs" x-text="'- ' + item.removes.join(', ')"></span>
+                </template>
+                <template x-if="item.extras && item.extras.length">
+                  <span class="text-brand-600 block text-xs" x-text="'+ ' + item.extras.map(e => e.name).join(', ')"></span>
+                </template>
+              </div>
+              <div class="flex items-center gap-3 shrink-0">
+                <div class="flex items-center border border-stone-300 rounded-full overflow-hidden">
+                  <button type="button" class="w-8 h-8 flex items-center justify-center text-stone-700 hover:bg-stone-100" @click="changeQty(idx, -1)">−</button>
+                  <span class="w-8 text-center text-sm font-medium" x-text="item.qty"></span>
+                  <button type="button" class="w-8 h-8 flex items-center justify-center text-stone-700 hover:bg-stone-100" @click="changeQty(idx, 1)">+</button>
+                </div>
+                <span class="font-semibold w-16 text-right" x-text="(item.product.price * item.qty + (item.extras || []).reduce((s,e) => s + e.price * item.qty, 0)) + ' ₺'"></span>
+              </div>
+            </li>
+          </template>
+        </ul>
+        <p class="text-right font-bold text-lg text-stone-900 mb-6">Toplam: <span x-text="cartTotal() + ' ₺'"></span></p>
+        <button
+          type="button"
+          @click="startCheckout()"
+          class="w-full py-4 rounded-xl bg-brand-500 text-white font-semibold hover:bg-brand-600 active:scale-[0.98] transition-all"
+        >
+          Siparişi tamamla
+        </button>
+        <button type="button" @click="backToCart()" class="mt-3 w-full py-2 text-stone-500 font-medium text-sm">
+          ← Menüye dön
+        </button>
+      </div>
+
       <div
         x-show="checkoutStep === 'mode'"
         x-transition
@@ -462,6 +506,23 @@
           </template>
         </ul>
         <p class="text-right font-bold text-lg text-stone-900 mb-6">Toplam: <span x-text="cartTotal() + ' ₺'"></span></p>
+        <div class="mb-6">
+          <p class="text-sm font-medium text-stone-700 mb-2">Ödeme şekli</p>
+          <div class="space-y-2">
+            <label class="flex items-center gap-3 p-3 rounded-xl border border-stone-200 cursor-pointer hover:bg-stone-50 transition-colors" :class="{ 'border-brand-500 bg-brand-50 ring-1 ring-brand-500': paymentMethod === 'online' }">
+              <input type="radio" name="paymentSummary" value="online" x-model="paymentMethod" class="w-4 h-4 text-brand-600">
+              <span class="font-medium">Online ödeme</span>
+            </label>
+            <label class="flex items-center gap-3 p-3 rounded-xl border border-stone-200 cursor-pointer hover:bg-stone-50 transition-colors" :class="{ 'border-brand-500 bg-brand-50 ring-1 ring-brand-500': paymentMethod === 'kapida_nakit' }">
+              <input type="radio" name="paymentSummary" value="kapida_nakit" x-model="paymentMethod" class="w-4 h-4 text-brand-600">
+              <span class="font-medium">Kapıda nakit</span>
+            </label>
+            <label class="flex items-center gap-3 p-3 rounded-xl border border-stone-200 cursor-pointer hover:bg-stone-50 transition-colors" :class="{ 'border-brand-500 bg-brand-50 ring-1 ring-brand-500': paymentMethod === 'kapida_pos' }">
+              <input type="radio" name="paymentSummary" value="kapida_pos" x-model="paymentMethod" class="w-4 h-4 text-brand-600">
+              <span class="font-medium">Kapıda kart (POS)</span>
+            </label>
+          </div>
+        </div>
         <template x-if="!orderModeSelected">
           <button
             type="button"

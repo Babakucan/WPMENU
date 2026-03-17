@@ -1038,6 +1038,10 @@
     function formatDate(iso) {
       return new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
     }
+    function getPaymentLabel(pm) {
+      const map = { online: 'Online ödeme', kapida_pos: 'Kapıda kart', kapida_nakit: 'Kapıda nakit' };
+      return map[pm] || map.kapida_nakit;
+    }
     function isToday(iso) {
       return new Date(iso).toDateString() === new Date().toDateString();
     }
@@ -1288,7 +1292,7 @@
           <div class="order-footer">
             <span class="stat-value" style="font-size:1rem">${o.total}₺</span>
             <span class="badge">${o.orderType === 'restoran' ? '🏠' : '📦'}</span>
-            <span class="badge">${(o.paymentMethod || 'kapida_nakit') === 'kapida_pos' ? '💳' : '💵'}</span>
+            <span class="badge" title="Ödeme">${getPaymentLabel(o.paymentMethod)}</span>
             ${(() => {
               const delay = getOrderDelayMinutes(o);
               return delay > 0 ? `<span class="badge overdue">⏰ ${delay} dk gecikme</span>` : '';
@@ -1412,7 +1416,7 @@
             <div class="order-footer">
               <span class="stat-value" style="font-size:1rem">${o.total}₺</span>
               <span class="badge">${o.orderType === 'restoran' ? '🏠' : '📦'}</span>
-              <span class="badge">${(o.paymentMethod || 'kapida_nakit') === 'kapida_pos' ? '💳' : '💵'}</span>
+              <span class="badge" title="Ödeme">${getPaymentLabel(o.paymentMethod)}</span>
               ${(() => {
                 const delay = getOrderDelayMinutes(o);
                 return delay > 0 ? `<span class="badge overdue">⏰ ${delay} dk gecikme</span>` : '';
