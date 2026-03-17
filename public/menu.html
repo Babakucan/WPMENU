@@ -158,9 +158,13 @@
                   <button
                     type="button"
                     @click.stop="addToCartQuick(product)"
+                    :disabled="!product.isActive || product.outOfStock"
+                    :class="(!product.isActive || product.outOfStock) ? 'opacity-50 cursor-not-allowed' : ''"
                     class="w-full py-3 rounded-xl bg-surface-900 text-white text-sm font-semibold hover:bg-surface-850 active:scale-[0.98] transition-all duration-200"
                   >
-                    Sepete ekle
+                    <span x-show="product.isActive && !product.outOfStock">Sepete ekle</span>
+                    <span x-show="!product.isActive">Geçici kapalı</span>
+                    <span x-show="product.outOfStock">Stokta yok</span>
                   </button>
                 </div>
               </article>
@@ -242,9 +246,13 @@
               <button
                 type="button"
                 @click="addToCartFromModal()"
+                :disabled="!modalProduct.isActive || modalProduct.outOfStock"
+                :class="(!modalProduct.isActive || modalProduct.outOfStock) ? 'opacity-50 cursor-not-allowed' : ''"
                 class="w-full py-4 rounded-xl bg-surface-900 text-white font-semibold hover:bg-surface-850 active:scale-[0.98] transition-all duration-200"
               >
-                Sepete ekle
+                <span x-show="modalProduct.isActive && !modalProduct.outOfStock">Sepete ekle</span>
+                <span x-show="!modalProduct.isActive">Geçici kapalı</span>
+                <span x-show="modalProduct.outOfStock">Stokta yok</span>
               </button>
             </div>
           </div>
@@ -342,6 +350,7 @@
             <input
               type="text"
               x-model="customer.name"
+              @input="saveCartState()"
               placeholder="Adınız"
               class="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none transition"
             />
@@ -351,6 +360,7 @@
             <input
               type="tel"
               x-model="customer.phone"
+              @input="saveCartState()"
               placeholder="05XX XXX XX XX"
               class="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none transition"
             />
@@ -383,6 +393,7 @@
             </template>
             <textarea
               x-model="customer.address"
+              @input="saveCartState()"
               placeholder="Teslimat adresi"
               rows="3"
               class="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none transition resize-none"
@@ -392,6 +403,7 @@
                 id="save-address"
                 type="checkbox"
                 x-model="customer.saveAddress"
+                @change="saveCartState()"
                 class="rounded border-stone-300 text-brand-600 focus:ring-brand-500"
               />
               <label for="save-address" class="text-xs text-stone-600">Bu adresi kaydet</label>

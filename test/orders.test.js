@@ -1,6 +1,6 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
-const { orderUserMatch, prefsKey } = require('../lib/orders');
+const { orderUserMatch, prefsKey, normalizeItemsStructured } = require('../lib/orders');
 
 describe('orders lib', () => {
   describe('orderUserMatch', () => {
@@ -26,6 +26,23 @@ describe('orders lib', () => {
     });
     it('returns null when both missing', () => {
       assert.strictEqual(prefsKey(null, null), null);
+    });
+  });
+
+  describe('normalizeItemsStructured', () => {
+    it('normalizes valid rows and drops invalid entries', () => {
+      const data = normalizeItemsStructured([
+        { productId: 'pizza', qty: 2, removes: ['soğan'], extras: [{ name: 'Peynir', price: 10 }] },
+        { productId: '', qty: 1 },
+        null
+      ]);
+      assert.strictEqual(data.length, 1);
+      assert.deepStrictEqual(data[0], {
+        productId: 'pizza',
+        qty: 2,
+        removes: ['soğan'],
+        extras: [{ name: 'Peynir', price: 10 }]
+      });
     });
   });
 });

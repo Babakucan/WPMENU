@@ -10,7 +10,8 @@ const rateLimit = require('express-rate-limit');
 const { logError } = require('./lib/logger');
 const helmet = require('helmet');
 const { validateRestaurant, validateMenu } = require('./lib/validators');
-const { loadOrders, saveOrders, loadFavorites, saveFavorites, loadPrefs, savePrefs, orderUserMatch, prefsKey } = require('./lib/orders');
+const { loadOrders, saveOrders, loadFavorites, saveFavorites, loadPrefs, savePrefs, loadFeedback, saveFeedback, normalizeItemsStructured, orderUserMatch, prefsKey } = require('./lib/orders');
+const { createJsonStorageAdapter } = require('./lib/storage-adapter');
 const restaurantLib = require('./lib/restaurant');
 const { getCachedRestaurant, getCachedMenu, invalidateRestaurantCache, invalidateMenuCache, isOpen, validateCoupon, formatOrderConfirm, getActiveCampaign, loadMenuForPreview, MENU_PATH, RESTAURANT_PATH } = restaurantLib;
 const getRestaurant = getCachedRestaurant;
@@ -150,8 +151,54 @@ async function sendWhatsAppUrlButton(to, bodyText, buttonText, url) {
   }
 }
 
-let orders = loadOrders();
+const storage = createJsonStorageAdapter({
+  loadOrders,
+  saveOrders,
+  loadFavorites,
+  saveFavorites,
+  loadPrefs,
+  savePrefs,
+  loadFeedback,
+  saveFeedback
+});
+
+let orders = storage.getOrders();
+let feedbacks = storage.getFeedback();
 let orderIdCounter = Math.max(1, ...orders.map(o => o.id), 0) + 1;
+
+function serializeStructuredLine(item, menuMap) {
+  const qty = Math.max(1, Number(item.qty) || 1);
+  const menuItem = item.productId ? menuMap.get(String(item.productId)) : null;
+  const name = menuItem ? menuItem.name : (item.productName || item.productId || 'Ürün');
+  const removes = Array.isArray(item.removes) ? item.removes.filter(Boolean) : [];
+  const extras = Array.isArray(item.extras) ? item.extras.filter((x) => x && x.name) : [];
+  const base = menuItem ? Number(menuItem.price) || 0 : Number(item.basePrice) || 0;
+  const extrasTotal = extras.reduce((s, ex) => s + (Number(ex.price) || 0), 0);
+  const price = (base + extrasTotal) * qty;
+  let text = `${qty}x ${name}`;
+  if (removes.length) text += ` (- ${removes.join(', ')})`;
+  if (extras.length) text += ` (+ ${extras.map((e) => e.name).join(', ')})`;
+  return `${text} — ${price}₺`;
+}
+
+function getMenuProductMap() {
+  const map = new Map();
+  const menu = getCachedMenu();
+  if (!menu || !Array.isArray(menu.categories)) return map;
+  menu.categories.forEach((cat) => {
+    (cat.products || []).forEach((p) => {
+      if (p && p.id) map.set(String(p.id), p);
+    });
+  });
+  return map;
+}
+
+function structuredToItemsText(itemsStructured) {
+  const rows = normalizeItemsStructured(itemsStructured);
+  if (!rows.length) return '';
+  const menuMap = getMenuProductMap();
+  return rows.map((row) => serializeStructuredLine(row, menuMap)).join(', ');
+}
 
 // SSE: panel için sipariş akışı
 const orderSseClients = new Set();
@@ -421,13 +468,13 @@ app.get('/api/menu', (req, res) => {
 });
 app.get('/api/favorites', (req, res) => {
   const { telegramId, whatsappId } = req.query;
-  const favs = loadFavorites().filter(f =>
+  const favs = storage.getFavorites().filter(f =>
     (telegramId && f.telegramId === telegramId) || (whatsappId && f.whatsappId === whatsappId)
   );
   res.json({ favorites: favs });
 });
 app.get('/api/admin/stats', requireAdmin, (req, res) => {
-  const favs = loadFavorites();
+  const favs = storage.getFavorites();
   const today = orders.filter(o => new Date(o.createdAt).toDateString() === new Date().toDateString());
   res.json({
     favoritesCount: favs.length,
@@ -457,9 +504,58 @@ app.get('/api/analytics', requireAdmin, (req, res) => {
   orders.forEach(o => { byStatus[o.status] = (byStatus[o.status] || 0) + 1; });
   res.json({ byStatus, total: orders.length });
 });
+
+app.get('/api/admin/coupon-analytics', requireAdmin, (req, res) => {
+  const map = {};
+  orders.forEach((o) => {
+    const code = String(o.couponCode || '').trim();
+    if (!code) return;
+    if (!map[code]) map[code] = { code, uses: 0, totalDiscount: 0, totalSubtotal: 0, totalFinal: 0 };
+    map[code].uses += 1;
+    map[code].totalDiscount += Number(o.discountAmount || 0) || 0;
+    map[code].totalSubtotal += Number(o.subtotal || o.total || 0) || 0;
+    map[code].totalFinal += Number(o.total || 0) || 0;
+  });
+  const rows = Object.values(map).sort((a, b) => b.uses - a.uses);
+  res.json({ ok: true, coupons: rows });
+});
+
+app.get('/api/admin/kitchen/orders', requireAdmin, (req, res) => {
+  const liveStatuses = new Set(['Alındı', 'Hazırlanıyor', 'Hazır']);
+  const list = [...orders]
+    .filter((o) => liveStatuses.has(o.status))
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  res.json({ ok: true, orders: list });
+});
+
+app.get('/api/admin/feedback', requireAdmin, (req, res) => {
+  res.json({ ok: true, feedback: [...feedbacks].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) });
+});
+
+app.post('/api/feedback', (req, res) => {
+  const { orderId, telegramId, whatsappId, rating, comment } = req.body || {};
+  const userId = telegramId || whatsappId;
+  const order = orders.find((o) => o.id === Number(orderId) && orderUserMatch(o, telegramId, whatsappId));
+  if (!userId || !order) return res.status(400).json({ ok: false, error: 'Geçersiz sipariş veya kullanıcı.' });
+  const n = Number(rating);
+  if (Number.isNaN(n) || n < 1 || n > 5) return res.status(400).json({ ok: false, error: 'Puan 1-5 arası olmalı.' });
+  const id = feedbacks.length ? Math.max(...feedbacks.map((f) => Number(f.id) || 0)) + 1 : 1;
+  const fb = {
+    id,
+    orderId: Number(orderId),
+    rating: n,
+    comment: String(comment || '').trim().slice(0, 500),
+    createdAt: new Date().toISOString()
+  };
+  if (telegramId) fb.telegramId = String(telegramId);
+  if (whatsappId) fb.whatsappId = String(whatsappId);
+  feedbacks.push(fb);
+  storage.setFeedback(feedbacks);
+  res.json({ ok: true, feedbackId: id });
+});
 app.get('/api/favorites/:id', (req, res) => {
   const { telegramId, whatsappId } = req.query;
-  const fav = loadFavorites().find(f => {
+  const fav = storage.getFavorites().find(f => {
     if (f.id !== parseInt(req.params.id)) return false;
     return (telegramId && f.telegramId === telegramId) || (whatsappId && f.whatsappId === whatsappId);
   });
@@ -467,34 +563,35 @@ app.get('/api/favorites/:id', (req, res) => {
   res.json(fav);
 });
 app.post('/api/favorites', (req, res) => {
-  const { telegramId, whatsappId, orderId, items, total, name } = req.body;
+  const { telegramId, whatsappId, orderId, items, itemsStructured, total, name } = req.body;
   const userId = telegramId || whatsappId;
   if (!userId || !orderId || !items || total == null) {
     return res.status(400).json({ ok: false, error: 'Eksik bilgi' });
   }
-  const favs = loadFavorites();
+  const favs = storage.getFavorites();
   const id = favs.length ? Math.max(...favs.map(f => f.id)) + 1 : 1;
   const fav = {
     id, orderId: parseInt(orderId), items, total: Number(total),
-    name: name || `Sipariş ${orderId}`
+    name: name || `Sipariş ${orderId}`,
+    itemsStructured: normalizeItemsStructured(itemsStructured)
   };
   if (telegramId) fav.telegramId = String(telegramId);
   if (whatsappId) fav.whatsappId = String(whatsappId);
   favs.push(fav);
-  saveFavorites(favs);
+  storage.setFavorites(favs);
   res.json({ ok: true, favoriteId: id });
 });
 app.delete('/api/favorites/:id', (req, res) => {
   const { telegramId, whatsappId } = req.query;
   const id = parseInt(req.params.id);
-  const favs = loadFavorites();
+  const favs = storage.getFavorites();
   const idx = favs.findIndex(f => {
     if (f.id !== id) return false;
     return (telegramId && f.telegramId === String(telegramId)) || (whatsappId && f.whatsappId === String(whatsappId));
   });
   if (idx === -1) return res.status(404).json({ ok: false, error: 'Favori bulunamadı' });
   favs.splice(idx, 1);
-  saveFavorites(favs);
+  storage.setFavorites(favs);
   res.json({ ok: true });
 });
 app.get('/api/restaurant', (req, res) => {
@@ -507,14 +604,14 @@ app.get('/api/restaurant', (req, res) => {
 app.get('/api/user/prefs', (req, res) => {
   const key = prefsKey(req.query.telegramId, req.query.whatsappId);
   if (!key) return res.status(400).json({ error: 'telegramId veya whatsappId gerekli' });
-  const p = loadPrefs()[key] || { notify: true, addresses: [] };
+  const p = storage.getPrefs()[key] || { notify: true, addresses: [] };
   res.json(p);
 });
 app.post('/api/user/prefs', (req, res) => {
   const { telegramId, whatsappId, notify, address, addresses } = req.body;
   const key = prefsKey(telegramId, whatsappId);
   if (!key) return res.status(400).json({ ok: false });
-  const prefs = loadPrefs();
+  const prefs = storage.getPrefs();
   if (!prefs[key]) prefs[key] = { notify: true, addresses: [] };
   if (typeof notify === 'boolean') prefs[key].notify = notify;
   if (Array.isArray(addresses)) {
@@ -524,7 +621,7 @@ app.post('/api/user/prefs', (req, res) => {
     if (!addrs.includes(address)) addrs.push(address);
     prefs[key].addresses = addrs.slice(-5);
   }
-  savePrefs(prefs);
+  storage.setPrefs(prefs);
   res.json({ ok: true });
 });
 app.post('/api/coupon/validate', (req, res) => {
@@ -564,8 +661,9 @@ app.post('/api/admin/backup', requireAdmin, (req, res) => {
       restaurant: getCachedRestaurant(),
       menu: getCachedMenu(),
       orders,
-      favorites: loadFavorites(),
-      prefs: loadPrefs()
+      favorites: storage.getFavorites(),
+      prefs: storage.getPrefs(),
+      feedback: storage.getFeedback()
     };
     fs.writeFileSync(fullPath, JSON.stringify(snapshot, null, 2), 'utf8');
     res.json({ ok: true, file: fileName });
@@ -601,10 +699,14 @@ app.post('/api/admin/restore', requireAdmin, (req, res) => {
       broadcastOrderEvent('snapshot', { total: orders.length });
     }
     if (Array.isArray(snapshot.favorites)) {
-      saveFavorites(snapshot.favorites);
+      storage.setFavorites(snapshot.favorites);
     }
     if (snapshot.prefs && typeof snapshot.prefs === 'object') {
-      savePrefs(snapshot.prefs);
+      storage.setPrefs(snapshot.prefs);
+    }
+    if (Array.isArray(snapshot.feedback)) {
+      feedbacks = snapshot.feedback;
+      storage.setFeedback(feedbacks);
     }
     res.json({ ok: true });
   } catch (e) {
@@ -641,9 +743,10 @@ app.put('/api/menu', requireAdmin, (req, res) => {
 // ——— Sipariş API ———
 app.post('/api/order', (req, res) => {
   try {
-    const { telegramId, whatsappId, items, total, address, notes, orderType, paymentMethod, location, couponCode, saveAddress } = req.body;
+    const { telegramId, whatsappId, items, itemsStructured, total, address, notes, orderType, paymentMethod, location, couponCode, saveAddress } = req.body;
     const userId = telegramId || whatsappId;
-    if (!userId || !items || total == null) {
+    const normalizedStructured = normalizeItemsStructured(itemsStructured);
+    if (!userId || (!items && !normalizedStructured.length) || total == null) {
       return res.status(400).json({ ok: false, error: 'Eksik bilgi (telegramId veya whatsappId gerekli)' });
     }
     const rest = getRestaurant();
@@ -671,7 +774,9 @@ app.post('/api/order', (req, res) => {
       ? (rest.estimatedMinutesGelAl ?? rest.estimatedMinutes ?? 25)
       : (rest.estimatedMinutesPaket ?? rest.estimatedMinutes ?? 25);
     const order = {
-      id, items,
+      id,
+      items: items || structuredToItemsText(normalizedStructured),
+      itemsStructured: normalizedStructured,
       total: finalTotal, subtotal, discountAmount,
       address: address || 'Belirtilmedi', notes: notes || '', orderType: orderType || 'paket',
       paymentMethod: payMethod,
@@ -689,12 +794,12 @@ app.post('/api/order', (req, res) => {
     const addr = order.address && order.address !== 'Belirtilmedi' ? order.address : null;
     const shouldSaveAddress = (typeof saveAddress === 'undefined') ? true : !!saveAddress;
     if (addr && prefsKeyUser && shouldSaveAddress) {
-      const prefs = loadPrefs();
+      const prefs = storage.getPrefs();
       if (!prefs[prefsKeyUser]) prefs[prefsKeyUser] = { notify: true, addresses: [] };
       const addrs = prefs[prefsKeyUser].addresses || [];
       if (!addrs.includes(addr)) addrs.push(addr);
       prefs[prefsKeyUser].addresses = addrs.slice(-5);
-      savePrefs(prefs);
+      storage.setPrefs(prefs);
     }
     const confirmText = formatOrderConfirm(order, getRestaurant);
     if (telegramId) {
@@ -755,16 +860,49 @@ app.get('/api/orders/:id', (req, res) => {
   res.json(order);
 });
 
+app.get('/api/orders/:id/reorder-data', (req, res) => {
+  const { telegramId, whatsappId } = req.query;
+  const order = orders.find(o => o.id === parseInt(req.params.id) && orderUserMatch(o, telegramId, whatsappId));
+  if (!order) return res.status(404).json({ ok: false, error: 'Sipariş bulunamadı' });
+  res.json({
+    ok: true,
+    orderId: order.id,
+    itemsStructured: normalizeItemsStructured(order.itemsStructured),
+    itemsText: order.items || ''
+  });
+});
+
+app.get('/api/favorites/:id/reorder-data', (req, res) => {
+  const { telegramId, whatsappId } = req.query;
+  const fav = storage.getFavorites().find((f) => {
+    if (f.id !== parseInt(req.params.id)) return false;
+    return orderUserMatch(f, telegramId, whatsappId);
+  });
+  if (!fav) return res.status(404).json({ ok: false, error: 'Favori bulunamadı' });
+  res.json({
+    ok: true,
+    favoriteId: fav.id,
+    itemsStructured: normalizeItemsStructured(fav.itemsStructured),
+    itemsText: fav.items || ''
+  });
+});
+
 app.post('/api/orders/:id/add', (req, res) => {
   const id = parseInt(req.params.id);
-  const { telegramId, whatsappId, items, total } = req.body;
+  const { telegramId, whatsappId, items, itemsStructured, total } = req.body;
   const order = orders.find(o => o.id === id && orderUserMatch(o, telegramId, whatsappId));
   if (!order) return res.status(404).json({ ok: false, error: 'Sipariş bulunamadı' });
   const canAdd = ['Alındı', 'Hazırlanıyor', 'Hazır'].includes(order.status);
   if (!canAdd) return res.status(400).json({ ok: false, error: 'Sipariş yola çıktı, ekleme yapılamaz' });
-  if (!items || total == null) return res.status(400).json({ ok: false, error: 'Eksik bilgi' });
+  const nextStructured = normalizeItemsStructured(itemsStructured);
+  if ((!items && !nextStructured.length) || total == null) return res.status(400).json({ ok: false, error: 'Eksik bilgi' });
   const prevItems = order.items || '';
-  order.items = prevItems ? `${prevItems}, ${items}` : items;
+  const textItems = items || structuredToItemsText(itemsStructured);
+  order.items = prevItems && textItems ? `${prevItems}, ${textItems}` : (prevItems || textItems || '');
+  if (nextStructured.length) {
+    if (!Array.isArray(order.itemsStructured)) order.itemsStructured = [];
+    order.itemsStructured = order.itemsStructured.concat(nextStructured);
+  }
   order.total = (order.total || 0) + Number(total);
   if (order.subtotal != null) order.subtotal += Number(total);
   saveOrders(orders);
@@ -835,14 +973,14 @@ app.patch('/api/orders/:id', (req, res, next) => {
   };
   if (msgs[status]) {
     const prefsKeyUser = prefsKey(order.telegramId, order.whatsappId);
-    const prefs = loadPrefs();
+    const prefs = storage.getPrefs();
     const notify = (prefsKeyUser && (prefs[prefsKeyUser] || {}).notify) !== false;
     if (notify) {
       const statusText = `📦 Sipariş #${id}\n\n${msgs[status]}`;
       if (order.telegramId) {
         let opts = {};
         if (status === 'Teslim Edildi') {
-          const favs = loadFavorites();
+          const favs = storage.getFavorites();
           const isFav = favs.some(f => f.telegramId === order.telegramId && f.orderId === id);
           if (!isFav) opts.reply_markup = { inline_keyboard: [[{ text: '⭐ Favorilere Ekle', callback_data: `fav_add_${id}` }]] };
         }
@@ -1115,7 +1253,7 @@ bot.on('callback_query', async (query) => {
       await bot.sendMessage(chatId, 'Böyle bir sipariş bulunamadı.');
       return;
     }
-    const favs = loadFavorites();
+    const favs = storage.getFavorites();
     if (favs.some(f => f.telegramId === String(chatId) && f.orderId === orderId)) {
       await bot.sendMessage(chatId, 'Bu sipariş zaten favorilerinde.', { reply_markup: buildMainKeyboard(chatId) });
       return;
@@ -1125,16 +1263,17 @@ bot.on('callback_query', async (query) => {
       telegramId: String(chatId),
       orderId,
       items: order.items,
+      itemsStructured: normalizeItemsStructured(order.itemsStructured),
       total: order.total,
       name: `Sipariş ${orderId}`
     });
-    saveFavorites(favs);
+    storage.setFavorites(favs);
     bot.answerCallbackQuery(query.id, { text: '⭐ Favorilere eklendi' });
     return;
   }
 
   if (data === 'favorites') {
-    const favs = loadFavorites().filter(f => f.telegramId === String(chatId));
+    const favs = storage.getFavorites().filter(f => f.telegramId === String(chatId));
     bot.answerCallbackQuery(query.id);
     if (favs.length === 0) {
       await bot.sendMessage(chatId, 'Henüz favori siparişin yok. Geçmiş siparişlerden favorilere ekleyebilirsin.', { reply_markup: buildMainKeyboard(chatId) });
@@ -1152,7 +1291,7 @@ bot.on('callback_query', async (query) => {
 
   if (data.startsWith('fav_order_')) {
     const favId = parseInt(data.replace('fav_order_', ''));
-    const fav = loadFavorites().find(f => f.id === favId && f.telegramId === String(chatId));
+    const fav = storage.getFavorites().find(f => f.id === favId && f.telegramId === String(chatId));
     bot.answerCallbackQuery(query.id);
     if (!fav) {
       await bot.sendMessage(chatId, 'Bu favori bulunamadı.', { reply_markup: buildMainKeyboard(chatId) });
@@ -1169,12 +1308,12 @@ bot.on('callback_query', async (query) => {
     bot.answerCallbackQuery(query.id);
     if (data.startsWith('notify_')) {
       const on = data === 'notify_on';
-      const prefs = loadPrefs();
+      const prefs = storage.getPrefs();
       if (!prefs[chatId]) prefs[chatId] = { notify: true, addresses: [] };
       prefs[chatId].notify = on;
-      savePrefs(prefs);
+      storage.setPrefs(prefs);
     }
-    const prefs = loadPrefs()[chatId] || { notify: true, addresses: [] };
+    const prefs = storage.getPrefs()[chatId] || { notify: true, addresses: [] };
     const addrs = prefs.addresses || [];
     let text = '<b>⚙️ Ayarlar</b>\n\n';
     text += `Bildirimler: ${prefs.notify ? 'Açık — Sipariş durumu güncellenince haberdar olursun.' : 'Kapalı'}\n`;

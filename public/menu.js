@@ -5,6 +5,8 @@
 (function () {
   'use strict';
 
+  var CART_STORAGE_PREFIX = 'wpmenu_cart_v1_';
+
   function normalizeProducts(categories) {
     if (!Array.isArray(categories)) return [];
     return categories.map(function (cat) {
@@ -22,7 +24,10 @@
           ingredientIds: ingredientIds,
           extraIds: extraIds,
           extras: extras,
-          categoryId: cat.id
+          categoryId: cat.id,
+          isActive: p.isActive !== false,
+          outOfStock: !!p.outOfStock,
+          stockNote: (p.stockNote || '').trim()
         };
       });
       return { id: cat.id, name: cat.name || '', products: products };
@@ -49,6 +54,9 @@
       whatsappId: '',
       telegramId: '',
       savedAddresses: [],
+      activeOrderAddId: '',
+      reorderId: '',
+      favoriteId: '',
 
       init: function () {
       var self = this;
@@ -56,6 +64,9 @@
       try {
         var params = new URLSearchParams(window.location.search || '');
         self.channel = (params.get('channel') || '').trim();
+        self.activeOrderAddId = (params.get('add') || '').trim();
+        self.reorderId = (params.get('reorder') || '').trim();
+        self.favoriteId = (params.get('fav') || '').trim();
         var uid = (params.get('userId') || params.get('wa') || '').trim();
         var tg = (params.get('tg') || '').trim();
         self.whatsappId = uid ? uid.replace(/\D/g, '') : '';
@@ -112,11 +123,54 @@
               })
               .catch(function () {});
           }
+
+          self.restoreCart();
+          if (self.favoriteId) self.loadFavoriteForReorder(self.favoriteId);
+          else if (self.reorderId) self.loadOrderForReorder(self.reorderId);
         }).catch(function () {
           self.restaurant = { name: 'Menü', logo: null, tableNumber: '—', phone: '' };
           self.categories = [];
           self.loading = false;
         });
+      },
+
+      getStorageKey: function () {
+        if (this.whatsappId) return CART_STORAGE_PREFIX + 'wa_' + this.whatsappId;
+        if (this.telegramId) return CART_STORAGE_PREFIX + 'tg_' + this.telegramId;
+        return CART_STORAGE_PREFIX + 'guest';
+      },
+
+      saveCartState: function () {
+        try {
+          var payload = {
+            cart: this.toStructuredItems(),
+            orderMode: this.orderMode,
+            customer: this.customer
+          };
+          localStorage.setItem(this.getStorageKey(), JSON.stringify(payload));
+        } catch (_) {}
+      },
+
+      restoreCart: function () {
+        try {
+          var raw = localStorage.getItem(this.getStorageKey());
+          if (!raw) return;
+          var parsed = JSON.parse(raw);
+          this.cart = this.structuredToCart((parsed && parsed.cart) || []);
+          if (parsed && parsed.orderMode) this.orderMode = parsed.orderMode;
+          if (parsed && parsed.customer && typeof parsed.customer === 'object') {
+            this.customer = {
+              name: parsed.customer.name || '',
+              phone: parsed.customer.phone || '',
+              address: parsed.customer.address || '',
+              saveAddress: parsed.customer.saveAddress !== false
+            };
+          }
+        } catch (_) {}
+      },
+
+      clearCartState: function () {
+        try { localStorage.removeItem(this.getStorageKey()); } catch (_) {}
       },
 
       setActiveCategory: function (id) {
@@ -164,12 +218,14 @@
       },
 
       addToCartQuick: function (product) {
+        if (!product || !product.isActive || product.outOfStock) return;
         this.cart.push({
           product: product,
           qty: 1,
           removes: [],
           extras: []
         });
+        this.saveCartState();
         this.addToCartBounce = true;
         var self = this;
         setTimeout(function () { self.addToCartBounce = false; }, 400);
@@ -177,7 +233,7 @@
 
       addToCartFromModal: function () {
         var p = this.modalProduct;
-        if (!p) return;
+        if (!p || !p.isActive || p.outOfStock) return;
         var extras = [];
         if (p.extraIds && p.extras) {
           p.extraIds.forEach(function (exId) {
@@ -193,6 +249,7 @@
           removes: this.modalRemoves.slice(),
           extras: extras
         });
+        this.saveCartState();
         this.addToCartBounce = true;
         var self = this;
         setTimeout(function () { self.addToCartBounce = false; }, 400);
@@ -212,6 +269,7 @@
         } else {
           item.qty = next;
         }
+        this.saveCartState();
       },
 
       cartTotal: function () {
@@ -232,10 +290,12 @@
         this.orderModeSelected = true;
         if (mode === 'in') this.checkoutStep = 'summary';
         else this.checkoutStep = 'form';
+        this.saveCartState();
       },
 
       submitCustomerForm: function () {
         this.checkoutStep = 'summary';
+        this.saveCartState();
       },
 
       backToCart: function () {
@@ -253,6 +313,7 @@
 
       selectSavedAddress: function (addr) {
         this.customer.address = addr || '';
+        this.saveCartState();
       },
 
       deleteSavedAddress: function (addr) {
@@ -271,6 +332,79 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         }).catch(function () {});
+      },
+
+      toStructuredItems: function () {
+        return this.cart.map(function (item) {
+          return {
+            productId: item.product && item.product.id ? String(item.product.id) : '',
+            qty: Math.max(1, Number(item.qty) || 1),
+            removes: Array.isArray(item.removes) ? item.removes.slice() : [],
+            extras: Array.isArray(item.extras) ? item.extras.map(function (ex) {
+              return { name: ex.name || '', price: Number(ex.price) || 0 };
+            }) : []
+          };
+        }).filter(function (item) { return item.productId; });
+      },
+
+      structuredToCart: function (itemsStructured) {
+        if (!Array.isArray(itemsStructured) || !itemsStructured.length) return [];
+        var allProducts = [];
+        this.categories.forEach(function (cat) {
+          (cat.products || []).forEach(function (p) { allProducts.push(p); });
+        });
+        var byId = {};
+        allProducts.forEach(function (p) { byId[String(p.id)] = p; });
+        var out = [];
+        itemsStructured.forEach(function (s) {
+          var p = byId[String((s && s.productId) || '')];
+          if (!p) return;
+          out.push({
+            product: p,
+            qty: Math.max(1, Number((s && s.qty) || 1) || 1),
+            removes: Array.isArray(s && s.removes) ? s.removes.map(function (x) { return String(x || ''); }) : [],
+            extras: Array.isArray(s && s.extras) ? s.extras.map(function (x) {
+              return { name: String((x && x.name) || ''), price: Number((x && x.price) || 0) || 0 };
+            }) : []
+          });
+        });
+        return out;
+      },
+
+      loadOrderForReorder: function (orderId) {
+        var self = this;
+        var id = parseInt(orderId, 10);
+        if (!id) return;
+        var q = self.whatsappId ? ('whatsappId=' + encodeURIComponent(self.whatsappId)) : (self.telegramId ? ('telegramId=' + encodeURIComponent(self.telegramId)) : '');
+        if (!q) return;
+        fetch('/api/orders/' + id + '/reorder-data?' + q)
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (d) {
+            if (!d || !d.ok) return;
+            var cart = self.structuredToCart(d.itemsStructured || []);
+            if (cart.length) {
+              self.cart = cart;
+              self.saveCartState();
+            }
+          }).catch(function () {});
+      },
+
+      loadFavoriteForReorder: function (favId) {
+        var self = this;
+        var id = parseInt(favId, 10);
+        if (!id) return;
+        var q = self.whatsappId ? ('whatsappId=' + encodeURIComponent(self.whatsappId)) : (self.telegramId ? ('telegramId=' + encodeURIComponent(self.telegramId)) : '');
+        if (!q) return;
+        fetch('/api/favorites/' + id + '/reorder-data?' + q)
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (d) {
+            if (!d || !d.ok) return;
+            var cart = self.structuredToCart(d.itemsStructured || []);
+            if (cart.length) {
+              self.cart = cart;
+              self.saveCartState();
+            }
+          }).catch(function () {});
       },
 
       sendWhatsApp: function () {
@@ -295,12 +429,13 @@
       lines.push('');
       lines.push('*Toplam: ' + this.cartTotal() + '₺*');
 
-      // Eğer WhatsApp botundan gelen bir kullanıcıysak, siparişi doğrudan sunucuya ilet
-      if (this.channel === 'whatsapp' && this.whatsappId) {
+      // Bot kimliği varsa siparişi doğrudan API'ye ilet
+      if (this.whatsappId || this.telegramId) {
         var payload = {
-          whatsappId: String(this.whatsappId),
-          telegramId: null,
+          whatsappId: this.whatsappId ? String(this.whatsappId) : null,
+          telegramId: this.telegramId ? String(this.telegramId) : null,
           items: itemsSummary.join(', '),
+          itemsStructured: this.toStructuredItems(),
           total: this.cartTotal(),
           address: this.orderMode === 'in' ? '' : (this.customer.address || ''),
           notes: '',
@@ -309,15 +444,18 @@
           saveAddress: this.orderMode !== 'in' && this.customer.saveAddress !== false
         };
         var self = this;
-        fetch('/api/order', {
+        var addId = parseInt(this.activeOrderAddId || '', 10);
+        var url = addId ? ('/api/orders/' + addId + '/add') : '/api/order';
+        fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         }).then(function (r) { return r.json(); }).then(function (res) {
           if (res && res.ok) {
-            alert('Siparişiniz alındı. WhatsApp üzerinden onay gönderilecek.');
+            alert(addId ? 'Ürünler aktif siparişe eklendi.' : 'Siparişiniz alındı. Onay mesajı gönderilecek.');
             self.cart = [];
             self.checkoutStep = 'cart';
+            self.clearCartState();
           } else {
             alert('Sipariş gönderilirken bir hata oluştu. Lütfen tekrar deneyin.');
           }
